@@ -95,12 +95,12 @@ const CB_MATCH_INFO  = id => `https://www.cricbuzz.com/api/cricket-match/${id}/m
 const CB_COMMENTARY  = id => `https://www.cricbuzz.com/api/cricket-match/${id}/commentary?page=1`;
 
 // Points table & stats
-const CB_POINTS_TABLE = 'https://www.cricbuzz.com/api/cricket-series/9237/standings';
-const CB_MOST_RUNS    = 'https://www.cricbuzz.com/api/cricket-series/9237/stats?statsType=mostRuns';
-const CB_MOST_WKTS   = 'https://www.cricbuzz.com/api/cricket-series/9237/stats?statsType=mostWickets';
+const CB_POINTS_TABLE = 'https://www.cricbuzz.com/api/cricket-series/9241/standings';
+const CB_MOST_RUNS    = 'https://www.cricbuzz.com/api/cricket-series/9241/stats?statsType=mostRuns';
+const CB_MOST_WKTS   = 'https://www.cricbuzz.com/api/cricket-series/9241/stats?statsType=mostWickets';
 
-// Alternate series IDs in case 9237 is wrong
-const CB_SERIES_IDS  = ['9237', '9203', '9280', '9300'];
+// Alternate series IDs in case 9241 is wrong
+const CB_SERIES_IDS  = ['9241'];
 
 /**
  * Find today's live/recent IPL match via Cricbuzz JSON
@@ -144,7 +144,7 @@ const findMatchViaJSON = async () => {
                     : state.includes('COMPLETE') || state.includes('FINISH') ? 'FINISHED'
                     : 'RECENT',
           cbUrl: `https://www.cricbuzz.com/live-cricket-scorecard/${mid}`,
-          seriesId: String(info?.seriesId || '9237'),
+          seriesId: String(info?.seriesId || '9241'),
         };
       }
     }
@@ -989,7 +989,7 @@ export const scrapeIPLStandingsAndStats = async () => {
       // Points table from Cricbuzz HTML
       if (!pointsTable || pointsTable.length < 4) {
         try {
-          await page.goto('https://www.cricbuzz.com/cricket-series/9237/indian-premier-league-2026/points-table',
+          await page.goto('https://www.cricbuzz.com/cricket-series/9241/indian-premier-league-2026/points-table',
             { waitUntil: 'domcontentloaded', timeout: 20000 });
           await wait(3000);
           const table = await page.evaluate(TEAMS => {
@@ -1016,7 +1016,7 @@ export const scrapeIPLStandingsAndStats = async () => {
       // Stats from Cricbuzz HTML stats page
       if (!orangeCap) {
         try {
-          await page.goto('https://www.cricbuzz.com/cricket-series/9237/indian-premier-league-2026/stats',
+          await page.goto('https://www.cricbuzz.com/cricket-series/9241/indian-premier-league-2026/stats',
             { waitUntil: 'domcontentloaded', timeout: 20000 });
           await wait(3000);
           const stats = await page.evaluate(() => {

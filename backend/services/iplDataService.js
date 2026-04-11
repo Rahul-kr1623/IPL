@@ -19,7 +19,7 @@ export const scrapeIPLStandings = async () => {
     const page = await browser.newPage();
 
     // ── Points Table ──────────────────────────────────────────────────────
-    await page.goto('https://www.cricbuzz.com/cricket-series/9237/indian-premier-league-2026/points-table', {
+    await page.goto('https://www.cricbuzz.com/cricket-series/9241/indian-premier-league-2026/points-table', {
       waitUntil: 'domcontentloaded',
       timeout: 30000,
     });
@@ -83,7 +83,7 @@ export const scrapeIPLStandings = async () => {
     let orangeCap = null, purpleCap = null;
 
     try {
-      await page.goto('https://www.cricbuzz.com/cricket-series/9237/indian-premier-league-2026/stats', {
+      await page.goto('https://www.cricbuzz.com/cricket-series/9241/indian-premier-league-2026/stats', {
         waitUntil: 'domcontentloaded',
         timeout: 20000,
       });
