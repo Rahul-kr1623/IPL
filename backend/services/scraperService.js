@@ -22,7 +22,7 @@
  * 5. Puppeteer → Google (local dev last resort)
  */
 
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 import https from 'https';
 
 const CHROME = process.env.PUPPETEER_EXECUTABLE_PATH
