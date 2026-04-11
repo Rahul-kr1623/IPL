@@ -1,0 +1,29 @@
+# --- Backend Specific ---
+backend/node_modules/
+backend/.env
+backend/*.log
+
+# --- Frontend Specific ---
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/*.local
+frontend/*.log
+frontend/*.txt
+
+# --- Logs & Debugging ---
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+client_build_err.txt
+
+# --- Editor / OS Specific ---
+.vscode/
+.idea/
+.DS_Store
+*.sw?
+
+# --- Database ---
+dump.rdb

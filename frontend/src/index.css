@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+html {
+  scroll-behavior: smooth;
+}
+
+:root {
+  --ipl-dark: #020617;
+  --ipl-neon: #0ea5e9;
+  --ipl-accent: #f43f5e;
+  background-color: var(--ipl-dark);
+  color: white;
+}
+
+/* Tera glassmorphism wala tadka */
+@theme {
+  --color-ipl-dark: var(--ipl-dark);
+  --color-ipl-neon: var(--ipl-neon);
+  --color-ipl-accent: var(--ipl-accent);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
