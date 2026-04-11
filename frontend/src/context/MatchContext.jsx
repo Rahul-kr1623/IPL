@@ -74,7 +74,10 @@ export const MatchProvider = ({ children }) => {
       if (cancelled) return;
       dispatch({ type: 'FETCH_START' });
       try {
-        const res = await fetch('http://localhost:5000/api/v1/live-score');
+        // Updated to use environment variable for production
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${API_URL}/api/v1/live-score`);
+
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
