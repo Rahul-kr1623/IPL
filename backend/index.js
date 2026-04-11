@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import https from 'https'; // Required for Keep-Alive ping
 import { scrapeLiveMatch, scrapeIPLStandingsAndStats } from './services/scraperService.js';
 import LiveMatch from './models/LiveMatch.js';
 import commentRoutes from './routes/comments.js';
@@ -13,6 +14,7 @@ import {
 
 dotenv.config();
 const app  = express();
+// Priority to process.env.PORT for Render deployment
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
@@ -70,10 +72,8 @@ app.get('/api/v1/live-score', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Standings — computed (always reliable) + scrape-verified
 app.get('/api/v1/ipl-data', (req, res) => res.json(standingsCache));
 
-// Commentary
 app.get('/api/v1/commentary', async (req, res) => {
   try {
     const data = await LiveMatch.findOne().sort({ lastUpdated:-1 });
@@ -81,7 +81,6 @@ app.get('/api/v1/commentary', async (req, res) => {
   } catch { res.json({ commentary: [] }); }
 });
 
-// Player stats (for Stats tab)
 app.get('/api/v1/player-stats', (req, res) => {
   const caps = getCapLeaders(PLAYER_STATS);
   res.json({
@@ -89,7 +88,6 @@ app.get('/api/v1/player-stats', (req, res) => {
     topBowlers: caps.topBowlers,
     orangeCap:  caps.orangeCap,
     purpleCap:  caps.purpleCap,
-    // Override with scraped data if available
     ...(standingsCache.topBatsmen?.length > 3 ? { topBatsmen: standingsCache.topBatsmen } : {}),
     ...(standingsCache.topBowlers?.length > 3 ? { topBowlers: standingsCache.topBowlers } : {}),
     ...(standingsCache.orangeCap ? { orangeCap: standingsCache.orangeCap } : {}),
@@ -97,7 +95,6 @@ app.get('/api/v1/player-stats', (req, res) => {
   });
 });
 
-// Completed matches for Fixtures page
 app.get('/api/v1/completed-matches', (req, res) => {
   res.json({
     completedIds: COMPLETED_MATCHES.map(m => m.id),
@@ -119,7 +116,6 @@ app.use('/api/comments', commentRoutes);
 const runLiveSync = async () => {
   const t = new Date().toLocaleTimeString();
 
-  // Freeze window
   if (matchFinishedAt) {
     const elapsed = Date.now() - matchFinishedAt;
     if (elapsed < FREEZE_MS) {
@@ -135,7 +131,6 @@ const runLiveSync = async () => {
   try {
     const data = await scrapeLiveMatch();
 
-    // ── No data / special status ──────────────────────────────────────────
     if (!data?.score || data.score === '0') {
       if (data?.status && ['ABANDONED','RAIN DELAY','POSTPONED'].includes(data.status)) {
         if (!data.commentary?.length) {
@@ -171,7 +166,6 @@ const runLiveSync = async () => {
     }
     lastKnownMatchKey = newKey;
 
-    // ── FINISHED validation ───────────────────────────────────────────────
     if (data.status === 'FINISHED') {
       const winner = data.result?.match(/^([A-Z]{2,4})\s+won/i)?.[1]?.toUpperCase();
       if (!winner || (winner !== data.team1?.name && winner !== data.team2?.name)) {
@@ -205,7 +199,6 @@ const runLiveSync = async () => {
     }
     if (data.score && parseInt(data.score) > 5) lastLiveScore = data.score;
 
-    // ── Commentary injection ──────────────────────────────────────────────
     const hasRealComm = (data.commentary||[]).filter(c => !c.generated).length >= 2;
     if (!hasRealComm) {
       const ctx = {
@@ -263,33 +256,16 @@ const saveToDb = async d => {
   }).save();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// STANDINGS + STATS — every 12 hours
-// Strategy: Compute from COMPLETED_MATCHES (reliable) + verify against crex
-// ─────────────────────────────────────────────────────────────────────────────
 const updateStandingsAndStats = async () => {
   const t = new Date().toLocaleTimeString();
   console.log(`\n[${t}] 📊 Updating standings & stats (12h cycle)...`);
-
-  // Always recompute from our reliable COMPLETED_MATCHES
   const computed = calculatePointsTable(COMPLETED_MATCHES);
 
   try {
     const scraped = await scrapeIPLStandingsAndStats();
-
     if (scraped) {
-      // Verify computed vs scraped
-      const cTop = computed[0]?.team;
-      const sTop = scraped.pointsTable?.[0]?.team;
-      if (sTop && cTop !== sTop) {
-        console.log(`⚠️ Standings mismatch: computed=${cTop}, scraped=${sTop}`);
-        console.log(`   ❗ Add missing match(es) to COMPLETED_MATCHES in matchDataEngine.js`);
-      } else if (sTop) {
-        console.log(`✅ Standings verified. Top: ${cTop}`);
-      }
-
       standingsCache = {
-        pointsTable:      computed,                                  // Always use computed
+        pointsTable:      computed,
         orangeCap:        scraped.orangeCap  || computedCaps.orangeCap,
         purpleCap:        scraped.purpleCap  || computedCaps.purpleCap,
         topBatsmen:       scraped.topBatsmen?.length > 2 ? scraped.topBatsmen : computedCaps.topBatsmen,
@@ -298,9 +274,7 @@ const updateStandingsAndStats = async () => {
         source:           'computed+crex',
         matchesAccounted: COMPLETED_MATCHES.length,
       };
-      console.log(`✅ Orange Cap: ${standingsCache.orangeCap?.name || 'N/A'} | Purple Cap: ${standingsCache.purpleCap?.name || 'N/A'}`);
     } else {
-      // Scraping failed — use computed only
       standingsCache = {
         pointsTable:      computed,
         ...computedCaps,
@@ -308,22 +282,26 @@ const updateStandingsAndStats = async () => {
         source:           'computed',
         matchesAccounted: COMPLETED_MATCHES.length,
       };
-      console.log(`📊 Standings from computed data only. ${computed.length} teams.`);
     }
   } catch (err) {
     standingsCache = { ...standingsCache, pointsTable: computed, lastUpdated: new Date(), source: 'computed' };
-    console.log(`📊 Computed only (error: ${err.message})`);
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// START
-// ─────────────────────────────────────────────────────────────────────────────
+// 🚀 START SERVER
 app.listen(PORT, async () => {
   console.log(`🚀 Server → http://localhost:${PORT}`);
-  console.log(`📊 Engine: ${COMPLETED_MATCHES.length} matches, ${Object.keys(PLAYER_STATS).length} players`);
 
-  // Resume freeze if existing match is FINISHED
+  // --- KEEP ALIVE LOGIC FOR RENDER ---
+  // Pings itself every 14 minutes to prevent the free tier from sleeping
+  setInterval(() => {
+    https.get(`https://ipl-2026-h136.onrender.com/api/v1/health`, (res) => {
+      console.log(`[Keep-Alive] Ping sent to self. Status: ${res.statusCode}`);
+    }).on('error', (err) => {
+      console.error('[Keep-Alive] Ping failed:', err.message);
+    });
+  }, 14 * 60 * 1000);
+
   try {
     const ex = await LiveMatch.findOne().sort({ lastUpdated:-1 });
     if (ex?.status === 'FINISHED' || ex?.status === 'RECENTLY FINISHED') {
@@ -336,11 +314,9 @@ app.listen(PORT, async () => {
     if (ex) lastKnownMatchKey = `${ex.team1?.name}_${ex.team2?.name}`;
   } catch {}
 
-  // Initial runs
-  await updateStandingsAndStats();   // run once on startup
+  await updateStandingsAndStats();
   await runLiveSync();
 
-  // Intervals
-  setInterval(runLiveSync,             40_000);         // 40 seconds
-  setInterval(updateStandingsAndStats, 12*60*60_000);   // 12 hours
+  setInterval(runLiveSync,             40_000); 
+  setInterval(updateStandingsAndStats, 12*60*60_000);
 });
