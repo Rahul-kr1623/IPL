@@ -294,15 +294,18 @@ app.listen(PORT, async () => {
 
   // --- KEEP ALIVE LOGIC FOR RENDER ---
   // Pings itself every 14 minutes to prevent the free tier from sleeping
-  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `https://ipl-2026-h136.onrender.com`;
+  const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `https://ipl-2026-h136.onrender.com`;
 
-  setInterval(() => {
-    https.get(`${SELF_URL}/api/v1/health`, (res) => {
-      console.log(`[Keep-Alive] Status: ${res.statusCode}`);
-    }).on('error', (err) => {
-      console.error('[Keep-Alive] Failed:', err.message);
-    });
-  }, 14 * 60 * 1000);
+  if (process.env.NODE_ENV === 'production') {
+    setInterval(() => {
+      https.get(`${RENDER_URL}/api/v1/health`, (res) => {
+        console.log(`[Keep-alive] ${res.statusCode} at ${new Date().toLocaleTimeString()}`);
+      }).on('error', (err) => {
+        console.error('[Keep-alive] Ping failed:', err.message);
+      });
+    }, 14 * 60 * 1000); // 14 minutes
+    console.log(`[Keep-alive] Self-ping enabled → ${RENDER_URL}`);
+  }
 
   try {
     const ex = await LiveMatch.findOne().sort({ lastUpdated: -1 });
