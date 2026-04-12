@@ -39,7 +39,7 @@ const ESPN_SUMMARY    = id => `https://site.api.espn.com/apis/site/v2/sports/cri
 const ESPN_STANDINGS  = `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/standings`;
 
 // Cricbuzz series IDs to try
-const CB_SERIES_IDS   = ['9237','9241','9300','9350','9280'];
+const CB_SERIES_IDS   = ['9241','9237','9300','9350','9280'];
 const CB_LIVE_LIST    = 'https://www.cricbuzz.com/api/cricket-match/live-scores';
 const CB_MINI_SCORE   = id => `https://www.cricbuzz.com/api/cricket-match/${id}/miniscore`;
 const CB_COMMENTARY   = id => `https://www.cricbuzz.com/api/cricket-match/${id}/commentary/1`;
