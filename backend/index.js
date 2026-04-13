@@ -14,6 +14,125 @@ import {
 
 dotenv.config();
 const app = express();
+
+// ─── CLAUDE'S DEBUG ROUTES (ADDED RIGHT AFTER APP = EXPRESS) ──────────────────
+app.get('/api/v1/debug/sources', async (req, res) => {
+  const results = {};
+
+  // Test 1: cricbuzz-live.vercel.app proxy
+  try {
+    const r = await fetch('https://cricbuzz-live.vercel.app/v1/matches');
+    const data = await r.json();
+    results.cbProxy = {
+      status: r.status,
+      matchCount: data?.data?.matches?.length || 0,
+      firstMatch: data?.data?.matches?.[0] || null,
+      raw: JSON.stringify(data).substring(0, 500),
+    };
+  } catch(e) {
+    results.cbProxy = { error: e.message };
+  }
+
+  // Test 2: ESPN header (personalized)
+  try {
+    const r = await fetch('https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta');
+    const data = await r.json();
+    const events = data?.sports?.[0]?.leagues?.[0]?.events || [];
+    results.espnHeader = {
+      status: r.status,
+      eventCount: events.length,
+      firstEvent: events[0] || null,
+    };
+  } catch(e) {
+    results.espnHeader = { error: e.message };
+  }
+
+  // Test 3: ESPN scoreboard with IPL ID 23694
+  try {
+    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/cricket/23694/scoreboard');
+    const data = await r.json();
+    results.espn23694 = {
+      status: r.status,
+      eventCount: data?.events?.length || 0,
+      firstEvent: data?.events?.[0]?.name || null,
+    };
+  } catch(e) {
+    results.espn23694 = { error: e.message };
+  }
+
+  // Test 4: ESPN scoreboard with old ID 8039
+  try {
+    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/cricket/8039/scoreboard');
+    const data = await r.json();
+    results.espn8039 = {
+      status: r.status,
+      eventCount: data?.events?.length || 0,
+    };
+  } catch(e) {
+    results.espn8039 = { error: e.message };
+  }
+
+  // Test 5: Cricbuzz live list
+  try {
+    const r = await fetch('https://www.cricbuzz.com/api/cricket-match/live-scores', {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.cricbuzz.com/' }
+    });
+    const text = await r.text();
+    results.cricbuzzDirect = {
+      status: r.status,
+      bodyLength: text.length,
+      isJSON: text.startsWith('{'),
+      preview: text.substring(0, 200),
+    };
+  } catch(e) {
+    results.cricbuzzDirect = { error: e.message };
+  }
+
+  // Test 6: Cricbuzz series standings
+  for (const sid of ['9237','9241','9300']) {
+    try {
+      const r = await fetch(`https://www.cricbuzz.com/api/cricket-series/${sid}/standings`);
+      const text = await r.text();
+      results[`cbStandings_${sid}`] = {
+        status: r.status,
+        bodyLength: text.length,
+        preview: text.substring(0, 150),
+      };
+    } catch(e) {
+      results[`cbStandings_${sid}`] = { error: e.message };
+    }
+  }
+
+  res.json({
+    timestamp: new Date().toISOString(),
+    serverTime: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    results,
+  });
+});
+
+// Quick test of just the scraper
+app.get('/api/v1/debug/scrape-now', async (req, res) => {
+  try {
+    const { scrapeLiveMatch } = await import('./services/scraperService.js');
+    const result = await scrapeLiveMatch();
+    res.json({ success: !!result, result, timestamp: new Date().toISOString() });
+  } catch(e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// Clear DB and force fresh scrape
+app.get('/api/v1/debug/reset', async (req, res) => {
+  try {
+    const LiveMatch = (await import('./models/LiveMatch.js')).default;
+    await LiveMatch.deleteMany({});
+    res.json({ cleared: true, message: 'DB cleared. Next scrape cycle will fetch fresh data.' });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Priority to process.env.PORT for Render deployment
 const PORT = process.env.PORT || 5000;
 
