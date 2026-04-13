@@ -29,7 +29,7 @@ app.get('/api/v1/debug/sources', async (req, res) => {
       firstMatch: data?.data?.matches?.[0] || null,
       raw: JSON.stringify(data).substring(0, 500),
     };
-  } catch(e) {
+  } catch (e) {
     results.cbProxy = { error: e.message };
   }
 
@@ -43,7 +43,7 @@ app.get('/api/v1/debug/sources', async (req, res) => {
       eventCount: events.length,
       firstEvent: events[0] || null,
     };
-  } catch(e) {
+  } catch (e) {
     results.espnHeader = { error: e.message };
   }
 
@@ -56,7 +56,7 @@ app.get('/api/v1/debug/sources', async (req, res) => {
       eventCount: data?.events?.length || 0,
       firstEvent: data?.events?.[0]?.name || null,
     };
-  } catch(e) {
+  } catch (e) {
     results.espn23694 = { error: e.message };
   }
 
@@ -68,7 +68,7 @@ app.get('/api/v1/debug/sources', async (req, res) => {
       status: r.status,
       eventCount: data?.events?.length || 0,
     };
-  } catch(e) {
+  } catch (e) {
     results.espn8039 = { error: e.message };
   }
 
@@ -84,12 +84,12 @@ app.get('/api/v1/debug/sources', async (req, res) => {
       isJSON: text.startsWith('{'),
       preview: text.substring(0, 200),
     };
-  } catch(e) {
+  } catch (e) {
     results.cricbuzzDirect = { error: e.message };
   }
 
   // Test 6: Cricbuzz series standings
-  for (const sid of ['9237','9241','9300']) {
+  for (const sid of ['9237', '9241', '9300']) {
     try {
       const r = await fetch(`https://www.cricbuzz.com/api/cricket-series/${sid}/standings`);
       const text = await r.text();
@@ -98,7 +98,7 @@ app.get('/api/v1/debug/sources', async (req, res) => {
         bodyLength: text.length,
         preview: text.substring(0, 150),
       };
-    } catch(e) {
+    } catch (e) {
       results[`cbStandings_${sid}`] = { error: e.message };
     }
   }
@@ -116,7 +116,7 @@ app.get('/api/v1/debug/scrape-now', async (req, res) => {
     const { scrapeLiveMatch } = await import('./services/scraperService.js');
     const result = await scrapeLiveMatch();
     res.json({ success: !!result, result, timestamp: new Date().toISOString() });
-  } catch(e) {
+  } catch (e) {
     res.json({ success: false, error: e.message });
   }
 });
@@ -127,9 +127,21 @@ app.get('/api/v1/debug/reset', async (req, res) => {
     const LiveMatch = (await import('./models/LiveMatch.js')).default;
     await LiveMatch.deleteMany({});
     res.json({ cleared: true, message: 'DB cleared. Next scrape cycle will fetch fresh data.' });
-  } catch(e) {
+  } catch (e) {
     res.json({ error: e.message });
   }
+});
+
+// Manually clear freeze lock
+app.get('/api/v1/debug/clear-freeze', (req, res) => {
+  matchFinishedAt = null;
+  finishedConfirmations = 0;
+  lastKnownMatchKey = null;
+  lastLiveScore = null;
+  res.json({
+    cleared: true,
+    message: 'Freeze cleared. Next scrape will run immediately.'
+  });
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -170,7 +182,7 @@ let finishedConfirmations = 0;
 let lastKnownMatchKey = null;
 let lastLiveScore = null;
 
-const FREEZE_MS = 50 * 60 * 1000;   // 50 min freeze after FINISHED
+const FREEZE_MS = 20 * 60 * 1000;   // 20 min freeze after FINISHED
 const NEED_CONFIRM = 2;                  // 2 consecutive FINISHED readings
 const MAX_FAILS = 12;                 // auto-mark finished after 12 fails
 
@@ -283,8 +295,19 @@ const runLiveSync = async () => {
       console.log(`🆕 Match changed: ${lastKnownMatchKey} → ${newKey}. Resetting state.`);
       matchFinishedAt = null; finishedConfirmations = 0; lastLiveScore = null;
     }
-    lastKnownMatchKey = newKey;
 
+
+    // If a new match appears during freeze, clear the freeze
+    if (matchFinishedAt && data?.team1?.name && data?.team2?.name) {
+      const detectedKey = `${data.team1?.name}_${data.team2?.name}`;
+      if (lastKnownMatchKey && lastKnownMatchKey !== detectedKey) {
+        console.log('🆕 New match detected during freeze — clearing freeze.');
+        matchFinishedAt = null;
+        finishedConfirmations = 0;
+        lastLiveScore = null;
+      }
+    }
+    lastKnownMatchKey = newKey;
     if (data.status === 'FINISHED') {
       const winner = data.result?.match(/^([A-Z]{2,4})\s+won/i)?.[1]?.toUpperCase();
       if (!winner || (winner !== data.team1?.name && winner !== data.team2?.name)) {
