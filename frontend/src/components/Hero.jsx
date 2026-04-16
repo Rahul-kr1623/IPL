@@ -10,11 +10,11 @@ import iplAudio from '../assets/_Ye_Khel_Hai_Sher_Jawano_Ka_Ipl_Ringtone_(by Fri
 
 // ─── Logo map ─────────────────────────────────────────────────────────────────
 const LOGO = {
-  CSK:'/src/assets/logos/csk.png', MI:'/src/assets/logos/mi.png',
-  RCB:'/src/assets/logos/rcb.png', KKR:'/src/assets/logos/kkr.png',
-  RR:'/src/assets/logos/rr.png',   PBKS:'/src/assets/logos/pbks.png',
-  DC:'/src/assets/logos/dc.png',   GT:'/src/assets/logos/gt.png',
-  LSG:'/src/assets/logos/lsg.png', SRH:'/src/assets/logos/srh.png',
+  CSK:'/src/assets/logos/csk_logo.png', MI:'/src/assets/logos/mi_logo.png',
+  RCB:'/src/assets/logos/rcb_logo.png', KKR:'/src/assets/logos/kkr_logo.png',
+  RR:'/src/assets/logos/rr_logo.png',   PBKS:'/src/assets/logos/pbks_logo.png',
+  DC:'/src/assets/logos/dc_logo.png',   GT:'/src/assets/logos/gt_logo.png',
+  LSG:'/src/assets/logos/lsg_logo.png', SRH:'/src/assets/logos/srh_logo.png',
 };
 const getLogo = (n) => n ? LOGO[n.toUpperCase()] || null : null;
 
