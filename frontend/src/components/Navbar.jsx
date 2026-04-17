@@ -120,11 +120,11 @@ const Navbar = () => {
                   <span className="font-black text-white group-hover:text-ipl-neon transition-colors">
                     {match.team2?.name} {match.score}/{match.wickets}
                   </span>
+                  <span className="text-gray-500 text-[10px]">({match.overs})</span>
                   <span className="text-gray-600 italic text-[10px]">v</span>
                   <span className="font-bold text-gray-400">
                     {match.team1?.name}{match.team1Score ? ` ${match.team1Score}` : ''}
                   </span>
-                  <span className="text-gray-500 text-[10px]">({match.overs})</span>
                 </>
               )}
             </div>
@@ -183,8 +183,8 @@ const Navbar = () => {
               </p>
               {match
                 ? <div className="flex justify-between items-end">
-                    <span className="text-2xl font-bold">{match.team2?.name} {match.score}/{match.wickets}</span>
-                    <span className="text-ipl-neon font-mono">{match.overs} ov</span>
+                    <span className="text-2xl font-bold">{match.team2?.name} {match.score}/{match.wickets} <span className="text-base font-normal text-ipl-neon">({match.overs} ov)</span></span>
+                    <span className="text-gray-400 font-mono text-sm">{match.team1?.name}{match.team1Score ? ` ${match.team1Score}` : ''}</span>
                   </div>
                 : <p className="text-gray-500 text-sm italic">
                     {isFetching ? 'Fetching live data…' : 'No match in progress'}
