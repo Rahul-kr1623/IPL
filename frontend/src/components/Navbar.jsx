@@ -33,6 +33,13 @@ const Navbar = () => {
   const isLive     = match?.status === 'LIVE';
   const isOffline  = fetchStatus === 'ERROR';
 
+  // currentInnings: 1 = team1 is batting (1st innings), 2 = team2 is batting (2nd innings)
+  const isFirstInnings = !match || match.currentInnings !== 2;
+  const battingTeam = match ? (isFirstInnings ? match.team1 : match.team2) : null;
+  const otherTeam   = match ? (isFirstInnings ? match.team2 : match.team1) : null;
+  // otherScore = the completed innings score of the non-batting team (only in 2nd innings)
+  const otherScore  = !isFirstInnings ? match?.team1Score : null;
+
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -118,12 +125,12 @@ const Navbar = () => {
               {match && (
                 <>
                   <span className="font-black text-white group-hover:text-ipl-neon transition-colors">
-                    {match.team2?.name} {match.score}/{match.wickets}
+                    {battingTeam?.name} {match.score}/{match.wickets}
                   </span>
                   <span className="text-gray-500 text-[10px]">({match.overs})</span>
                   <span className="text-gray-600 italic text-[10px]">v</span>
                   <span className="font-bold text-gray-400">
-                    {match.team1?.name}{match.team1Score ? ` ${match.team1Score}` : ''}
+                    {otherTeam?.name}{otherScore ? ` ${otherScore}` : ''}
                   </span>
                 </>
               )}
@@ -183,8 +190,8 @@ const Navbar = () => {
               </p>
               {match
                 ? <div className="flex justify-between items-end">
-                    <span className="text-2xl font-bold">{match.team2?.name} {match.score}/{match.wickets} <span className="text-base font-normal text-ipl-neon">({match.overs} ov)</span></span>
-                    <span className="text-gray-400 font-mono text-sm">{match.team1?.name}{match.team1Score ? ` ${match.team1Score}` : ''}</span>
+                    <span className="text-2xl font-bold">{battingTeam?.name} {match.score}/{match.wickets} <span className="text-base font-normal text-ipl-neon">({match.overs} ov)</span></span>
+                    <span className="text-gray-400 font-mono text-sm">{otherTeam?.name}{otherScore ? ` ${otherScore}` : ''}</span>
                   </div>
                 : <p className="text-gray-500 text-sm italic">
                     {isFetching ? 'Fetching live data…' : 'No match in progress'}
