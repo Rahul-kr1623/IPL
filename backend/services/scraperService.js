@@ -605,6 +605,9 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     commentary: commentary.slice(0, 10),
     crr, rrr,
     espnId,
+    // 1 = 1st innings in progress (team1 currently batting)
+    // 2 = 2nd innings in progress (team2 currently batting)
+    currentInnings: (firstInningsRuns && firstInningsRuns !== '' && firstInningsRuns !== 'null') ? 2 : 1,
     source: 'espn',
   };
 };
@@ -690,7 +693,7 @@ const cbProxyFetch = async () => {
   console.log(`  ✅ [CB-Proxy] team1(bat1st)=${team1Name} | team2(bat2nd)=${team2Name} | ${score}/${wickets} (${overs}) | ${status}`);
   if (batsmen.length) console.log(`     🏏 ${batsmen.map(b=>`${b.name}${b.onStrike?'*':''}: ${b.runs}(${b.balls})`).join(' | ')}`);
 
-  return {team1:{name:team1Name},team2:{name:team2Name},score,wickets,overs,team1Score:team1ScoreStr||null,team1Wickets:team1WktsStr||null,team1Overs:null,target:target||null,status,result,toss,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:['·','·','·','·','·','·'],batsmen,bowlers,commentary:[],crr,rrr,source:'cricbuzz-proxy'};
+  return {team1:{name:team1Name},team2:{name:team2Name},score,wickets,overs,team1Score:team1ScoreStr||null,team1Wickets:team1WktsStr||null,team1Overs:null,target:target||null,status,result,toss,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:['·','·','·','·','·','·'],batsmen,bowlers,commentary:[],crr,rrr,source:'cricbuzz-proxy',currentInnings:target?2:1};
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -799,7 +802,7 @@ const cbDirectFetch = async () => {
   if(status==='FINISHED'){const w=result.toUpperCase();if(w.includes(team1Name)){wP1=100;wP2=0;}else if(w.includes(team2Name)){wP2=100;wP1=0;}}
 
   console.log(`  ✅ [CB-Direct] team1(bat1st)=${team1Name} | team2=${team2Name} | ${score}/${wickets} (${overs}) | ${status}`);
-  return{team1:{name:team1Name},team2:{name:team2Name},score,wickets,overs,team1Score:t1Sc||null,team1Wickets:t1Wk||null,team1Overs:t1Ov||null,target:target||null,status,result,toss,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:recent.slice(0,6),batsmen:batsmen.slice(0,3),bowlers:bowlers.slice(0,2),commentary:commentary.slice(0,10),crr,rrr,source:'cricbuzz-api'};
+  return{team1:{name:team1Name},team2:{name:team2Name},score,wickets,overs,team1Score:t1Sc||null,team1Wickets:t1Wk||null,team1Overs:t1Ov||null,target:target||null,status,result,toss,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:recent.slice(0,6),batsmen:batsmen.slice(0,3),bowlers:bowlers.slice(0,2),commentary:commentary.slice(0,10),crr,rrr,source:'cricbuzz-api',currentInnings:(t1Sc&&t1Sc!=='')?2:1};
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -993,6 +996,6 @@ const browserFallback = async () => {
     let wP1=50,wP2=50;
     if(graw.rrr&&graw.crr&&graw.crr>0){const r=graw.rrr/graw.crr;wP2=r<0.5?88:r<0.75?78:r<0.9?66:r<1.0?55:r<1.1?46:r<1.3?37:18;wP1=100-wP2;}
     console.log(`  ✅ [Google] ${mm.team1} vs ${mm.team2} | ${graw.score}/${graw.wickets} (${normalizeOvers(graw.overs)})`);
-    return{team1:{name:team1n},team2:{name:team2n},score:graw.score,wickets:graw.wickets,overs:normalizeOvers(graw.overs),team1Score:null,team1Wickets:null,team1Overs:null,target:graw.target||null,status:graw.status,result:graw.result,toss:null,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:['·','·','·','·','·','·'],batsmen:[],bowlers:[],commentary:[],crr:graw.crr,rrr:graw.rrr,source:'google',lastUpdated:new Date()};
+    return{team1:{name:team1n},team2:{name:team2n},score:graw.score,wickets:graw.wickets,overs:normalizeOvers(graw.overs),team1Score:null,team1Wickets:null,team1Overs:null,target:graw.target||null,status:graw.status,result:graw.result,toss:null,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:['·','·','·','·','·','·'],batsmen:[],bowlers:[],commentary:[],crr:graw.crr,rrr:graw.rrr,source:'google',currentInnings:graw.target?2:1,lastUpdated:new Date()};
   } catch(e) { if(browser) await browser.close(); console.error('[Browser fatal]', e.message); return null; }
 };

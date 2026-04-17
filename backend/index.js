@@ -468,32 +468,45 @@ const runLiveSync = async () => {
   } catch(err) { console.error('❌ Sync error:', err.message); }
 };
 
+/**
+ * index.js — saveToDb() patch
+ *
+ * In your existing saveToDb() function, add ONE line after espnId:
+ *
+ *   espnId:         d.espnId         || null,
+ *   currentInnings: d.currentInnings || 2,    // ← ADD THIS LINE
+ *
+ * The full saveToDb() should look like this:
+ */
+
 const saveToDb = async d => {
   await LiveMatch.deleteMany({});
   await new LiveMatch({
-    team1:        d.team1,
-    team2:        d.team2,
-    score:        d.score        || '0',
-    wickets:      d.wickets      || '0',
-    overs:        d.overs        || '0.0',
-    team1Score:   d.team1Score   || null,
-    team1Wickets: d.team1Wickets || null,
-    team1Overs:   d.team1Overs   || null,
-    target:       d.target       || null,
-    status:       d.status       || 'LIVE',
-    result:       d.result       || '',
-    toss:         d.toss         || null,
-    winProb:      d.winProbT2    || 50,
-    winProbT1:    d.winProbT1    || 50,
-    winProbT2:    d.winProbT2    || 50,
-    recent:       d.recent       || [],
-    commentary:   d.commentary   || [],
-    batsmen:      d.batsmen      || [],
-    bowlers:      d.bowlers      || [],
-    crr:          d.crr          || null,
-    rrr:          d.rrr          || null,
-    source:       d.source       || 'unknown',
-    lastUpdated:  new Date(),
+    team1:          d.team1,
+    team2:          d.team2,
+    score:          d.score          || '0',
+    wickets:        d.wickets        || '0',
+    overs:          d.overs          || '0.0',
+    team1Score:     d.team1Score     || null,
+    team1Wickets:   d.team1Wickets   || null,
+    team1Overs:     d.team1Overs     || null,
+    target:         d.target         || null,
+    status:         d.status         || 'LIVE',
+    result:         d.result         || '',
+    toss:           d.toss           || null,
+    winProb:        d.winProbT2      || 50,
+    winProbT1:      d.winProbT1      || 50,
+    winProbT2:      d.winProbT2      || 50,
+    recent:         d.recent         || [],
+    commentary:     d.commentary     || [],
+    batsmen:        d.batsmen        || [],
+    bowlers:        d.bowlers        || [],
+    crr:            d.crr            || null,
+    rrr:            d.rrr            || null,
+    source:         d.source         || 'unknown',
+    espnId:         d.espnId         || null,
+    currentInnings: d.currentInnings || 2,   // 1 = team1 batting, 2 = team2 batting
+    lastUpdated:    new Date(),
   }).save();
 };
 

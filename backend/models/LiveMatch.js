@@ -39,6 +39,11 @@ const LiveMatchSchema = new mongoose.Schema({
   // ── twice in a season. Stored from scraperService espnGetScore return value. ──
   // ── Also add  espnId: d.espnId || null  inside saveToDb() in index.js.      ──
   espnId:      { type: String, default: null },
+  // currentInnings: 1 = 1st innings in progress (team1 currently batting)
+  //                 2 = 2nd innings in progress (team2 currently batting)
+  // Hero uses this to know which team to highlight on the RIGHT.
+  // Add  currentInnings: d.currentInnings || 2  in saveToDb() in index.js
+  currentInnings: { type: Number, default: 2 },
   lastUpdated: { type: Date, default: Date.now },
 }, { timestamps: true });
 

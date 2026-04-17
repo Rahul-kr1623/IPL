@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import {
-  Play, MessageSquare, Volume2, VolumeX, X, Pause,
-  Activity, RefreshCw, WifiOff, Clock, Trophy, BarChart2, Users, Zap
+  Play, Volume2, VolumeX, X, Pause,
+  Activity, RefreshCw, WifiOff, Clock, Trophy, BarChart2,
 } from 'lucide-react';
 import { useMatchContext } from '../context/MatchContext';
 import iplAudio from '../assets/_Ye_Khel_Hai_Sher_Jawano_Ka_Ipl_Ringtone_(by Fringster.com).mp3';
@@ -44,19 +44,18 @@ const LoadingCard = ({ icon: Icon = RefreshCw, label, sub }) => (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WIN PROBABILITY METER
-// team1 = batted first (left side), team2 = currently batting (right side)
-// winProbT1 = team1's win probability %, winProbT2 = team2's win probability %
+// leftTeam / rightTeam — whichever teams we decide to put left/right
+// leftProb / rightProb — their respective probabilities
 // ─────────────────────────────────────────────────────────────────────────────
-const WinProbMeter = ({ team1, team2, probT1, probT2 }) => {
-  const p1 = Math.max(0, Math.min(100, Math.round(probT1 ?? 50)));
-  const p2 = Math.max(0, Math.min(100, Math.round(probT2 ?? 50)));
+const WinProbMeter = ({ leftTeam, rightTeam, leftProb, rightProb }) => {
+  const p1 = Math.max(0, Math.min(100, Math.round(leftProb  ?? 50)));
+  const p2 = Math.max(0, Math.min(100, Math.round(rightProb ?? 50)));
   return (
     <div className="w-full space-y-2">
       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-        {/* team1 (bat first) on LEFT, team2 (currently batting) on RIGHT */}
-        <span className="text-indigo-400">{team1} <span className="text-white ml-1">{p1}%</span></span>
+        <span className="text-indigo-400">{leftTeam}  <span className="text-white ml-1">{p1}%</span></span>
         <span className="text-gray-600 text-[8px]">WIN PROBABILITY</span>
-        <span className="text-red-400">{p2}% <span className="text-white ml-1">{team2}</span></span>
+        <span className="text-red-400">{p2}% <span className="text-white ml-1">{rightTeam}</span></span>
       </div>
       <div className="relative h-3 rounded-full overflow-hidden bg-white/5 border border-white/10">
         <motion.div
@@ -80,101 +79,104 @@ const WinProbMeter = ({ team1, team2, probT1, probT2 }) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCORECARD MODAL
-// IMPORTANT: In the data model:
-//   team1 = batted FIRST  (their score = team1Score/Wickets/Overs)
-//   team2 = batting SECOND / currently batting (their score = score/wickets/overs)
-// So: "1st Innings" tab = team1's completed innings
-//     "2nd Innings" tab = team2's current/completed innings
+//
+// DATA MODEL (from backend):
+//   team1         = team that BATTED FIRST (always, regardless of innings)
+//   team2         = team that BATS SECOND  (always, regardless of innings)
+//   team1Score    = team1's completed 1st innings score (null during 1st innings)
+//   score/wickets = team currently batting's score
+//   currentInnings = 1 → team1 is currently batting
+//                    2 → team2 is currently batting
+//
+// Modal tabs:
+//   inn1 tab = team1's innings (1st innings)
+//   inn2 tab = team2's innings (2nd innings / current if in 2nd)
 // ─────────────────────────────────────────────────────────────────────────────
 const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) => {
-  const [tab, setTab] = useState('inn2'); // default to current innings (team2)
+  const inn = match.currentInnings ?? 2;
+  const [tab, setTab] = useState(inn === 1 ? 'inn1' : 'inn2');
 
   const isFinished = match.status === 'FINISHED' || match.status === 'RECENTLY FINISHED';
+  const isFirstInnings = inn === 1;
 
-  // team1 = batted first → 1st innings tab
-  // team2 = batting second → 2nd innings tab
-  const inn1Label = `${team1Name} Innings`; // 1st innings (completed)
-  const inn2Label = `${team2Name} Innings`; // 2nd innings (current)
-
-  const currentBatsmen = match.batsmen   || [];
-  const currentBowlers = match.bowlers   || [];
-
-  // First innings: team1's score
+  // team1 1st innings score
   const firstInningsScore = match.team1Score
-    ? `${match.team1Score}${match.team1Wickets ? '/' + match.team1Wickets : ''}${match.team1Overs ? ' (' + match.team1Overs + ')' : ''}`
+    ? `${match.team1Score}${match.team1Wickets ? '/' + match.team1Wickets : ''} (${match.team1Overs || '20.0'})`
+    : isFirstInnings ? `${match.score}/${match.wickets} (${match.overs})` : 'Yet to bat';
+
+  // team2 2nd innings score (only valid if in 2nd innings)
+  const secondInningsScore = !isFirstInnings
+    ? `${match.score}/${match.wickets} (${match.overs})`
     : 'Yet to bat';
 
-  const hasFirstInningsData = !!(match.team1Score && match.team1Score !== 'null' && match.team1Score !== '0');
+  const currentBatsmen = match.batsmen || [];
+  const currentBowlers = match.bowlers || [];
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
         className="absolute inset-0 bg-black/95 backdrop-blur-md cursor-pointer"
       />
-
-      {/* Modal */}
       <motion.div
         initial={{ scale: 0.92, opacity: 0, y: 24 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.92, opacity: 0, y: 24 }}
         className="relative w-full max-w-2xl max-h-[88vh] bg-[#0c0c14] border border-white/10 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden"
       >
-        {/* Close */}
         <button onClick={onClose}
           className="absolute top-5 right-5 z-10 p-2 hover:bg-white/10 rounded-full transition-colors">
           <X className="w-5 h-5 text-white" />
         </button>
 
-        {/* Header */}
+        {/* Header — always show team1 LEFT and team2 RIGHT in the modal */}
         <div className="p-6 pb-0 flex-shrink-0">
-          {/* Match summary — team1 (bat1st) on LEFT, team2 (bat2nd) on RIGHT */}
           <div className="flex justify-around items-center mb-5">
+            {/* team1 — LEFT — batted first */}
             <div className="text-center">
               {logo1 && <img src={logo1} className="w-12 mx-auto mb-1" alt={team1Name} />}
               <p className="text-xs font-black text-white">{team1Name}</p>
-              {/* team1 = batted first, show their completed score */}
               <p className="text-[10px] font-mono text-gray-400">{firstInningsScore}</p>
               <p className="text-[9px] text-gray-600 mt-0.5">1st Innings</p>
             </div>
+
+            {/* Centre */}
             <div className="text-center space-y-1">
               <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest
                 ${isFinished ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                 {match.status}
               </span>
-              {match.target && (
+              {match.target && !isFirstInnings && (
                 <p className="text-[9px] text-gray-500">Target: {match.target}</p>
               )}
               {match.result && (
                 <p className="text-green-400 font-black text-[10px] italic">{match.result}</p>
               )}
             </div>
+
+            {/* team2 — RIGHT — bats second */}
             <div className="text-center">
               {logo2 && <img src={logo2} className="w-12 mx-auto mb-1" alt={team2Name} />}
               <p className="text-xs font-black text-white">{team2Name}</p>
-              {/* team2 = batting second, show their current/final score */}
-              <p className="text-[10px] font-mono text-ipl-neon font-bold">
-                {match.score}/{match.wickets} ({match.overs})
-              </p>
+              <p className="text-[10px] font-mono text-ipl-neon font-bold">{secondInningsScore}</p>
               <p className="text-[9px] text-gray-600 mt-0.5">2nd Innings</p>
             </div>
           </div>
 
-          {/* Win probability bar */}
+          {/* Win probability — team1 left, team2 right */}
           <div className="mb-4">
             <WinProbMeter
-              team1={team1Name} team2={team2Name}
-              probT1={match.winProbT1} probT2={match.winProbT2}
+              leftTeam={team1Name}  leftProb={match.winProbT1}
+              rightTeam={team2Name} rightProb={match.winProbT2}
             />
           </div>
 
-          {/* Innings Tabs */}
+          {/* Tabs */}
           <div className="flex gap-1 bg-white/5 p-1 rounded-2xl mb-2">
             {[
-              { id: 'inn1', label: inn1Label },
-              { id: 'inn2', label: inn2Label },
+              { id: 'inn1', label: `${team1Name} Innings` },
+              { id: 'inn2', label: `${team2Name} Innings` },
             ].map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all
@@ -188,7 +190,7 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto p-6 pt-3" style={{ scrollbarWidth: 'none' }}>
 
-          {/* ── 1ST INNINGS TAB (team1 — batted first) ── */}
+          {/* ── INN1 TAB: team1's 1st innings ── */}
           {tab === 'inn1' && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
@@ -196,115 +198,10 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
                 <p className="text-2xl font-black text-ipl-neon font-mono">{firstInningsScore}</p>
               </div>
 
-              {hasFirstInningsData ? (
-                <div className="flex flex-col items-center gap-3 py-8 text-center">
-                  <BarChart2 className="w-8 h-8 text-gray-700" />
-                  <p className="text-xs text-gray-500 font-black uppercase tracking-widest">
-                    1st Innings Complete
-                  </p>
-                  <p className="text-[10px] text-gray-600 max-w-xs">
-                    Ball-by-ball breakdown for the completed innings isn't available from the live scraper.
-                  </p>
-                  <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/10 text-left text-[10px] w-full">
-                    <p className="text-gray-400 font-black mb-2">SUMMARY</p>
-                    <div className="flex justify-between py-1 border-b border-white/5">
-                      <span className="text-gray-500">Team</span>
-                      <span className="text-white font-bold">{team1Name}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-white/5">
-                      <span className="text-gray-500">Score</span>
-                      <span className="text-ipl-neon font-bold">{firstInningsScore}</span>
-                    </div>
-                    {match.target && (
-                      <div className="flex justify-between py-1">
-                        <span className="text-gray-500">Set target of</span>
-                        <span className="text-yellow-400 font-bold">{match.target}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 py-8 text-center">
-                  <Clock className="w-8 h-8 text-gray-700" />
-                  <p className="text-xs text-gray-500 font-black uppercase tracking-widest">
-                    Innings Not Started
-                  </p>
-                  <p className="text-[10px] text-gray-600">
-                    {team1Name} is yet to bat.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── 2ND INNINGS TAB (team2 — currently batting) ── */}
-          {tab === 'inn2' && (
-            <div className="space-y-5">
-              {/* Current score summary */}
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
-                <div>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">
-                    {team2Name} — {isFinished ? 'Final Score' : '2nd Innings'}
-                  </p>
-                  <p className="text-2xl font-black text-ipl-neon font-mono mt-1">
-                    {match.score}/{match.wickets}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[9px] text-gray-500 uppercase tracking-widest">Overs</p>
-                  <p className="text-lg font-black text-white">{match.overs}</p>
-                  {match.crr && !isFinished && (
-                    <p className="text-[9px] text-gray-500 mt-1">CRR: {match.crr}</p>
-                  )}
-                  {match.rrr && !isFinished && (
-                    <p className="text-[9px] text-red-400">RRR: {match.rrr}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Target info */}
-              {match.target && !isFinished && (
-                <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex justify-between text-[10px]">
-                  <div className="text-center">
-                    <p className="text-gray-500">Target</p>
-                    <p className="text-yellow-400 font-black text-sm">{match.target}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-gray-500">Need</p>
-                    <p className="text-white font-black text-sm">
-                      {Math.max(0, match.target - parseInt(match.score || 0))} runs
-                    </p>
-                  </div>
-                  {match.overs && (
-                    <div className="text-center">
-                      <p className="text-gray-500">Balls left</p>
-                      <p className="text-white font-black text-sm">
-                        {Math.max(0, Math.floor((20 - parseFloat(match.overs || 0)) * 6))}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Last 6 balls */}
-              {match.recent?.some(b => b !== '·') && (
-                <div>
-                  <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Last 6 Balls</p>
-                  <div className="flex gap-2">
-                    {match.recent.map((b, i) => (
-                      <div key={i}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black border ${ballCls(b)}`}>
-                        {b}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Live batting table */}
-              {currentBatsmen.length > 0 ? (
-                <div>
-                  <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Batting</p>
+              {/* If currently in 1st innings, show live batting table */}
+              {isFirstInnings && currentBatsmen.length > 0 ? (
+                <>
+                  <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest">Batting</p>
                   <table className="w-full text-left text-xs">
                     <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
                       <tr>
@@ -334,52 +231,225 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
                       ))}
                     </tbody>
                   </table>
-                </div>
-              ) : (
+                  {currentBowlers.length > 0 && (
+                    <>
+                      <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mt-4 mb-2">Bowling</p>
+                      <table className="w-full text-left text-xs">
+                        <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
+                          <tr>
+                            <th className="py-2 px-1">Bowler</th>
+                            <th className="py-2 px-1 text-right">O</th>
+                            <th className="py-2 px-1 text-right">M</th>
+                            <th className="py-2 px-1 text-right">R</th>
+                            <th className="py-2 px-1 text-right">W</th>
+                            <th className="py-2 px-1 text-right">Eco</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {currentBowlers.map((b, i) => (
+                            <tr key={i} className="hover:bg-white/5">
+                              <td className="py-2.5 px-1 font-bold text-white">{b.name}</td>
+                              <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.overs}</td>
+                              <td className="py-2.5 px-1 text-right text-gray-500">{b.maidens ?? 0}</td>
+                              <td className="py-2.5 px-1 text-right text-white">{b.runs}</td>
+                              <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.wickets}</td>
+                              <td className="py-2.5 px-1 text-right text-gray-400">{b.economy ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+                </>
+              ) : isFirstInnings ? (
                 <div className="flex flex-col items-center gap-2 py-6 text-center">
                   <Activity className="w-6 h-6 text-gray-700 animate-pulse" />
-                  <p className="text-[10px] text-gray-600">
-                    Live batter data will appear within 2 scrape cycles (~80s).
+                  <p className="text-[10px] text-gray-600">Live batter data will appear within 2 scrape cycles (~80s).</p>
+                </div>
+              ) : (
+                // 1st innings is done — show summary
+                <div className="flex flex-col items-center gap-3 py-6 text-center">
+                  <BarChart2 className="w-8 h-8 text-gray-700" />
+                  <p className="text-xs text-gray-500 font-black uppercase tracking-widest">1st Innings Complete</p>
+                  <p className="text-[10px] text-gray-600 max-w-xs">
+                    Ball-by-ball breakdown for the completed innings isn't available from the live scraper.
                   </p>
+                  <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/10 text-left text-[10px] w-full">
+                    <p className="text-gray-400 font-black mb-2">SUMMARY</p>
+                    <div className="flex justify-between py-1 border-b border-white/5">
+                      <span className="text-gray-500">Team</span>
+                      <span className="text-white font-bold">{team1Name}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-white/5">
+                      <span className="text-gray-500">Score</span>
+                      <span className="text-ipl-neon font-bold">{firstInningsScore}</span>
+                    </div>
+                    {match.target && (
+                      <div className="flex justify-between py-1">
+                        <span className="text-gray-500">Set target of</span>
+                        <span className="text-yellow-400 font-bold">{match.target}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
+            </div>
+          )}
 
-              {/* Live bowling table */}
-              {currentBowlers.length > 0 && (
-                <div>
-                  <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Bowling</p>
-                  <table className="w-full text-left text-xs">
-                    <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
-                      <tr>
-                        <th className="py-2 px-1">Bowler</th>
-                        <th className="py-2 px-1 text-right">O</th>
-                        <th className="py-2 px-1 text-right">M</th>
-                        <th className="py-2 px-1 text-right">R</th>
-                        <th className="py-2 px-1 text-right">W</th>
-                        <th className="py-2 px-1 text-right">Eco</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {currentBowlers.map((b, i) => (
-                        <tr key={i} className="hover:bg-white/5">
-                          <td className="py-2.5 px-1 font-bold text-white">{b.name}</td>
-                          <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.overs}</td>
-                          <td className="py-2.5 px-1 text-right text-gray-500">{b.maidens ?? 0}</td>
-                          <td className="py-2.5 px-1 text-right text-white">{b.runs}</td>
-                          <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.wickets}</td>
-                          <td className="py-2.5 px-1 text-right text-gray-400">{b.economy ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+          {/* ── INN2 TAB: team2's 2nd innings ── */}
+          {tab === 'inn2' && (
+            <div className="space-y-5">
+              {!isFirstInnings ? (
+                <>
+                  {/* Score summary */}
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                    <div>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">
+                        {team2Name} — {isFinished ? 'Final Score' : '2nd Innings'}
+                      </p>
+                      <p className="text-2xl font-black text-ipl-neon font-mono mt-1">
+                        {match.score}/{match.wickets}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest">Overs</p>
+                      <p className="text-lg font-black text-white">{match.overs}</p>
+                      {match.crr && !isFinished && (
+                        <p className="text-[9px] text-gray-500 mt-1">CRR: {match.crr}</p>
+                      )}
+                      {match.rrr && !isFinished && (
+                        <p className="text-[9px] text-red-400">RRR: {match.rrr}</p>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Finished note */}
-              {isFinished && match.result && (
-                <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">
-                  <Trophy className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                  <p className="text-green-400 font-black text-sm italic">{match.result}</p>
+                  {/* Target */}
+                  {match.target && !isFinished && (
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex justify-between text-[10px]">
+                      <div className="text-center">
+                        <p className="text-gray-500">Target</p>
+                        <p className="text-yellow-400 font-black text-sm">{match.target}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-500">Need</p>
+                        <p className="text-white font-black text-sm">
+                          {Math.max(0, match.target - parseInt(match.score || 0))} runs
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-500">Balls left</p>
+                        <p className="text-white font-black text-sm">
+                          {Math.max(0, Math.floor((20 - parseFloat(match.overs || 0)) * 6))}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Last 6 balls */}
+                  {match.recent?.some(b => b !== '·') && (
+                    <div>
+                      <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Last 6 Balls</p>
+                      <div className="flex gap-2">
+                        {match.recent.map((b, i) => (
+                          <div key={i}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black border ${ballCls(b)}`}>
+                            {b}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Batsmen */}
+                  {currentBatsmen.length > 0 ? (
+                    <div>
+                      <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Batting</p>
+                      <table className="w-full text-left text-xs">
+                        <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
+                          <tr>
+                            <th className="py-2 px-1">Batter</th>
+                            <th className="py-2 px-1 text-right">R</th>
+                            <th className="py-2 px-1 text-right">B</th>
+                            <th className="py-2 px-1 text-right">4s</th>
+                            <th className="py-2 px-1 text-right">6s</th>
+                            <th className="py-2 px-1 text-right">SR</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {currentBatsmen.map((bat, i) => (
+                            <tr key={i} className="hover:bg-white/5">
+                              <td className="py-2.5 px-1 font-bold text-white flex items-center gap-1.5">
+                                {bat.onStrike && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse inline-block flex-shrink-0" />
+                                )}
+                                {bat.name}
+                              </td>
+                              <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{bat.runs}</td>
+                              <td className="py-2.5 px-1 text-right font-mono text-gray-300">{bat.balls}</td>
+                              <td className="py-2.5 px-1 text-right text-amber-400">{bat.fours ?? '—'}</td>
+                              <td className="py-2.5 px-1 text-right text-yellow-400">{bat.sixes ?? '—'}</td>
+                              <td className="py-2.5 px-1 text-right text-gray-400">{bat.sr ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 py-6 text-center">
+                      <Activity className="w-6 h-6 text-gray-700 animate-pulse" />
+                      <p className="text-[10px] text-gray-600">
+                        Live batter data will appear within 2 scrape cycles (~80s).
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Bowlers */}
+                  {currentBowlers.length > 0 && (
+                    <div>
+                      <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Bowling</p>
+                      <table className="w-full text-left text-xs">
+                        <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
+                          <tr>
+                            <th className="py-2 px-1">Bowler</th>
+                            <th className="py-2 px-1 text-right">O</th>
+                            <th className="py-2 px-1 text-right">M</th>
+                            <th className="py-2 px-1 text-right">R</th>
+                            <th className="py-2 px-1 text-right">W</th>
+                            <th className="py-2 px-1 text-right">Eco</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {currentBowlers.map((b, i) => (
+                            <tr key={i} className="hover:bg-white/5">
+                              <td className="py-2.5 px-1 font-bold text-white">{b.name}</td>
+                              <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.overs}</td>
+                              <td className="py-2.5 px-1 text-right text-gray-500">{b.maidens ?? 0}</td>
+                              <td className="py-2.5 px-1 text-right text-white">{b.runs}</td>
+                              <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.wickets}</td>
+                              <td className="py-2.5 px-1 text-right text-gray-400">{b.economy ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Result */}
+                  {isFinished && match.result && (
+                    <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">
+                      <Trophy className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                      <p className="text-green-400 font-black text-sm italic">{match.result}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                // 2nd innings hasn't started yet (we're in 1st innings)
+                <div className="flex flex-col items-center gap-3 py-12 text-center">
+                  <Clock className="w-8 h-8 text-gray-700" />
+                  <p className="text-xs text-gray-500 font-black uppercase tracking-widest">Not Yet Started</p>
+                  <p className="text-[10px] text-gray-600">
+                    {team2Name} will bat in the 2nd innings.
+                  </p>
                 </div>
               )}
             </div>
@@ -393,15 +463,25 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HERO COMPONENT
-// Layout:
-//   LEFT  = team1 (batted first, dimmed, shows their completed score)
-//   RIGHT = team2 (currently batting, highlighted, shows live score)
-//   CENTRE = team2's current score (the "big number")
+//
+// ╔═══════════════════════════════════════════════════════════════════╗
+// ║  LAYOUT RULE — which team goes LEFT vs RIGHT:                    ║
+// ║                                                                   ║
+// ║  currentInnings === 1  (1st innings in progress):                 ║
+// ║    LEFT  = team2  (yet to bat, dimmed)                            ║
+// ║    RIGHT = team1  (currently batting, highlighted)                ║
+// ║    CENTRE big score = team1's live score                          ║
+// ║                                                                   ║
+// ║  currentInnings === 2  (2nd innings in progress / finished):      ║
+// ║    LEFT  = team1  (batted first, dimmed, shows completed score)   ║
+// ║    RIGHT = team2  (currently batting / chased, highlighted)       ║
+// ║    CENTRE big score = team2's live score                          ║
+// ╚═══════════════════════════════════════════════════════════════════╝
 // ─────────────────────────────────────────────────────────────────────────────
 const Hero = () => {
-  const [isPlaying,  setIsPlaying]  = useState(false);
-  const [isMuted,    setIsMuted]    = useState(false);
-  const [showModal,  setShowModal]  = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted,   setIsMuted]   = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const audioRef = useRef(new Audio(iplAudio));
 
   const { state } = useMatchContext();
@@ -426,41 +506,54 @@ const Hero = () => {
     mouseY.set(e.clientY - (r.top + r.height / 2));
   };
 
-  // team1 = batted first (LEFT, dimmed)
-  // team2 = currently batting (RIGHT, highlighted)
-  const t1 = match?.team1?.name || '';  // batted first
-  const t2 = match?.team2?.name || '';  // currently batting
-  const logo1 = getLogo(t1);  // left team logo
-  const logo2 = getLogo(t2);  // right team logo
+  // From the data model:
+  //   team1 = always the team that batted/will bat FIRST
+  //   team2 = always the team that bats/batted SECOND
+  const t1 = match?.team1?.name || '';
+  const t2 = match?.team2?.name || '';
+
+  // currentInnings tells us who is currently batting:
+  //   1 → team1 is currently batting (1st innings)
+  //   2 → team2 is currently batting (2nd innings)
+  const currentInnings = match?.currentInnings ?? 2;
+
+  // ── Determine LEFT and RIGHT teams ────────────────────────────────────────
+  // Convention: LEFT = not currently batting (dimmed), RIGHT = currently batting (highlighted)
+  const leftTeam  = currentInnings === 1 ? t2 : t1;  // not batting → LEFT
+  const rightTeam = currentInnings === 1 ? t1 : t2;  // batting now → RIGHT
+  const leftLogo  = getLogo(leftTeam);
+  const rightLogo = getLogo(rightTeam);
+
+  // Left team's score display
+  const leftScoreDisplay = currentInnings === 1
+    ? null  // left team (t2) hasn't batted yet
+    : (match?.team1Score
+        ? `${match.team1Score}/${match.team1Wickets || ''} (${match.team1Overs || '20.0'})`
+        : null);
+
+  // Right team is always the one currently batting → big centre score
+  // Win probability: left team's prob, right team's prob
+  const leftProb  = currentInnings === 1 ? (match?.winProbT2 ?? 50) : (match?.winProbT1 ?? 50);
+  const rightProb = currentInnings === 1 ? (match?.winProbT1 ?? 50) : (match?.winProbT2 ?? 50);
 
   const isLive     = match?.status === 'LIVE';
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
   const isBreak    = match?.status === 'INNINGS BREAK';
   const isLoading  = (fetchStatus === 'LOADING' || fetchStatus === 'IDLE') && !match;
-  const isWarmUp   = fetchStatus === 'WARMING_UP' && !match;
   const isError    = fetchStatus === 'ERROR' && !match;
 
-  // Win probability — from backend, correctly assigned
-  // winProbT1 = team1's (batted first) probability
-  // winProbT2 = team2's (currently batting) probability
-  let probT1 = match?.winProbT1 ?? 50;
-  let probT2 = match?.winProbT2 ?? 50;
-
-  // Override for finished matches
+  // Override prob for finished match
+  let finalLeftProb  = leftProb;
+  let finalRightProb = rightProb;
   if (isFinished && match?.result) {
     const w = (match.result || '').toUpperCase();
-    if (t1 && w.includes(t1.toUpperCase())) { probT1 = 100; probT2 = 0; }
-    else if (t2 && w.includes(t2.toUpperCase())) { probT2 = 100; probT1 = 0; }
+    if (leftTeam && w.includes(leftTeam.toUpperCase()))       { finalLeftProb = 100;  finalRightProb = 0; }
+    else if (rightTeam && w.includes(rightTeam.toUpperCase())) { finalRightProb = 100; finalLeftProb = 0; }
   }
 
   // Batters sorted: striker first
   const batters = [...(match?.batsmen || [])].sort((a, b) => (b.onStrike ? 1 : 0) - (a.onStrike ? 1 : 0));
   const bowler  = match?.bowlers?.[0] || null;
-
-  // First innings score display for team1 (left side)
-  const team1InningsDisplay = match?.team1Score
-    ? `${match.team1Score}${match.team1Wickets ? '/' + match.team1Wickets : ''} (${match.team1Overs || '20.0'})`
-    : null;
 
   return (
     <section
@@ -483,9 +576,8 @@ const Hero = () => {
         className="w-full max-w-6xl glass rounded-[4rem] p-10 md:p-16 relative border border-white/10 shadow-2xl overflow-hidden"
       >
         {/* Loading/error/empty states */}
-        {isLoading  && <LoadingCard label="Connecting to live feed…" sub="First load takes ~30s" />}
-        {isWarmUp   && <LoadingCard icon={Activity} label="Scraper warming up…" />}
-        {isError    && !match && (
+        {isLoading && <LoadingCard label="Connecting to live feed…" sub="First load takes ~30s" />}
+        {isError && !match && (
           <div className="flex flex-col items-center gap-4 py-20 text-center">
             <WifiOff className="w-12 h-12 text-red-500" />
             <p className="text-white font-black text-base uppercase tracking-widest">Connection Error</p>
@@ -551,28 +643,29 @@ const Hero = () => {
               ))}
             </div>
 
-            {/* Scoreboard */}
+            {/* ── SCOREBOARD ── */}
             <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-8"
               style={{ transform:'translateZ(100px)' }}>
 
-              {/* LEFT: team1 — batted first (dimmed) */}
+              {/* LEFT — not currently batting (dimmed) */}
               <div className="text-center opacity-40 hover:opacity-70 transition-opacity">
-                {logo1
-                  ? <img src={logo1} alt={t1} className="w-28 md:w-36 mx-auto drop-shadow-2xl" />
+                {leftLogo
+                  ? <img src={leftLogo} alt={leftTeam} className="w-28 md:w-36 mx-auto drop-shadow-2xl" />
                   : <div className="w-32 h-20 mx-auto flex items-center justify-center">
-                      <span className="text-3xl font-black text-gray-400">{t1}</span>
+                      <span className="text-3xl font-black text-gray-400">{leftTeam}</span>
                     </div>}
-                <h2 className="text-lg font-bold mt-3 tracking-widest text-gray-400 uppercase">{t1}</h2>
-                {/* Show team1's completed innings score */}
-                {team1InningsDisplay
-                  ? <p className="text-sm font-mono mt-1 text-gray-500">{team1InningsDisplay}</p>
-                  : <p className="text-xs text-gray-600 mt-1">1st Innings</p>
+                <h2 className="text-lg font-bold mt-3 tracking-widest text-gray-400 uppercase">{leftTeam}</h2>
+                {leftScoreDisplay
+                  ? <p className="text-sm font-mono mt-1 text-gray-500">{leftScoreDisplay}</p>
+                  : <p className="text-xs text-gray-600 mt-1">
+                      {currentInnings === 1 ? 'Yet to bat' : '1st Innings'}
+                    </p>
                 }
               </div>
 
-              {/* CENTRE: live score (team2's current score) */}
+              {/* CENTRE — big live score (always the currently batting team's score) */}
               <div className="text-center">
-                {match.target && !isFinished && (
+                {match.target && currentInnings === 2 && !isFinished && (
                   <p className="text-[10px] font-mono text-gray-500 mb-1 uppercase tracking-widest">
                     Target <span className="text-white">{match.target}</span>
                     {match.rrr && <span className="ml-3 text-red-400">RRR {match.rrr}</span>}
@@ -598,18 +691,20 @@ const Hero = () => {
                 )}
               </div>
 
-              {/* RIGHT: team2 — currently batting (highlighted) */}
+              {/* RIGHT — currently batting (highlighted) */}
               <div className="text-center">
                 <div className="relative">
-                  {logo2
-                    ? <img src={logo2} alt={t2}
+                  {rightLogo
+                    ? <img src={rightLogo} alt={rightTeam}
                         className={`w-28 md:w-40 mx-auto drop-shadow-2xl ${isLive ? 'animate-pulse' : ''}`} />
                     : <div className="w-32 h-20 mx-auto flex items-center justify-center">
-                        <span className="text-3xl font-black text-white">{t2}</span>
+                        <span className="text-3xl font-black text-white">{rightTeam}</span>
                       </div>}
                   {isLive && <Activity className="absolute -top-2 -right-2 w-5 h-5 text-ipl-neon animate-bounce" />}
                 </div>
-                <h2 className="text-xl font-black mt-3 tracking-tighter text-white uppercase italic">{t2}</h2>
+                <h2 className="text-xl font-black mt-3 tracking-tighter text-white uppercase italic">
+                  {rightTeam}
+                </h2>
                 <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase
                   ${isFinished ? 'bg-green-500/20 text-green-400'
                   : isBreak    ? 'bg-yellow-500/20 text-yellow-400'
@@ -619,10 +714,12 @@ const Hero = () => {
               </div>
             </div>
 
-            {/* Win probability meter */}
+            {/* Win probability — leftTeam on left, rightTeam on right */}
             <div className="mb-8 px-2" style={{ transform:'translateZ(60px)' }}>
-              {/* team1 on left, team2 on right — probT1 is team1's probability */}
-              <WinProbMeter team1={t1} team2={t2} probT1={probT1} probT2={probT2} />
+              <WinProbMeter
+                leftTeam={leftTeam}   leftProb={finalLeftProb}
+                rightTeam={rightTeam} rightProb={finalRightProb}
+              />
             </div>
 
             {/* Scorecard button */}
@@ -634,7 +731,7 @@ const Hero = () => {
               </button>
             </div>
 
-            {/* Batter / Bowler HUD — 3 columns */}
+            {/* Batter / Bowler HUD */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ transform:'translateZ(40px)' }}>
               {/* Striker */}
               <div className="glass bg-white/5 p-5 rounded-[1.5rem] border border-white/10 flex items-center justify-between">
@@ -650,7 +747,9 @@ const Hero = () => {
                 </div>
                 {batters[0]
                   ? <div className="text-right">
-                      <span className="text-lg font-black text-ipl-neon">{batters[0].runs}{batters[0].onStrike ? '*' : ''}</span>
+                      <span className="text-lg font-black text-ipl-neon">
+                        {batters[0].runs}{batters[0].onStrike ? '*' : ''}
+                      </span>
                       <p className="text-[9px] text-gray-500">{batters[0].balls} (B)</p>
                     </div>
                   : <span className="text-gray-700 text-sm">—</span>}
@@ -699,19 +798,19 @@ const Hero = () => {
         )}
       </motion.div>
 
-      {/* Scorecard Modal */}
+      {/* Scorecard Modal — always passes team1/team2 in canonical order */}
       <AnimatePresence>
         {showModal && match && (
           <ScorecardModal
             match={match}
             onClose={() => setShowModal(false)}
-            team1Name={t1}  team2Name={t2}
-            logo1={logo1}   logo2={logo2}
+            team1Name={t1}          team2Name={t2}
+            logo1={getLogo(t1)}     logo2={getLogo(t2)}
           />
         )}
       </AnimatePresence>
 
-      {/* Floating controls */}
+      {/* Floating audio controls */}
       <div className="absolute bottom-12 right-12 flex flex-col gap-5 z-30">
         <button onClick={() => setIsPlaying(!isPlaying)}
           className={`w-14 h-14 rounded-full glass flex items-center justify-center border border-white/10
