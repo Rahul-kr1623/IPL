@@ -1,26 +1,26 @@
 /**
- * scraperService.js — COMPLETE FIX
+ * scraperService.js — COMPLETE FIX v2
  *
- * ISSUES FROM SCREENSHOTS:
- * 1. CSK showing 0/0 as 1st innings while KKR 160/7 is current score
- *    → team1/team2 assignment is wrong. ESPN returns bowlingTeam first in competitors.
- *    → Must use toss + innings count to determine who batted first.
+ * FIXES:
+ * 1. team1/team2 inversion — ESPN competitor[0] is NOT always batting first.
+ *    We now use innings array ordering exclusively to determine who batted first.
+ *    inn[0].team = batted first = team1
+ *    inn[1].team = currently batting = team2
  *
- * 2. Batsmen/bowler "Awaiting" — ESPN batterBoxScores is empty for cricket.
- *    → Real data is in gpkg.leaders[] or gpkg.scoringPlays[].participants
- *    → Added ESPN dump route to see actual JSON structure
+ * 2. Batsmen/bowler always "Awaiting" — ESPN innings[].batting.batsmen is empty
+ *    for cricket. Fixed by reading from batterBoxScores with active flag, and
+ *    from competitors[].athletes as fallback.
  *
- * 3. Win probability stuck at 50-50
- *    → ESPN doesn't provide CRR/RRR directly; must compute from score + overs
+ * 3. Win probability inverted — now correctly tied to team1 (bat first) and
+ *    team2 (chasing).
  *
- * 4. Orange/Purple cap + Points table — separate dedicated scraper
- *    → Uses ESPN IPL series stats endpoint
+ * 4. team1Score showing "Yet to bat" — ensured team1Score is always populated
+ *    from inn[0] when 2 innings exist.
  *
- * TEAM1/TEAM2 MODEL (matches frontend expectations):
- *    team1 = team that BATTED FIRST (1st innings)
- *    team1Score/Wickets/Overs = their completed innings
- *    team2 = team currently BATTING (chasing in 2nd innings)
- *    score/wickets/overs = current live score
+ * TEAM MODEL (never changes):
+ *   team1 = batted FIRST  → team1Score/Wickets/Overs = their completed score
+ *   team2 = batting SECOND (currently batting / chasing)
+ *   score/wickets/overs = team2's current live score
  */
 
 import https from 'https';
@@ -47,9 +47,8 @@ const normalizeOvers = (raw) => {
   const s = String(raw).trim();
   if (!s || s === 'null') return '0.0';
   if (/^\d+$/.test(s)) {
-    // Pure integer — could be total balls
     const n = parseInt(s);
-    if (n <= 20) return `${n}.0`; // treat as overs
+    if (n <= 20) return `${n}.0`;
     const ov = Math.floor(n / 6);
     const b  = n % 6;
     return ov >= 20 ? '20.0' : `${ov}.${b}`;
@@ -123,11 +122,8 @@ const toTeam = (s = '') => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ESPN SCRAPER — primary source
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Find live IPL match ID
 const espnFindMatch = async () => {
   console.log('[ESPN] Finding match...');
-  // Try personalized header first
   const hd = await fetchJSON(
     'https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta',
     {}, 'ESPN header'
@@ -148,7 +144,6 @@ const espnFindMatch = async () => {
       }
     }
   }
-  // Fallback scoreboard
   const sb = await fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`, {}, 'ESPN scoreboard');
   for (const ev of (sb?.events || [])) {
     const comp = ev.competitions?.[0];
@@ -162,7 +157,6 @@ const espnFindMatch = async () => {
   return null;
 };
 
-// Get full match data from ESPN summary
 const espnGetScore = async ({ espnId, compA, compB }) => {
   const summary = await fetchJSON(
     `https://site.web.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/summary?contentorigin=espn&event=${espnId}&lang=en&region=in`,
@@ -170,11 +164,10 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
   );
   if (!summary) return null;
 
-  const gpkg  = summary.gamepackageJSON || {};
+  const gpkg   = summary.gamepackageJSON || {};
   const header = summary.header?.competitions?.[0];
   if (!header) return null;
 
-  // Log all keys to understand structure
   console.log(`  [ESPN] gpkg keys: [${Object.keys(gpkg).join(', ')}]`);
 
   // ── STATUS ─────────────────────────────────────────────────────────────────
@@ -182,37 +175,20 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
   const stDetail = (stType.detail || stType.shortDetail || '').toUpperCase();
   const stName   = (stType.name || '').toUpperCase();
   let status = 'LIVE', result = '';
-  if (stDetail.includes('RAIN') || stDetail.includes('HALT'))         status = 'RAIN DELAY';
+  if (stDetail.includes('RAIN') || stDetail.includes('HALT'))                status = 'RAIN DELAY';
   else if (stDetail.includes('INNINGS BREAK') || stDetail.includes('BREAK')) status = 'INNINGS BREAK';
-  else if (stName.includes('FINAL') || stType.completed === true)     status = 'FINISHED';
+  else if (stName.includes('FINAL') || stType.completed === true)             status = 'FINISHED';
   if (status === 'FINISHED') result = header.notes?.[0]?.headline || stDetail;
 
-  // ── TOSS — determines who batted first ────────────────────────────────────
-  let toss = null, battingFirstTeam = null;
-  const tossNote = (header.notes || []).find(n =>
-    /(toss|chose|elected|opt)/i.test(n.headline || '')
-  );
-  if (tossNote) {
-    toss = tossNote.headline;
-    // "KKR won the toss and elected to bat"
-    const batM  = toss.match(new RegExp(`(${TEAMS.join('|')}).*?(?:elected|chose|opt).*?to\\s+bat`, 'i'));
-    const bowlM = toss.match(new RegExp(`(${TEAMS.join('|')}).*?(?:elected|chose|opt).*?to\\s+(?:bowl|field)`, 'i'));
-    if (batM)  battingFirstTeam = toTeam(batM[1]);
-    else if (bowlM) {
-      const bowlFirst = toTeam(bowlM[1]);
-      battingFirstTeam = bowlFirst === compA ? compB : compA;
-    }
-    console.log(`  [ESPN] Toss: "${toss.substring(0,60)}" → batFirst:${battingFirstTeam}`);
-  }
+  // ── TOSS NOTE (for display only, not for team assignment) ─────────────────
+  const tossNote = (header.notes || []).find(n => /(toss|chose|elected|opt)/i.test(n.headline || ''));
+  const toss = tossNote?.headline || null;
 
-  // ── COMPETITORS ────────────────────────────────────────────────────────────
+  // ── COMPETITORS (raw ESPN order — do NOT use for batting-first logic) ──────
   const comp0 = header.competitors?.[0];
   const comp1 = header.competitors?.[1];
   const ct0   = toTeam(comp0?.team?.displayName || '') || compA;
   const ct1   = toTeam(comp1?.team?.displayName || '') || compB;
-  const sc0   = comp0?.score || '';
-  const sc1   = comp1?.score || '';
-  console.log(`  [ESPN] Competitors: ${ct0}="${sc0}" | ${ct1}="${sc1}"`);
 
   // Parse score string "160/7" or "160/7 (20)"
   const parseScoreStr = s => {
@@ -221,144 +197,145 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     if (!m) return null;
     return { runs: m[1], wickets: m[2], overs: m[3] ? normalizeOvers(m[3]) : null };
   };
-  const ps0 = parseScoreStr(sc0);
-  const ps1 = parseScoreStr(sc1);
 
-  // ── LINESCORE ─────────────────────────────────────────────────────────────
-  const linescore = gpkg.linescore || {};
-  const lines = linescore.lines || linescore.periods || [];
-  console.log(`  [ESPN] linescore.lines: ${lines.length}`);
-  lines.forEach((l, i) => console.log(`    line[${i}]: team="${l.displayName}" runs=${l.runs} wkts=${l.wickets} ov=${l.overs} val=${l.value}`));
-
-  // ── INNINGS from gpkg ─────────────────────────────────────────────────────
+  // ── INNINGS ARRAY — THE AUTHORITATIVE SOURCE ──────────────────────────────
+  // inn[0] = 1st innings team (batted first)  → team1
+  // inn[1] = 2nd innings team (batting second) → team2
   const inningsArr = gpkg.innings || [];
   console.log(`  [ESPN] gpkg.innings: ${inningsArr.length}`);
   inningsArr.forEach((inn, i) => {
-    console.log(`    inn[${i}]: team="${inn.team?.displayName}" keys=[${Object.keys(inn).join(',')}]`);
-    if (inn.batting) console.log(`      batting keys=[${Object.keys(inn.batting).join(',')}]`);
+    const batTeam = toTeam(inn.team?.displayName || inn.team?.abbreviation || '');
+    console.log(`    inn[${i}]: team="${inn.team?.displayName}" (${batTeam}) keys=[${Object.keys(inn).join(',')}]`);
   });
 
-  // ── DETERMINE SCORES ──────────────────────────────────────────────────────
+  // ── LINESCORE as secondary source ─────────────────────────────────────────
+  const linescore = gpkg.linescore || {};
+  const lines = linescore.lines || linescore.periods || [];
+
   let score = '0', wickets = '0', overs = '0.0';
-  let firstInningsTeam = null, firstInningsRuns = null, firstInningsWkts = null, firstInningsOvers = null;
-  let currentBattingTeam = null;
+  let team1Name = null, team2Name = null;
+  let firstInningsRuns = null, firstInningsWkts = null, firstInningsOvers = null;
   let target = null;
 
   if (inningsArr.length >= 2) {
-    // Two innings — determine which is complete and which is current
-    const inn1 = inningsArr[0];
-    const inn2 = inningsArr[1];
-    const inn1Team = toTeam(inn1.team?.displayName || inn1.team?.abbreviation || '') || ct0;
-    const inn2Team = toTeam(inn2.team?.displayName || inn2.team?.abbreviation || '') || ct1;
+    // ── GOLDEN PATH: two innings exist ────────────────────────────────────
+    const inn1 = inningsArr[0];  // batted first
+    const inn2 = inningsArr[1];  // batting second
 
-    firstInningsTeam    = inn1Team;
-    currentBattingTeam  = inn2Team;
+    team1Name = toTeam(inn1.team?.displayName || inn1.team?.abbreviation || '') || ct0;
+    team2Name = toTeam(inn2.team?.displayName || inn2.team?.abbreviation || '') || (team1Name === ct0 ? ct1 : ct0);
 
-    // First innings score
+    // First innings score (from inn[0])
     const b1 = inn1.batting || inn1;
     firstInningsRuns  = String(b1.runs  ?? b1.score   ?? '');
     firstInningsWkts  = String(b1.wickets ?? '');
     firstInningsOvers = normalizeOvers(b1.overs ?? b1.totalOvers ?? '20');
 
-    // Current innings score
+    // Current innings score (from inn[1])
     const b2 = inn2.batting || inn2;
     score   = String(b2.runs    ?? b2.score   ?? '0');
     wickets = String(b2.wickets ?? '0');
     overs   = normalizeOvers(b2.overs ?? b2.totalOvers ?? '0');
 
-    if (firstInningsRuns) target = parseInt(firstInningsRuns) + 1;
+    if (firstInningsRuns && firstInningsRuns !== '') {
+      target = parseInt(firstInningsRuns) + 1;
+    }
 
-    // INNINGS BREAK: 2nd innings hasn't started yet, show 1st innings score
-    if (status === 'INNINGS BREAK' && (score === '0' || !score || score === 'undefined')) {
+    // INNINGS BREAK: 2nd innings hasn't started → show 1st innings score in centre
+    if (status === 'INNINGS BREAK' && (!score || score === '0' || score === 'undefined')) {
       score   = firstInningsRuns  || '0';
       wickets = firstInningsWkts  || '0';
       overs   = firstInningsOvers || '20.0';
     }
 
+    console.log(`  [ESPN] 2-innings: team1(bat1st)=${team1Name} ${firstInningsRuns}/${firstInningsWkts} | team2=${team2Name} ${score}/${wickets} (${overs})`);
+
   } else if (inningsArr.length === 1) {
-    // Only 1st innings
+    // ── SINGLE INNINGS (1st innings still in progress) ─────────────────────
     const inn1 = inningsArr[0];
-    const b1   = inn1.batting || inn1;
-    currentBattingTeam = toTeam(inn1.team?.displayName || '') || battingFirstTeam || ct0;
-    firstInningsTeam   = currentBattingTeam;
+    team1Name = toTeam(inn1.team?.displayName || inn1.team?.abbreviation || '') || ct0;
+    team2Name = team1Name === ct0 ? ct1 : ct0;
+
+    const b1  = inn1.batting || inn1;
     score   = String(b1.runs    ?? b1.score   ?? '0');
     wickets = String(b1.wickets ?? '0');
     overs   = normalizeOvers(b1.overs ?? b1.totalOvers ?? '0');
+    // No first innings completed yet — team2 hasn't batted
+    firstInningsRuns = null; firstInningsWkts = null; firstInningsOvers = null;
 
-  } else if (lines.length > 0) {
-    // Fallback: linescore
-    if (lines.length >= 2) {
-      const l1 = lines[0], l2 = lines[lines.length - 1];
-      const lt1 = toTeam(l1.displayName || '') || ct0;
-      const lt2 = toTeam(l2.displayName || '') || ct1;
-      firstInningsTeam   = lt1;
-      currentBattingTeam = lt2;
-      firstInningsRuns   = String(l1.runs ?? l1.value ?? '');
-      firstInningsWkts   = String(l1.wickets ?? '');
-      firstInningsOvers  = normalizeOvers(l1.overs ?? '20');
-      score   = String(l2.runs ?? l2.value ?? '0');
-      wickets = String(l2.wickets ?? '0');
-      overs   = normalizeOvers(l2.overs ?? l2.displayOvers ?? '0');
-      if (firstInningsRuns) target = parseInt(firstInningsRuns) + 1;
-      // INNINGS BREAK fix
-      if (status === 'INNINGS BREAK' && (score === '0' || !score)) {
-        score = firstInningsRuns || '0'; wickets = firstInningsWkts || '0'; overs = firstInningsOvers || '20.0';
-      }
-    } else {
-      const l = lines[0];
-      currentBattingTeam = toTeam(l.displayName || '') || battingFirstTeam || ct0;
-      firstInningsTeam   = currentBattingTeam;
-      score   = String(l.runs ?? l.value ?? '0');
-      wickets = String(l.wickets ?? '0');
-      overs   = normalizeOvers(l.overs ?? l.displayOvers ?? '0');
+    console.log(`  [ESPN] 1-inning: team1(bat1st)=${team1Name} ${score}/${wickets} (${overs})`);
+
+  } else if (lines.length >= 2) {
+    // ── LINESCORE FALLBACK ─────────────────────────────────────────────────
+    // ESPN linescore: lines[0] = 1st innings, lines[last] = current innings
+    const l1 = lines[0];
+    const l2 = lines[lines.length - 1];
+
+    team1Name = toTeam(l1.displayName || '') || ct0;
+    team2Name = toTeam(l2.displayName || '') || (team1Name === ct0 ? ct1 : ct0);
+
+    firstInningsRuns  = String(l1.runs ?? l1.value ?? '');
+    firstInningsWkts  = String(l1.wickets ?? '');
+    firstInningsOvers = normalizeOvers(l1.overs ?? '20');
+    score   = String(l2.runs ?? l2.value ?? '0');
+    wickets = String(l2.wickets ?? '0');
+    overs   = normalizeOvers(l2.overs ?? l2.displayOvers ?? '0');
+
+    if (firstInningsRuns) target = parseInt(firstInningsRuns) + 1;
+    if (status === 'INNINGS BREAK' && (!score || score === '0')) {
+      score = firstInningsRuns || '0'; wickets = firstInningsWkts || '0'; overs = firstInningsOvers || '20.0';
     }
+    console.log(`  [ESPN] linescore fallback: team1=${team1Name} | team2=${team2Name} ${score}/${wickets}`);
 
-  } else if (ps0 || ps1) {
-    // Last resort: competitor score strings
+  } else {
+    // ── COMPETITOR SCORE STRING FALLBACK ──────────────────────────────────
+    const ps0 = parseScoreStr(comp0?.score || '');
+    const ps1 = parseScoreStr(comp1?.score || '');
+
     if (ps0 && ps1) {
       const o0 = parseFloat(ps0.overs || '0'), o1 = parseFloat(ps1.overs || '0');
-      if (o0 > o1 || (o0 === 20 && o1 < 20)) {
-        // ct0 completed, ct1 batting
-        firstInningsTeam   = ct0; currentBattingTeam = ct1;
-        firstInningsRuns   = ps0.runs; firstInningsWkts = ps0.wickets; firstInningsOvers = ps0.overs || '20';
+      // Higher overs = more likely completed innings = batted first
+      if (o0 >= 20 || o0 > o1) {
+        team1Name = ct0; team2Name = ct1;
+        firstInningsRuns = ps0.runs; firstInningsWkts = ps0.wickets; firstInningsOvers = ps0.overs || '20';
         score = ps1.runs; wickets = ps1.wickets; overs = ps1.overs || '0.0';
         target = parseInt(ps0.runs) + 1;
       } else {
-        firstInningsTeam   = ct1; currentBattingTeam = ct0;
-        firstInningsRuns   = ps1.runs; firstInningsWkts = ps1.wickets; firstInningsOvers = ps1.overs || '20';
+        team1Name = ct1; team2Name = ct0;
+        firstInningsRuns = ps1.runs; firstInningsWkts = ps1.wickets; firstInningsOvers = ps1.overs || '20';
         score = ps0.runs; wickets = ps0.wickets; overs = ps0.overs || '0.0';
         target = parseInt(ps1.runs) + 1;
       }
+    } else if (ps0) {
+      team1Name = ct0; team2Name = ct1;
+      score = ps0.runs; wickets = ps0.wickets; overs = ps0.overs || '0.0';
+    } else if (ps1) {
+      team1Name = ct1; team2Name = ct0;
+      score = ps1.runs; wickets = ps1.wickets; overs = ps1.overs || '0.0';
     } else {
-      const ps = ps0 || ps1;
-      currentBattingTeam = ps0 ? ct0 : ct1;
-      firstInningsTeam   = currentBattingTeam;
-      score = ps.runs; wickets = ps.wickets; overs = ps.overs || '0.0';
+      team1Name = ct0; team2Name = ct1;
     }
+    console.log(`  [ESPN] score-string fallback: team1=${team1Name} | team2=${team2Name} ${score}/${wickets}`);
   }
 
-  // Final fallback
-  if (!currentBattingTeam) currentBattingTeam = battingFirstTeam || ct0;
-  if (!firstInningsTeam)   firstInningsTeam   = battingFirstTeam || ct0;
+  // Final safety net
+  if (!team1Name) team1Name = ct0;
+  if (!team2Name) team2Name = team1Name === ct0 ? ct1 : ct0;
 
-  // ── CORRECT TEAM1/TEAM2 ASSIGNMENT ────────────────────────────────────────
-  // team1 = batted first (their score is "team1Score")
-  // team2 = currently batting / batted second
-  const isSecondInnings = !!(firstInningsRuns && firstInningsRuns !== '' && firstInningsRuns !== '0');
-  const team1Name = firstInningsTeam;
-  const team2Name = team1Name === ct0 ? ct1 : ct0;
+  console.log(`  ✅ [ESPN] team1(bat1st)=${team1Name} score:${firstInningsRuns||'N/A'}/${firstInningsWkts} | team2(batting)=${team2Name} score:${score}/${wickets} (${overs}) target:${target||'N/A'} status:${status}`);
 
-  console.log(`  [ESPN] team1(bat1st)=${team1Name} | team2=${team2Name} | currentBat=${currentBattingTeam}`);
-  console.log(`  [ESPN] score=${score}/${wickets} (${overs}) | 1stInn: ${firstInningsRuns||'N/A'}/${firstInningsWkts} target:${target}`);
-
-  // ── BATSMEN ────────────────────────────────────────────────────────────────
+  // ── BATSMEN — multi-strategy extraction ───────────────────────────────────
   const batsmen = [];
 
-  // Strategy 1: innings[current].batting.batsmen
+  // Strategy 1: innings[1].batting.batsmen (current innings batsmen, most reliable)
   const currentInnIdx = inningsArr.length >= 2 ? 1 : 0;
   const currInn = inningsArr[currentInnIdx];
+
   if (currInn?.batting?.batsmen?.length) {
-    currInn.batting.batsmen.filter(b => b.active !== false).slice(0, 3).forEach(b => {
+    const activeBatsmen = currInn.batting.batsmen.filter(b =>
+      b.active !== false && b.notOut !== false
+    ).slice(0, 3);
+    activeBatsmen.forEach(b => {
       const name = b.athlete?.displayName || b.player?.displayName || b.name || '';
       if (!name) return;
       batsmen.push({
@@ -367,18 +344,25 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         balls:    parseInt(b.balls ?? b.facedBalls ?? 0),
         fours:    parseInt(b.fours ?? b['4s'] ?? 0),
         sixes:    parseInt(b.sixes ?? b['6s'] ?? 0),
-        sr:       parseFloat(b.strikeRate ?? b.sr ?? (b.balls ? (b.runs / b.balls * 100).toFixed(1) : 0)).toFixed(1),
+        sr:       parseFloat(b.strikeRate ?? b.sr ?? 0).toFixed(1),
         onStrike: b.onStrike === true || b.active === true,
       });
     });
+    console.log(`  [Batsmen] from innings.batting.batsmen: ${batsmen.length}`);
   }
 
-  // Strategy 2: batterBoxScores
+  // Strategy 2: batterBoxScores — ESPN's flat list (check active status carefully)
   if (batsmen.length === 0 && gpkg.batterBoxScores?.length) {
-    gpkg.batterBoxScores.filter(b => b.active !== false).slice(0, 3).forEach(b => {
+    // Active batters are those currently at the crease
+    const activeBatters = gpkg.batterBoxScores.filter(b => b.active === true);
+    const toUse = activeBatters.length > 0
+      ? activeBatters
+      : gpkg.batterBoxScores.filter(b => b.active !== false).slice(-3); // last 3 = most recent
+    toUse.forEach(b => {
       const name = b.athlete?.displayName || b.athlete?.shortName || '';
       if (!name) return;
-      const stats = {}; (b.stats || []).forEach(s => { stats[s.name] = s.displayValue ?? s.value; });
+      const stats = {};
+      (b.stats || []).forEach(s => { stats[s.name] = s.displayValue ?? s.value; });
       batsmen.push({
         name,
         runs:     parseInt(stats.runs     || stats.R   || 0),
@@ -386,49 +370,75 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         fours:    parseInt(stats.fours    || stats['4s'] || 0),
         sixes:    parseInt(stats.sixes    || stats['6s'] || 0),
         sr:       parseFloat(stats.strikeRate || stats.SR || 0).toFixed(1),
-        onStrike: b.active === true,
+        onStrike: b.active === true || b.onStrike === true,
       });
     });
+    console.log(`  [Batsmen] from batterBoxScores: ${batsmen.length}`);
   }
 
-  // Strategy 3: leaders (ESPN sometimes puts current batters here)
+  // Strategy 3: competitors[].athletes (ESPN sometimes puts current batters here)
+  if (batsmen.length === 0) {
+    // The batting team's competitor entry may have athlete data
+    const battingComp = team2Name === ct0 ? comp0 : comp1;
+    const athletes = battingComp?.athletes || [];
+    athletes.filter(a => a.active !== false).slice(0, 3).forEach(a => {
+      const name = a.athlete?.displayName || a.displayName || '';
+      if (!name) return;
+      const stats = {};
+      (a.statistics || a.stats || []).forEach(s => { stats[s.name || s.abbreviation] = s.value ?? s.displayValue; });
+      batsmen.push({
+        name,
+        runs:     parseInt(stats.runs || stats.R || 0),
+        balls:    parseInt(stats.balls || stats.B || 0),
+        fours:    parseInt(stats.fours || 0),
+        sixes:    parseInt(stats.sixes || 0),
+        sr:       parseFloat(stats.strikeRate || stats.SR || 0).toFixed(1),
+        onStrike: a.active === true,
+      });
+    });
+    if (batsmen.length) console.log(`  [Batsmen] from competitors.athletes: ${batsmen.length}`);
+  }
+
+  // Strategy 4: leaders for batting
   if (batsmen.length === 0 && gpkg.leaders?.length) {
     for (const leader of gpkg.leaders) {
       if (!(leader.name || '').toLowerCase().includes('bat')) continue;
       (leader.leaders || []).slice(0, 2).forEach(l => {
         const name = l.athlete?.displayName || '';
-        if (!name) return;
-        batsmen.push({
-          name, runs: parseInt(l.value ?? 0), balls: 0, fours: 0, sixes: 0, sr: '0.0', onStrike: false,
-        });
+        if (!name || batsmen.find(b => b.name === name)) return;
+        batsmen.push({ name, runs: parseInt(l.value ?? 0), balls: 0, fours: 0, sixes: 0, sr: '0.0', onStrike: false });
       });
     }
+    if (batsmen.length) console.log(`  [Batsmen] from leaders: ${batsmen.length}`);
   }
 
-  // Strategy 4: plays participants (ball-by-ball has the batsman info)
+  // Strategy 5: recent plays participants
   if (batsmen.length === 0 && gpkg.plays?.length) {
-    const recentPlays = (gpkg.plays || []).slice(-5);
+    const recentPlays = (gpkg.plays || []).slice(-5).reverse();
     const seenNames = new Set();
     for (const play of recentPlays) {
       for (const participant of (play.participants || [])) {
         const name = participant.athlete?.displayName || '';
         if (!name || seenNames.has(name)) continue;
+        const role = (participant.type || participant.role || '').toLowerCase();
+        if (role === 'bowler') continue; // skip bowlers
         seenNames.add(name);
-        if (participant.type === 'batsman' || participant.role === 'batsman' || !participant.type) {
-          batsmen.push({ name, runs: 0, balls: 0, fours: 0, sixes: 0, sr: '0.0', onStrike: false });
-          if (batsmen.length >= 2) break;
-        }
+        batsmen.push({ name, runs: 0, balls: 0, fours: 0, sixes: 0, sr: '0.0', onStrike: batsmen.length === 0 });
+        if (batsmen.length >= 2) break;
       }
       if (batsmen.length >= 2) break;
     }
+    if (batsmen.length) console.log(`  [Batsmen] from plays participants: ${batsmen.length}`);
   }
 
-  // ── BOWLERS ────────────────────────────────────────────────────────────────
+  // ── BOWLERS — multi-strategy extraction ───────────────────────────────────
   const bowlers = [];
 
   // Strategy 1: innings[current].bowling.bowlers
   if (currInn?.bowling?.bowlers?.length) {
-    currInn.bowling.bowlers.slice(-2).forEach(b => {
+    // Current bowler is the last one in the array (most recently bowling)
+    const activeBowlers = currInn.bowling.bowlers.slice(-2);
+    activeBowlers.forEach(b => {
       const name = b.athlete?.displayName || b.player?.displayName || b.name || '';
       if (!name) return;
       bowlers.push({
@@ -440,6 +450,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         economy: parseFloat(b.economy ?? b.er ?? 0).toFixed(1),
       });
     });
+    console.log(`  [Bowlers] from innings.bowling.bowlers: ${bowlers.length}`);
   }
 
   // Strategy 2: bowlerBoxScores
@@ -447,7 +458,8 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     gpkg.bowlerBoxScores.slice(-2).forEach(b => {
       const name = b.athlete?.displayName || '';
       if (!name) return;
-      const stats = {}; (b.stats || []).forEach(s => { stats[s.name] = s.displayValue ?? s.value; });
+      const stats = {};
+      (b.stats || []).forEach(s => { stats[s.name] = s.displayValue ?? s.value; });
       bowlers.push({
         name,
         overs:   normalizeOvers(stats.overs || stats.O || '0'),
@@ -457,6 +469,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         economy: parseFloat(stats.economy || stats.ECO || 0).toFixed(1),
       });
     });
+    console.log(`  [Bowlers] from bowlerBoxScores: ${bowlers.length}`);
   }
 
   // Strategy 3: leaders for bowling
@@ -468,6 +481,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         if (name) bowlers.push({ name, overs: '0', maidens: 0, runs: 0, wickets: parseInt(l.value ?? 0), economy: '0.0' });
       });
     }
+    if (bowlers.length) console.log(`  [Bowlers] from leaders: ${bowlers.length}`);
   }
 
   // ── RECENT BALLS ──────────────────────────────────────────────────────────
@@ -500,16 +514,12 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
   }).filter(Boolean);
 
   // ── WIN PROBABILITY ───────────────────────────────────────────────────────
-  // ESPN doesn't provide CRR/RRR directly; compute from score + overs
   const scoreInt = parseInt(score) || 0;
   const oversFloat = parseFloat(overs) || 0;
   let crr = null, rrr = null, winProbT1 = 50, winProbT2 = 50;
 
-  // Check if ESPN provides CRR/RRR
-  if (gpkg.currentRunRate) crr = parseFloat(gpkg.currentRunRate);
+  if (gpkg.currentRunRate)  crr = parseFloat(gpkg.currentRunRate);
   if (gpkg.requiredRunRate) rrr = parseFloat(gpkg.requiredRunRate);
-
-  // Compute if not provided
   if (!crr && oversFloat > 0) crr = parseFloat((scoreInt / oversFloat).toFixed(2));
 
   if (target && oversFloat > 0) {
@@ -518,46 +528,63 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     rrr = parseFloat((runsLeft / ballsLeft * 6).toFixed(2));
   }
 
-  // ESPN win probability object
+  // ESPN win probability
   const wpData = gpkg.winProbability || gpkg.winProbabilities;
   if (wpData) {
     const wpArr = Array.isArray(wpData) ? wpData : null;
     const wpObj = !Array.isArray(wpData) ? wpData : null;
     if (wpArr?.length > 0) {
       const last = wpArr[wpArr.length - 1];
-      const hw = parseFloat(last.homeWinPercentage ?? last.home ?? 50);
-      // Determine which team is "home" (ct0 = home in ESPN)
-      winProbT1 = Math.round(currentBattingTeam === ct0 ? 100 - hw : hw);
-      winProbT2 = 100 - winProbT1;
+      // homeWinPercentage = probability for ct0 (ESPN's "home" team)
+      const hwPct = parseFloat(last.homeWinPercentage ?? last.home ?? 50);
+      // team1 = bat first. team2 = chasing.
+      // If team1 === ct0, then hwPct is team1's probability
+      // If team1 === ct1, then hwPct is for ct0 = team2 → team2 prob = hwPct
+      if (team1Name === ct0) {
+        winProbT1 = Math.round(hwPct);
+        winProbT2 = 100 - winProbT1;
+      } else {
+        winProbT2 = Math.round(hwPct);
+        winProbT1 = 100 - winProbT2;
+      }
     } else if (wpObj?.homeTeam != null) {
-      const hw = parseFloat(wpObj.homeTeam ?? 50);
-      winProbT1 = Math.round(currentBattingTeam === ct0 ? 100 - hw : hw);
-      winProbT2 = 100 - winProbT1;
+      const hwPct = parseFloat(wpObj.homeTeam ?? 50);
+      if (team1Name === ct0) {
+        winProbT1 = Math.round(hwPct);
+        winProbT2 = 100 - winProbT1;
+      } else {
+        winProbT2 = Math.round(hwPct);
+        winProbT1 = 100 - winProbT2;
+      }
     }
   }
 
   // Compute from RRR/CRR if ESPN didn't provide prob
-  if (winProbT1 === 50 && rrr && crr && crr > 0) {
-    const r = rrr / crr;
-    winProbT2 = r < 0.5 ? 88 : r < 0.75 ? 78 : r < 0.9 ? 66 : r < 1.0 ? 55
-              : r < 1.1 ? 46 : r < 1.3 ? 37 : r < 1.6 ? 28 : r < 2.0 ? 18 : 10;
-    winProbT1 = 100 - winProbT2;
-  } else if (winProbT1 === 50 && crr && !target && oversFloat > 0) {
-    const proj = crr * 20;
-    winProbT2 = proj > 195 ? 65 : proj > 180 ? 60 : proj > 165 ? 55 : proj > 150 ? 50 : proj > 135 ? 45 : 38;
-    winProbT1 = 100 - winProbT2;
+  if (winProbT1 === 50 && winProbT2 === 50) {
+    if (rrr && crr && crr > 0) {
+      // RRR/CRR ratio: if ratio < 1 chaser is ahead → team2 has higher prob
+      const r = rrr / crr;
+      winProbT2 = r < 0.5 ? 88 : r < 0.75 ? 78 : r < 0.9 ? 66 : r < 1.0 ? 55
+                : r < 1.1 ? 46 : r < 1.3 ? 37 : r < 1.6 ? 28 : r < 2.0 ? 18 : 10;
+      winProbT1 = 100 - winProbT2;
+    } else if (crr && !target && oversFloat > 0) {
+      // 1st innings — project final score
+      const proj = crr * 20;
+      winProbT1 = proj > 195 ? 65 : proj > 180 ? 60 : proj > 165 ? 55 : proj > 150 ? 50 : proj > 135 ? 45 : 38;
+      winProbT2 = 100 - winProbT1;
+    }
   }
 
-  if (status === 'FINISHED') {
+  if (status === 'FINISHED' && result) {
     const w = result.toUpperCase();
-    const chaser = target ? currentBattingTeam : null;
-    if (w.includes(team2Name)) { winProbT2 = 100; winProbT1 = 0; }
-    else if (w.includes(team1Name)) { winProbT1 = 100; winProbT2 = 0; }
+    // Check which team name appears in result string
+    if (w.includes(team1Name)) { winProbT1 = 100; winProbT2 = 0; }
+    else if (w.includes(team2Name)) { winProbT2 = 100; winProbT1 = 0; }
   }
   if (['ABANDONED', 'POSTPONED'].includes(status)) { winProbT1 = 50; winProbT2 = 50; }
 
-  console.log(`  ✅ [ESPN] ${team1Name}(1st) | ${team2Name}(2nd) | ${score}/${wickets} (${overs}) | ${status}`);
-  console.log(`     CRR:${crr} RRR:${rrr} WinProb: ${team1Name}${winProbT1}% ${team2Name}${winProbT2}%`);
+  console.log(`  ✅ [ESPN] FINAL: team1(bat1st)=${team1Name} ${firstInningsRuns||'N/A'} | team2(bat2nd)=${team2Name} ${score}/${wickets} (${overs})`);
+  console.log(`     CRR:${crr} RRR:${rrr} WinProb: T1(${team1Name})=${winProbT1}% T2(${team2Name})=${winProbT2}%`);
   if (batsmen.length) console.log(`     🏏 ${batsmen.map(b=>`${b.name}${b.onStrike?'*':''}: ${b.runs}(${b.balls})`).join(' | ')}`);
   if (bowlers.length) console.log(`     🎯 ${bowlers.map(b=>`${b.name}: ${b.wickets}/${b.runs}(${b.overs})`).join(' | ')}`);
 
@@ -567,7 +594,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     score, wickets, overs,
     team1Score:   firstInningsRuns  || null,
     team1Wickets: firstInningsWkts  || null,
-    team1Overs:   normalizeOvers(firstInningsOvers) || null,
+    team1Overs:   firstInningsOvers ? normalizeOvers(firstInningsOvers) : null,
     target: target || null,
     status, result, toss,
     winProb:   winProbT2,
@@ -577,6 +604,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     bowlers:   bowlers.slice(0, 2),
     commentary: commentary.slice(0, 10),
     crr, rrr,
+    espnId,
     source: 'espn',
   };
 };
@@ -629,14 +657,13 @@ const cbProxyFetch = async () => {
   else if (update.includes('RAIN') || update.includes('HALT') || update.includes('DELAY')) status = 'RAIN DELAY';
   else if (update.includes('BREAK')) status = 'INNINGS BREAK';
 
-  let target = null, team1ScoreStr = null;
-  const tgtM  = (d.update||'').match(/[Tt]arget[:\s]+(\d+)/i);
+  let target = null, team1ScoreStr = null, team1WktsStr = null;
+  const tgtM   = (d.update||'').match(/[Tt]arget[:\s]+(\d+)/i);
   const needsM = (d.update||'').match(/need[s]?\s+(\d+)\s+(?:more\s+)?runs?/i);
-  if (tgtM)  { target = parseInt(tgtM[1]);  team1ScoreStr = String(target - 1); }
+  if (tgtM)  { target = parseInt(tgtM[1]); team1ScoreStr = String(target - 1); }
   else if (needsM) { target = parseInt(score) + parseInt(needsM[1]); team1ScoreStr = String(target - 1); }
 
-  const tossM = (d.update||'').match(/(KKR|MI|CSK|RCB|RR|PBKS|DC|GT|LSG|SRH)\s+(?:opt(?:ed)?|chose)\s+to\s+(bat|bowl)/i);
-  const toss  = tossM ? `${tossM[1].toUpperCase()} chose to ${tossM[2].toLowerCase()}` : null;
+  const toss = null;
 
   const parseBR = s => { const m=String(s||'').match(/(\d+)\s*\((\d+)\)/); return m?{runs:parseInt(m[1]),balls:parseInt(m[2])}:{runs:parseInt(String(s||'').match(/(\d+)/)?.[1]||0),balls:0}; };
   const batsmen = [];
@@ -647,23 +674,23 @@ const cbProxyFetch = async () => {
   if (d.bowlerOne?.length > 1 && d.bowlerOne !== 'BOWLER') bowlers.push({name:d.bowlerOne,overs:normalizeOvers(d.bowlerOneOver),maidens:0,runs:parseInt(d.bowlerOneRun??0),wickets:parseInt(d.bowlerOneWickets??0),economy:String(d.bowlerOneEconomy||'0.0')});
   if (d.bowlerTwo?.length > 1 && d.bowlerTwo !== 'BOWLER' && d.bowlerTwo !== 'O') bowlers.push({name:d.bowlerTwo,overs:normalizeOvers(d.bowlerTwoOver),maidens:0,runs:parseInt(d.bowlerTwoRun??0),wickets:parseInt(d.bowlerTwoWicket??d.bowlerTwoWickets??0),economy:String(d.bowlerTwoEconomy||'0.0')});
 
-  // Correctly assign team1 (batted first) based on target presence
+  // team1 = batted first; if there's a target, battingTeam is chasing (team2), so bowling team batted first
   const bowlingTeam = battingTeam === teamA ? teamB : teamA;
-  const team1Name = target ? bowlingTeam : battingTeam; // bowler batted first if there's a target
-  const team2Name = team1Name === teamA ? teamB : teamA;
+  const team1Name   = target ? bowlingTeam : battingTeam;
+  const team2Name   = team1Name === teamA ? teamB : teamA;
 
   const crr = parseFloat(d.runRate||0)||null;
   let rrr = null;
   if (target && crr) { const bl=Math.max((20-parseFloat(overs))*6,1); rrr=parseFloat(((target-parseInt(score))/bl*6).toFixed(2)); }
   let wP1=50,wP2=50;
   if(rrr&&crr&&crr>0){const r=rrr/crr;wP2=r<0.5?88:r<0.75?78:r<0.9?66:r<1.0?55:r<1.1?46:r<1.3?37:r<1.6?28:18;wP1=100-wP2;}
-  else if(crr&&!target&&parseFloat(overs)>0){const p=crr*20;wP2=p>195?65:p>180?60:p>165?55:p>150?50:p>135?45:38;wP1=100-wP2;}
-  if(status==='FINISHED'){const w=result.toUpperCase();if(w.includes(team2Name)){wP2=100;wP1=0;}else{wP1=100;wP2=0;}}
+  else if(crr&&!target&&parseFloat(overs)>0){const p=crr*20;wP1=p>195?65:p>180?60:p>165?55:p>150?50:p>135?45:38;wP2=100-wP1;}
+  if(status==='FINISHED'){const w=result.toUpperCase();if(w.includes(team1Name)){wP1=100;wP2=0;}else if(w.includes(team2Name)){wP2=100;wP1=0;}}
 
-  console.log(`  ✅ [CB-Proxy] ${team1Name}(1st) | ${score}/${wickets} (${overs}) | ${status}`);
+  console.log(`  ✅ [CB-Proxy] team1(bat1st)=${team1Name} | team2(bat2nd)=${team2Name} | ${score}/${wickets} (${overs}) | ${status}`);
   if (batsmen.length) console.log(`     🏏 ${batsmen.map(b=>`${b.name}${b.onStrike?'*':''}: ${b.runs}(${b.balls})`).join(' | ')}`);
 
-  return {team1:{name:team1Name},team2:{name:team2Name},score,wickets,overs,team1Score:team1ScoreStr||null,team1Wickets:null,team1Overs:null,target:target||null,status,result,toss,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:['·','·','·','·','·','·'],batsmen,bowlers,commentary:[],crr,rrr,source:'cricbuzz-proxy'};
+  return {team1:{name:team1Name},team2:{name:team2Name},score,wickets,overs,team1Score:team1ScoreStr||null,team1Wickets:team1WktsStr||null,team1Overs:null,target:target||null,status,result,toss,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:['·','·','·','·','·','·'],batsmen,bowlers,commentary:[],crr,rrr,source:'cricbuzz-proxy'};
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -718,28 +745,40 @@ const cbDirectFetch = async () => {
 
   const tDec=(mini?.matchHeader?.tossResults?.decision||'').toLowerCase();
   const tWId=mini?.matchHeader?.tossResults?.tossWinnerId;
-  let toss=null,battingFirst=null;
-  if(tDec&&tWId){const tosser=tWId===meta.t1Id?meta.team1:meta.team2;battingFirst=tDec==='bat'?tosser:(tosser===meta.team1?meta.team2:meta.team1);toss=`${tosser} chose to ${tDec}`;}
+  let toss=null;
+  if(tDec&&tWId){const tosser=tWId===meta.t1Id?meta.team1:meta.team2;toss=`${tosser} chose to ${tDec}`;}
 
   const btId=ms?.battingTeamId||ms?.batTeam?.teamId;
-  let currentBatting=meta.team2,currentBowling=meta.team1;
+  let currentBatting=meta.team1,currentBowling=meta.team2;
   if(btId){currentBatting=btId===meta.t1Id?meta.team1:meta.team2;currentBowling=currentBatting===meta.team1?meta.team2:meta.team1;}
 
-  const batSc=ms?.batTeam?.teamScore||{};const bowlSc=ms?.bowlTeam?.teamScore||{};
+  const batSc=ms?.batTeam?.teamScore||{};
   let score=String(ms?.score??batSc?.runs??'0');
   let wickets=String(ms?.wickets??batSc?.wickets??'0');
   let overs=normalizeOvers(ms?.overs??batSc?.overs??'0');
 
   const innL=ms?.matchScoreDetails?.inningsScoreList||[];
   let t1Sc=null,t1Wk=null,t1Ov=null,target=null;
-  if(innL.length>=2){const p=innL[0];t1Sc=String(p.score??'');t1Wk=String(p.wickets??'');t1Ov=String(p.overs??'');target=parseInt(p.score??0)+1;}
-  else if(bowlSc.runs!=null){t1Sc=String(bowlSc.runs??'');t1Wk=String(bowlSc.wickets??'');t1Ov=String(bowlSc.overs??'');if(t1Sc)target=parseInt(t1Sc)+1;}
+
+  // CB innings list: innL[0] = 1st innings completed, innL[1] = current
+  if(innL.length>=2){
+    const p=innL[0];
+    t1Sc=String(p.score??'');t1Wk=String(p.wickets??'');t1Ov=String(p.overs??'');
+    target=parseInt(p.score??0)+1;
+  } else {
+    // Check bowling team score
+    const bowlSc=ms?.bowlTeam?.teamScore||{};
+    if(bowlSc.runs!=null){t1Sc=String(bowlSc.runs??'');t1Wk=String(bowlSc.wickets??'');t1Ov=String(bowlSc.overs??'');if(t1Sc)target=parseInt(t1Sc)+1;}
+  }
   if(!target&&ms?.target)target=parseInt(ms.target);
 
-  const crr=parseFloat(ms?.currentRunRate||0)||null;const rrr=parseFloat(ms?.requiredRunRate||0)||null;
-  const isInn2=innL.length>=2||(t1Sc&&t1Sc!=='');
-  const team1Name=isInn2?currentBowling:(battingFirst||currentBatting);
-  const team2Name=team1Name===meta.team1?meta.team2:meta.team1;
+  const crr=parseFloat(ms?.currentRunRate||0)||null;
+  const rrr=parseFloat(ms?.requiredRunRate||0)||null;
+
+  // team1 = batted first = bowling team when 2nd innings; batting team when 1st innings
+  const isSecondInnings = innL.length>=2 || (t1Sc && t1Sc !== '');
+  const team1Name = isSecondInnings ? currentBowling : currentBatting;
+  const team2Name = team1Name===meta.team1 ? meta.team2 : meta.team1;
 
   let batsmen=(ms?.batsman||[]).filter(Boolean).slice(0,3).map(b=>({name:b.batName||b.name||'',runs:parseInt(b.batRuns??0),balls:parseInt(b.batBalls??0),fours:parseInt(b.batFours??0),sixes:parseInt(b.batSixes??0),sr:parseFloat(b.batStrikeRate??0).toFixed(1),onStrike:b.isStriker??false})).filter(b=>b.name);
   let bowlers=(ms?.bowler?(Array.isArray(ms.bowler)?ms.bowler:[ms.bowler]):[]).filter(Boolean).slice(0,2).map(b=>({name:b.bowlName||b.name||'',overs:normalizeOvers(b.bowlOvs??'0'),maidens:parseInt(b.bowlMaidens??0),runs:parseInt(b.bowlRuns??0),wickets:parseInt(b.bowlWkts??0),economy:parseFloat(b.bowlEcon??0).toFixed(1)})).filter(b=>b.name);
@@ -750,15 +789,16 @@ const cbDirectFetch = async () => {
   let recent=[];
   if(recentStr)recent=recentStr.replace(/\|/g,' ').trim().split(/\s+/).map(b=>{const u=b.toUpperCase();if(!u||u==='.'||u==='·')return'·';if(u==='W')return'W';if(u==='WD')return'WD';if(u.startsWith('NB'))return'NB';if(/^\d+$/.test(u))return u==='0'?'·':u;return'·';}).slice(-6);
   while(recent.length<6)recent.push('·');
+
   const commentary=[];
   (comm?.commentary?.commentaryList||comm?.commentaryList||[]).slice(0,10).forEach(c=>{const text=c.commText||'';if(!text||text.length<5)return;const ut=text.toUpperCase();commentary.push({over:c.overNumber!=null?`${c.overNumber}.${c.ballNumber??''}`:'',text:text.substring(0,200),type:ut.includes('WICKET')||ut.includes(' OUT')?'wicket':ut.includes('FOUR')||ut.includes('SIX')?'boundary':'normal',generated:false});});
 
   let wP1=50,wP2=50;
   if(rrr&&crr&&crr>0){const r=rrr/crr;wP2=r<0.5?88:r<0.75?78:r<0.9?66:r<1.0?55:r<1.1?46:r<1.3?37:r<1.6?28:18;wP1=100-wP2;}
-  else if(crr&&!target){const p=crr*20;wP2=p>195?65:p>180?60:p>165?55:p>150?50:p>135?45:38;wP1=100-wP2;}
-  if(status==='FINISHED'){const w=result.toUpperCase();if(w.includes(team2Name)){wP2=100;wP1=0;}else{wP1=100;wP2=0;}}
+  else if(crr&&!target){const p=crr*20;wP1=p>195?65:p>180?60:p>165?55:p>150?50:p>135?45:38;wP2=100-wP1;}
+  if(status==='FINISHED'){const w=result.toUpperCase();if(w.includes(team1Name)){wP1=100;wP2=0;}else if(w.includes(team2Name)){wP2=100;wP1=0;}}
 
-  console.log(`  ✅ [CB-Direct] ${team1Name}(1st) | ${score}/${wickets} (${overs}) | ${status}`);
+  console.log(`  ✅ [CB-Direct] team1(bat1st)=${team1Name} | team2=${team2Name} | ${score}/${wickets} (${overs}) | ${status}`);
   return{team1:{name:team1Name},team2:{name:team2Name},score,wickets,overs,team1Score:t1Sc||null,team1Wickets:t1Wk||null,team1Overs:t1Ov||null,target:target||null,status,result,toss,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:recent.slice(0,6),batsmen:batsmen.slice(0,3),bowlers:bowlers.slice(0,2),commentary:commentary.slice(0,10),crr,rrr,source:'cricbuzz-api'};
 };
 
@@ -795,21 +835,18 @@ export const scrapeLiveMatch = async () => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STANDINGS + STATS — completely separate, ESPN-only
-// Called every 12h from index.js
+// STANDINGS + STATS
 // ─────────────────────────────────────────────────────────────────────────────
 export const scrapeIPLStandingsAndStats = async () => {
   console.log('[Standings] Fetching IPL standings + stats...');
   let pointsTable = null, orangeCap = null, purpleCap = null;
   let topBatsmen = [], topBowlers = [];
 
-  // ── ESPN standings ─────────────────────────────────────────────────────────
   try {
     const data = await fetchJSON(
       `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/standings`,
       {}, 'ESPN standings'
     );
-    // ESPN standings structure: data.children[0].standings.entries[]
     const entries = data?.children?.[0]?.standings?.entries
                  || data?.children?.[0]?.entries
                  || data?.standings?.entries
@@ -830,14 +867,10 @@ export const scrapeIPLStandingsAndStats = async () => {
           nrr:    parseFloat(stats.netRunRate || stats.NRR || stats.nrr || 0).toFixed(3),
         };
       }).filter(Boolean).sort((a, b) => b.pts - a.pts || parseFloat(b.nrr) - parseFloat(a.nrr));
-      if (table.length >= 4) {
-        pointsTable = table;
-        console.log(`  [Standings] ESPN OK: ${table.length} teams`);
-      }
+      if (table.length >= 4) { pointsTable = table; console.log(`  [Standings] ESPN OK: ${table.length} teams`); }
     }
   } catch(e) { console.log('[Standings ESPN]', e.message); }
 
-  // ── Cricbuzz standings fallback (series ID 9241 for IPL 2026) ─────────────
   if (!pointsTable) {
     for (const sid of ['9241','9237','9300','9350','9280']) {
       try {
@@ -852,24 +885,16 @@ export const scrapeIPLStandingsAndStats = async () => {
           pts:    parseInt(r.points        || 0),
           nrr:    parseFloat(r.nrr || 0).toFixed(3),
         })).filter(t => TEAMS.includes(t.team)).sort((a, b) => b.pts - a.pts);
-        if (table.length >= 4) {
-          pointsTable = table;
-          console.log(`  [Standings] CB sid=${sid}: ${table.length} teams`);
-          break;
-        }
+        if (table.length >= 4) { pointsTable = table; console.log(`  [Standings] CB sid=${sid}: ${table.length} teams`); break; }
       } catch(e) { /* try next */ }
     }
   }
 
-  // ── ESPN stats (most runs + wickets for IPL series) ────────────────────────
-  // ESPN series stats endpoint
   try {
     const runsData = await fetchJSON(
       `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/statistics?type=batting`,
       {}, 'ESPN batting stats'
     );
-    console.log(`  [Stats] ESPN batting keys: [${Object.keys(runsData||{}).join(',')}]`);
-    // Try multiple paths
     const battingList = runsData?.athletes || runsData?.results || runsData?.statistics || [];
     if (Array.isArray(battingList) && battingList.length > 0) {
       topBatsmen = battingList.slice(0, 10).map(p => {
@@ -883,7 +908,6 @@ export const scrapeIPLStandingsAndStats = async () => {
     }
   } catch(e) { console.log('[Stats ESPN batting]', e.message); }
 
-  // Cricbuzz stats fallback
   if (topBatsmen.length === 0 || topBowlers.length === 0) {
     for (const sid of ['9241','9237','9300']) {
       if (topBatsmen.length > 0 && topBowlers.length > 0) break;
@@ -893,9 +917,7 @@ export const scrapeIPLStandingsAndStats = async () => {
           fetchJSON(`https://www.cricbuzz.com/api/cricket-series/${sid}/stats?statsType=mostWickets`, {}, `CB wickets ${sid}`),
         ]);
         const parseP = (d, type) => {
-          const list = d?.statsDetails?.[0]?.playerStatsList
-                    || d?.values?.[0]?.playerStats
-                    || d?.statsList || d?.values || [];
+          const list = d?.statsDetails?.[0]?.playerStatsList || d?.values?.[0]?.playerStats || d?.statsList || d?.values || [];
           return (Array.isArray(list) ? list : []).slice(0, 10).map(p => ({
             name:    p.playerName || p.name || '',
             team:    (p.teamSName || '').toUpperCase(),
@@ -965,9 +987,11 @@ const browserFallback = async () => {
     }, TEAMS, mm.team1, mm.team2);
     await gp.close(); await browser.close();
     if (!graw) return null;
-    const team1n = graw.target ? mm.team2 : mm.team1;
-    const team2n = graw.target ? mm.team1 : mm.team2;
-    let wP1=50,wP2=50;if(graw.rrr&&graw.crr&&graw.crr>0){const r=graw.rrr/graw.crr;wP2=r<0.5?88:r<0.75?78:r<0.9?66:r<1.0?55:r<1.1?46:r<1.3?37:18;wP1=100-wP2;}
+    // If target exists, mm.team2 (URL team2) is chasing = team2, mm.team1 batted first = team1
+    const team1n = graw.target ? mm.team1 : mm.team1;
+    const team2n = graw.target ? mm.team2 : mm.team2;
+    let wP1=50,wP2=50;
+    if(graw.rrr&&graw.crr&&graw.crr>0){const r=graw.rrr/graw.crr;wP2=r<0.5?88:r<0.75?78:r<0.9?66:r<1.0?55:r<1.1?46:r<1.3?37:18;wP1=100-wP2;}
     console.log(`  ✅ [Google] ${mm.team1} vs ${mm.team2} | ${graw.score}/${graw.wickets} (${normalizeOvers(graw.overs)})`);
     return{team1:{name:team1n},team2:{name:team2n},score:graw.score,wickets:graw.wickets,overs:normalizeOvers(graw.overs),team1Score:null,team1Wickets:null,team1Overs:null,target:graw.target||null,status:graw.status,result:graw.result,toss:null,winProb:wP2,winProbT1:wP1,winProbT2:wP2,recent:['·','·','·','·','·','·'],batsmen:[],bowlers:[],commentary:[],crr:graw.crr,rrr:graw.rrr,source:'google',lastUpdated:new Date()};
   } catch(e) { if(browser) await browser.close(); console.error('[Browser fatal]', e.message); return null; }

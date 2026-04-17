@@ -14,7 +14,7 @@ const LiveMatchSchema = new mongoose.Schema({
   rrr:          { type: Number, default: null },
   status:       { type: String, default: 'LIVE' },
   result:       { type: String, default: '' },
-  toss:         { type: String, default: null },   // ← NEW
+  toss:         { type: String, default: null },
   winProb:      { type: Number, default: 50 },
   winProbT1:    { type: Number, default: 50 },
   winProbT2:    { type: Number, default: 50 },
@@ -35,6 +35,10 @@ const LiveMatchSchema = new mongoose.Schema({
     runs: Number, wickets: Number, economy: String,
   }],
   source:      { type: String, default: 'unknown' },
+  // ── espnId: used by Fixtures page to deduplicate when teams play each other ──
+  // ── twice in a season. Stored from scraperService espnGetScore return value. ──
+  // ── Also add  espnId: d.espnId || null  inside saveToDb() in index.js.      ──
+  espnId:      { type: String, default: null },
   lastUpdated: { type: Date, default: Date.now },
 }, { timestamps: true });
 

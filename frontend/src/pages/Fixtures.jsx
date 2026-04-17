@@ -33,7 +33,7 @@ const VENUES = {
 const mk = (id, date, day, time, home, away, city, extras = {}) => ({
   id, date, day, time, teamA: home, teamB: away,
   city, venue: VENUES[city] || city,
-  type:   extras.type   || 'League Match',
+  type:       extras.type       || 'League Match',
   baseStatus: extras.baseStatus || 'upcoming',
   result:     extras.result     || null,
   winner:     extras.winner     || null,
@@ -127,10 +127,81 @@ const BASE_SCHEDULE = [
   mk(70,"24 MAY 2026","Sun","07:30 PM","KKR","DC","Kolkata"),
 ];
 
-// ─── Utility: check if two team sets match ────────────────────────────────────
-const teamsMatch = (fixtureA, fixtureB, liveA, liveB) => {
-  const set1 = new Set([fixtureA?.toUpperCase(), fixtureB?.toUpperCase()]);
-  return set1.has(liveA?.toUpperCase()) && set1.has(liveB?.toUpperCase());
+// ─────────────────────────────────────────────────────────────────────────────
+// DEDUPLICATION HELPER
+//
+// Problem: Teams play each other twice in the season. The old teamsMatch()
+// check only looked at team names, so BOTH fixture cards for the same matchup
+// (e.g. RCB vs CSK on Apr 5 AND the later rematch) would show live data.
+//
+// Fix: Parse each fixture's date string and compare it to today's date.
+// Only the fixture whose date matches today is considered live.
+// Fallback: if espnId is stored in the live data, match by ID for certainty.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Month abbreviation → 0-indexed month number
+const MONTH_MAP = {
+  JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5,
+  JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11,
+};
+
+/**
+ * Parse a fixture date string like "17 APR 2026" into a Date object (midnight IST).
+ * Returns null if parsing fails.
+ */
+const parseFixtureDate = (dateStr) => {
+  try {
+    const parts = dateStr.trim().toUpperCase().split(' ');
+    if (parts.length !== 3) return null;
+    const day   = parseInt(parts[0]);
+    const month = MONTH_MAP[parts[1]];
+    const year  = parseInt(parts[2]);
+    if (isNaN(day) || month === undefined || isNaN(year)) return null;
+    return new Date(year, month, day); // local midnight
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Returns true only if this fixture is the one currently being played live.
+ *
+ * Checks (in order):
+ *  1. Teams must match (both teams appear in the fixture).
+ *  2. If espnId is available in liveMatch → match by ID (most reliable).
+ *  3. Otherwise → fixture date must be today's date.
+ *
+ * This prevents the duplicate live-score problem when two teams play each
+ * other twice in the season.
+ */
+const isThisFixtureLive = (fixture, liveMatch) => {
+  if (!liveMatch?.team1?.name || !liveMatch?.team2?.name) return false;
+
+  const liveA = liveMatch.team1.name.toUpperCase();
+  const liveB = liveMatch.team2.name.toUpperCase();
+  const fixA  = fixture.teamA.toUpperCase();
+  const fixB  = fixture.teamB.toUpperCase();
+
+  // Step 1: Teams must match (order doesn't matter)
+  const sameTeams = (fixA === liveA && fixB === liveB) ||
+                    (fixA === liveB && fixB === liveA);
+  if (!sameTeams) return false;
+
+  // Step 2: ESPN ID match — most reliable, use it when available
+  if (liveMatch.espnId && fixture.espnId) {
+    return String(liveMatch.espnId) === String(fixture.espnId);
+  }
+
+  // Step 3: Date match — fixture date must be today
+  const fixtureDate = parseFixtureDate(fixture.date);
+  if (!fixtureDate) return false;
+
+  const today = new Date();
+  return (
+    fixtureDate.getFullYear() === today.getFullYear() &&
+    fixtureDate.getMonth()    === today.getMonth()    &&
+    fixtureDate.getDate()     === today.getDate()
+  );
 };
 
 // ─── SCORECARD MODAL ─────────────────────────────────────────────────────────
@@ -139,9 +210,8 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
     match.baseStatus === 'completed' ? 'innings1' : 'inn2'
   );
 
-  const isLiveMatch = liveMatch && teamsMatch(match.teamA, match.teamB, liveMatch.team1?.name, liveMatch.team2?.name);
-  const useLiveData = isLiveMatch && match.baseStatus !== 'completed';
-
+  const isLiveMatch  = isThisFixtureLive(match, liveMatch);
+  const useLiveData  = isLiveMatch && match.baseStatus !== 'completed';
   const staticScorecard = match.scorecard;
 
   return createPortal(
@@ -156,21 +226,29 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
           <X className="w-5 h-5 text-white"/>
         </button>
 
-        {/* Match header */}
+        {/* Header */}
         <div className="p-6 pb-0 flex-shrink-0">
           <div className="flex justify-around items-center mb-4">
+            {/* LEFT: team1 (batted first) */}
             <div className="text-center">
               {LOGOS[match.teamA] && <img src={LOGOS[match.teamA]} className="w-12 mx-auto mb-1" alt={match.teamA}/>}
               <p className="text-sm font-black text-white">{match.teamA}</p>
               <p className="text-[10px] font-mono text-gray-400">
                 {useLiveData
-                  ? (liveMatch.team1Score ? `${liveMatch.team1Score}/${liveMatch.team1Wickets} (${liveMatch.team1Overs})` : 'Yet to bat')
+                  ? (liveMatch.team1Score
+                      ? `${liveMatch.team1Score}/${liveMatch.team1Wickets ?? ''} (${liveMatch.team1Overs ?? ''})`
+                      : 'Yet to bat')
                   : match.scoreA || '—'}
               </p>
+              {useLiveData && liveMatch.team1Score && (
+                <p className="text-[9px] text-gray-600 mt-0.5">1st Innings</p>
+              )}
             </div>
+
+            {/* CENTRE */}
             <div className="text-center space-y-1">
               <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${
-                useLiveData && (liveMatch.status==='LIVE'||liveMatch.status==='INNINGS BREAK')
+                useLiveData && ['LIVE','INNINGS BREAK','RAIN DELAY'].includes(liveMatch.status)
                   ? 'bg-red-500/20 text-red-400'
                   : 'bg-green-500/20 text-green-400'
               }`}>
@@ -185,6 +263,8 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
                 <p className="text-[9px] text-gray-500">Target: {liveMatch.target}</p>
               )}
             </div>
+
+            {/* RIGHT: team2 (batting second) */}
             <div className="text-center">
               {LOGOS[match.teamB] && <img src={LOGOS[match.teamB]} className="w-12 mx-auto mb-1" alt={match.teamB}/>}
               <p className="text-sm font-black text-white">{match.teamB}</p>
@@ -193,6 +273,9 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
                   ? `${liveMatch.score}/${liveMatch.wickets} (${liveMatch.overs})`
                   : match.scoreB || '—'}
               </p>
+              {useLiveData && (
+                <p className="text-[9px] text-gray-600 mt-0.5">2nd Innings</p>
+              )}
             </div>
           </div>
 
@@ -217,8 +300,8 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
           ) : useLiveData ? (
             <div className="flex gap-1 bg-white/5 p-1 rounded-2xl mb-3">
               {[
-                {id:'inn1', label:`${liveMatch.team1?.name||match.teamA} — 1st`},
-                {id:'inn2', label:`${liveMatch.team2?.name||match.teamB} — 2nd`},
+                {id:'inn1', label:`${liveMatch.team1?.name || match.teamA} — 1st`},
+                {id:'inn2', label:`${liveMatch.team2?.name || match.teamB} — 2nd`},
               ].map(t => (
                 <button key={t.id} onClick={()=>setTab(t.id)}
                   className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all
@@ -233,7 +316,7 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 pt-2" style={{scrollbarWidth:'none'}}>
 
-          {/* Static scorecard innings */}
+          {/* ── STATIC SCORECARD (completed matches) ── */}
           {staticScorecard && (()=>{
             const inn = tab==='innings1' ? staticScorecard.innings1 : staticScorecard.innings2;
             return (
@@ -244,7 +327,15 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
                 </div>
                 <table className="w-full text-left text-xs mb-5">
                   <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
-                    <tr><th className="py-2 px-1">Batter</th><th className="py-2 px-1 text-[8px] text-gray-500 hidden md:table-cell">Dismissal</th><th className="py-2 px-1 text-right">R</th><th className="py-2 px-1 text-right">B</th><th className="py-2 px-1 text-right">4s</th><th className="py-2 px-1 text-right">6s</th><th className="py-2 px-1 text-right">SR</th></tr>
+                    <tr>
+                      <th className="py-2 px-1">Batter</th>
+                      <th className="py-2 px-1 text-[8px] text-gray-500 hidden md:table-cell">Dismissal</th>
+                      <th className="py-2 px-1 text-right">R</th>
+                      <th className="py-2 px-1 text-right">B</th>
+                      <th className="py-2 px-1 text-right">4s</th>
+                      <th className="py-2 px-1 text-right">6s</th>
+                      <th className="py-2 px-1 text-right">SR</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {inn.batsmen.map((b,i)=>(
@@ -258,13 +349,25 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
                         <td className="py-2.5 px-1 text-right text-gray-400">{b.sr}</td>
                       </tr>
                     ))}
-                    <tr className="bg-white/5"><td colSpan={7} className="py-2 px-1 text-right text-[10px] font-black text-white">Total: {inn.total}</td></tr>
+                    <tr className="bg-white/5">
+                      <td colSpan={7} className="py-2 px-1 text-right text-[10px] font-black text-white">
+                        Total: {inn.total}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
+
                 <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3">Bowling</p>
                 <table className="w-full text-left text-xs">
                   <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
-                    <tr><th className="py-2 px-1">Bowler</th><th className="py-2 px-1 text-right">O</th><th className="py-2 px-1 text-right">M</th><th className="py-2 px-1 text-right">R</th><th className="py-2 px-1 text-right">W</th><th className="py-2 px-1 text-right">Eco</th></tr>
+                    <tr>
+                      <th className="py-2 px-1">Bowler</th>
+                      <th className="py-2 px-1 text-right">O</th>
+                      <th className="py-2 px-1 text-right">M</th>
+                      <th className="py-2 px-1 text-right">R</th>
+                      <th className="py-2 px-1 text-right">W</th>
+                      <th className="py-2 px-1 text-right">Eco</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {inn.bowlers.map((b,i)=>(
@@ -283,54 +386,142 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
             );
           })()}
 
-          {/* Live data innings */}
+          {/* ── LIVE DATA INNINGS ── */}
           {!staticScorecard && useLiveData && (
             <>
+              {/* 1st innings tab — team1 (batted first) */}
               {tab === 'inn1' && (
                 <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-                  <p className="text-xs font-black text-white mb-1">{liveMatch.team1?.name} — 1st Innings</p>
+                  <p className="text-xs font-black text-white mb-1">
+                    {liveMatch.team1?.name} — 1st Innings
+                  </p>
                   <p className="text-2xl font-black text-ipl-neon font-mono">
                     {liveMatch.team1Score
-                      ? `${liveMatch.team1Score}/${liveMatch.team1Wickets} (${liveMatch.team1Overs})`
+                      ? `${liveMatch.team1Score}/${liveMatch.team1Wickets ?? ''} (${liveMatch.team1Overs ?? ''})`
                       : 'Yet to bat'}
                   </p>
-                  {liveMatch.target && <p className="text-xs text-gray-500 mt-2">Set target of {liveMatch.target}</p>}
+                  {liveMatch.target && (
+                    <p className="text-xs text-gray-500 mt-2">Set target of {liveMatch.target}</p>
+                  )}
                 </div>
               )}
+
+              {/* 2nd innings tab — team2 (currently batting) */}
               {tab === 'inn2' && (
                 <div className="space-y-4">
+                  {/* Score summary */}
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
                     <div>
-                      <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">{liveMatch.team2?.name} — 2nd Innings</p>
-                      <p className="text-2xl font-black text-ipl-neon font-mono mt-1">{liveMatch.score}/{liveMatch.wickets}</p>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">
+                        {liveMatch.team2?.name} — 2nd Innings
+                      </p>
+                      <p className="text-2xl font-black text-ipl-neon font-mono mt-1">
+                        {liveMatch.score}/{liveMatch.wickets}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[9px] text-gray-500">Overs</p>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest">Overs</p>
                       <p className="text-xl font-black text-white">{liveMatch.overs}</p>
-                      {liveMatch.crr && <p className="text-[9px] text-gray-500 mt-1">CRR: {liveMatch.crr}</p>}
-                      {liveMatch.rrr && <p className="text-[9px] text-red-400">RRR: {liveMatch.rrr}</p>}
+                      {liveMatch.crr && (
+                        <p className="text-[9px] text-gray-500 mt-1">CRR: {liveMatch.crr}</p>
+                      )}
+                      {liveMatch.rrr && (
+                        <p className="text-[9px] text-red-400">RRR: {liveMatch.rrr}</p>
+                      )}
                     </div>
                   </div>
-                  {liveMatch.batsmen?.length > 0 && (
-                    <table className="w-full text-left text-xs">
-                      <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
-                        <tr><th className="py-2 px-1">Batter</th><th className="py-2 px-1 text-right">R</th><th className="py-2 px-1 text-right">B</th><th className="py-2 px-1 text-right">SR</th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {liveMatch.batsmen.map((b,i)=>(
-                          <tr key={i} className="hover:bg-white/5">
-                            <td className="py-2.5 px-1 font-bold text-white flex items-center gap-1.5">
-                              {b.onStrike && <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse inline-block"/>}
-                              {b.name}
-                            </td>
-                            <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.runs}</td>
-                            <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.balls}</td>
-                            <td className="py-2.5 px-1 text-right text-gray-400">{b.sr}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+
+                  {/* Target info */}
+                  {liveMatch.target && liveMatch.status !== 'FINISHED' && (
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex justify-between text-[10px]">
+                      <div className="text-center">
+                        <p className="text-gray-500">Target</p>
+                        <p className="text-yellow-400 font-black text-sm">{liveMatch.target}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-500">Need</p>
+                        <p className="text-white font-black text-sm">
+                          {Math.max(0, liveMatch.target - parseInt(liveMatch.score || 0))} runs
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-500">Balls left</p>
+                        <p className="text-white font-black text-sm">
+                          {Math.max(0, Math.floor((20 - parseFloat(liveMatch.overs || 0)) * 6))}
+                        </p>
+                      </div>
+                    </div>
                   )}
+
+                  {/* Batsmen */}
+                  {liveMatch.batsmen?.length > 0 ? (
+                    <div>
+                      <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Batting</p>
+                      <table className="w-full text-left text-xs">
+                        <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
+                          <tr>
+                            <th className="py-2 px-1">Batter</th>
+                            <th className="py-2 px-1 text-right">R</th>
+                            <th className="py-2 px-1 text-right">B</th>
+                            <th className="py-2 px-1 text-right">SR</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {liveMatch.batsmen.map((b,i)=>(
+                            <tr key={i} className="hover:bg-white/5">
+                              <td className="py-2.5 px-1 font-bold text-white flex items-center gap-1.5">
+                                {b.onStrike && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse inline-block flex-shrink-0"/>
+                                )}
+                                {b.name}
+                              </td>
+                              <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.runs}</td>
+                              <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.balls}</td>
+                              <td className="py-2.5 px-1 text-right text-gray-400">{b.sr}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 py-6 text-center">
+                      <Activity className="w-6 h-6 text-gray-700 animate-pulse"/>
+                      <p className="text-[10px] text-gray-600">
+                        Live batter data will appear within 2 scrape cycles (~80s).
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Bowlers */}
+                  {liveMatch.bowlers?.length > 0 && (
+                    <div>
+                      <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-2">Bowling</p>
+                      <table className="w-full text-left text-xs">
+                        <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
+                          <tr>
+                            <th className="py-2 px-1">Bowler</th>
+                            <th className="py-2 px-1 text-right">O</th>
+                            <th className="py-2 px-1 text-right">R</th>
+                            <th className="py-2 px-1 text-right">W</th>
+                            <th className="py-2 px-1 text-right">Eco</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {liveMatch.bowlers.map((b,i)=>(
+                            <tr key={i} className="hover:bg-white/5">
+                              <td className="py-2.5 px-1 font-bold text-white">{b.name}</td>
+                              <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.overs}</td>
+                              <td className="py-2.5 px-1 text-right text-white">{b.runs}</td>
+                              <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.wickets}</td>
+                              <td className="py-2.5 px-1 text-right text-gray-400">{b.economy}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Result */}
                   {liveMatch.result && (
                     <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-center">
                       <Trophy className="w-5 h-5 text-yellow-400 mx-auto mb-1"/>
@@ -342,11 +533,13 @@ const ScorecardModal = ({ match, onClose, liveMatch }) => {
             </>
           )}
 
-          {/* No data available */}
+          {/* No data */}
           {!staticScorecard && !useLiveData && (
             <div className="flex flex-col items-center gap-3 py-12 text-center">
               <Clock className="w-8 h-8 text-gray-700"/>
-              <p className="text-xs text-gray-600 font-black uppercase tracking-widest">Scorecard not available</p>
+              <p className="text-xs text-gray-600 font-black uppercase tracking-widest">
+                Scorecard not available
+              </p>
               <p className="text-[10px] text-gray-700">Check back after the match starts</p>
             </div>
           )}
@@ -368,6 +561,7 @@ const FixtureCard = ({ match, effectiveStatus, liveMatchData, index }) => {
   const isCompleted = effectiveStatus === 'completed';
   const isUpcoming  = effectiveStatus === 'upcoming';
 
+  // Only use live data if this is the correct fixture for today (dedup applied upstream)
   const liveScore  = liveMatchData?.score;
   const liveWkts   = liveMatchData?.wickets;
   const liveOvers  = liveMatchData?.overs;
@@ -377,7 +571,7 @@ const FixtureCard = ({ match, effectiveStatus, liveMatchData, index }) => {
   const showScoreA = isCompleted
     ? match.scoreA
     : isLive && liveMatchData?.team1Score
-      ? `${liveMatchData.team1Score}/${liveMatchData.team1Wickets} (${liveMatchData.team1Overs})`
+      ? `${liveMatchData.team1Score}${liveMatchData.team1Wickets ? '/' + liveMatchData.team1Wickets : ''} (${liveMatchData.team1Overs ?? ''})`
       : null;
 
   const showScoreB = isCompleted
@@ -401,15 +595,12 @@ const FixtureCard = ({ match, effectiveStatus, liveMatchData, index }) => {
           : isCompleted ? 'border-white/10 bg-white/5 hover:border-white/20'
           :               'border-white/[0.06] bg-white/[0.02] hover:border-ipl-neon/30'}`}
       >
-        {/* Live pulse ring */}
         {isLive && (
           <div className="absolute inset-0 rounded-[2.5rem] border-2 border-red-500/20 animate-pulse pointer-events-none"/>
         )}
 
-        {/* Match number */}
         <div className="absolute top-5 left-7 text-[8px] font-black text-gray-700">#{match.id}</div>
 
-        {/* BG decor */}
         <div className="absolute -bottom-4 -right-2 text-8xl font-black italic opacity-[0.03] select-none uppercase pointer-events-none">
           {match.teamA}
         </div>
@@ -444,10 +635,18 @@ const FixtureCard = ({ match, effectiveStatus, liveMatchData, index }) => {
         {/* Teams */}
         <div className="flex justify-between items-center gap-4 mb-5">
           <div className="flex-1 text-center">
-            {LOGOS[match.teamA] && <img src={LOGOS[match.teamA]} alt={match.teamA} className="w-14 mx-auto mb-2 drop-shadow-lg"/>}
-            <div className="text-3xl font-black italic tracking-tighter" style={{color:colorA}}>{match.teamA}</div>
-            {showScoreA && <p className="text-[10px] font-mono text-gray-400 mt-1">{showScoreA}</p>}
-            {displayWinner===match.teamA && <span className="text-[8px] text-yellow-400 font-black">🏆 Winner</span>}
+            {LOGOS[match.teamA] && (
+              <img src={LOGOS[match.teamA]} alt={match.teamA} className="w-14 mx-auto mb-2 drop-shadow-lg"/>
+            )}
+            <div className="text-3xl font-black italic tracking-tighter" style={{color:colorA}}>
+              {match.teamA}
+            </div>
+            {showScoreA && (
+              <p className="text-[10px] font-mono text-gray-400 mt-1">{showScoreA}</p>
+            )}
+            {displayWinner === match.teamA && (
+              <span className="text-[8px] text-yellow-400 font-black">🏆 Winner</span>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
@@ -463,35 +662,48 @@ const FixtureCard = ({ match, effectiveStatus, liveMatchData, index }) => {
               </p>
             )}
             {isLive && liveStatus === 'INNINGS BREAK' && (
-              <span className="text-[8px] text-yellow-400 font-black uppercase">Innings Break</span>
+              <span className="text-[8px] text-yellow-400 font-black uppercase">Break</span>
             )}
           </div>
 
           <div className="flex-1 text-center">
-            {LOGOS[match.teamB] && <img src={LOGOS[match.teamB]} alt={match.teamB} className={`w-14 mx-auto mb-2 drop-shadow-lg ${isLive?'animate-pulse':''}`}/>}
-            <div className="text-3xl font-black italic tracking-tighter" style={{color:colorB}}>{match.teamB}</div>
+            {LOGOS[match.teamB] && (
+              <img src={LOGOS[match.teamB]} alt={match.teamB}
+                className={`w-14 mx-auto mb-2 drop-shadow-lg ${isLive ? 'animate-pulse' : ''}`}/>
+            )}
+            <div className="text-3xl font-black italic tracking-tighter" style={{color:colorB}}>
+              {match.teamB}
+            </div>
             {showScoreB && (
               <p className={`text-[10px] font-mono mt-1 ${isLive ? 'text-ipl-neon font-bold' : 'text-gray-400'}`}>
                 {showScoreB}
               </p>
             )}
-            {displayWinner===match.teamB && <span className="text-[8px] text-yellow-400 font-black">🏆 Winner</span>}
-            {isLive && <span className="text-[8px] text-ipl-neon font-black uppercase">Batting</span>}
+            {displayWinner === match.teamB && (
+              <span className="text-[8px] text-yellow-400 font-black">🏆 Winner</span>
+            )}
+            {isLive && (
+              <span className="text-[8px] text-ipl-neon font-black uppercase">Batting</span>
+            )}
           </div>
         </div>
 
         <hr className="border-white/5 mb-4"/>
 
-        {/* Bottom */}
+        {/* Bottom row */}
         <div className="flex flex-wrap justify-between items-end gap-3">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-gray-400">
               <Calendar className="w-3 h-3 text-ipl-neon flex-shrink-0"/>
-              <span className="text-[10px] font-black uppercase tracking-widest">{match.date} • {match.day}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                {match.date} • {match.day}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-gray-400">
               <MapPin className="w-3 h-3 text-ipl-neon flex-shrink-0"/>
-              <span className="text-[10px] font-black uppercase tracking-widest truncate max-w-[200px]">{match.venue}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest truncate max-w-[200px]">
+                {match.venue}
+              </span>
             </div>
           </div>
 
@@ -501,7 +713,7 @@ const FixtureCard = ({ match, effectiveStatus, liveMatchData, index }) => {
               <span className="text-lg font-mono font-black italic text-white">{match.time}</span>
             </div>
 
-            {(isCompleted && match.scorecard) && (
+            {isCompleted && match.scorecard && (
               <button onClick={() => setShowScorecard(true)}
                 className="flex items-center gap-2 px-5 py-2 bg-white/10 border border-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ipl-neon hover:text-black hover:border-transparent transition-all">
                 <Activity className="w-3 h-3"/> View Scorecard
@@ -541,66 +753,55 @@ const Fixtures = () => {
   const [search,     setSearch]     = useState('');
   const [teamFilter, setTeamFilter] = useState('all');
 
-  // Get live match from global context
   const { state } = useMatchContext();
   const liveMatch = state.currentMatch;
-  
-  // ✅ HOOK CALLED SAFELY INSIDE THE COMPONENT
+
   const { completedIds, getResult } = useCompletedMatches();
 
-  const allTeams = ['all','CSK','MI','RCB','KKR','RR','PBKS','DC','GT','LSG','SRH'];
+  const allTeams  = ['all','CSK','MI','RCB','KKR','RR','PBKS','DC','GT','LSG','SRH'];
   const filterOpts = [
-    {id:'all',      label:'All Matches'},
-    {id:'live',     label:'Live'},
-    {id:'completed',label:'Results'},
-    {id:'upcoming', label:'Upcoming'},
+    {id:'all',       label:'All Matches'},
+    {id:'live',      label:'Live'},
+    {id:'completed', label:'Results'},
+    {id:'upcoming',  label:'Upcoming'},
   ];
 
-  // ✅ LOGIC SAFELY MERGED INTO USEMEMO
+  // ─── ENRICHED SCHEDULE ──────────────────────────────────────────────────────
+  // This is where the deduplication fix lives.
+  // isThisFixtureLive() ensures only the date-matching fixture gets live data.
   const enrichedSchedule = useMemo(() => {
     return BASE_SCHEDULE.map(match => {
-      
-      const apiResult = getResult(match.id);
+      const apiResult    = getResult(match.id);
       const displayResult = apiResult?.result || match.result;
       const displayWinner = apiResult?.winner || match.winner;
       const displayScoreA = apiResult?.scoreA || match.scoreA;
       const displayScoreB = apiResult?.scoreB || match.scoreB;
 
-      let matchIsLive = false;
-      let scraperSaysFinished = false;
+      // ── KEY FIX: use isThisFixtureLive instead of bare teamsMatch ──────────
+      // This prevents BOTH CSK vs MI fixtures from lighting up as "live"
+      // when only today's match is actually in progress.
+      const matchIsLive = isThisFixtureLive(match, liveMatch);
+      const scraperSaysFinished = matchIsLive &&
+        (liveMatch?.status === 'FINISHED' || liveMatch?.status === 'RECENTLY FINISHED');
 
-      if (liveMatch?.team1?.name && liveMatch?.team2?.name) {
-        matchIsLive = teamsMatch(
-          match.teamA, match.teamB,
-          liveMatch.team1.name, liveMatch.team2.name
-        );
-
-        if (matchIsLive) {
-          scraperSaysFinished = liveMatch.status === 'FINISHED' || liveMatch.status === 'RECENTLY FINISHED';
-        }
-      }
-
-      const effectiveStatus = completedIds.has(match.id) 
+      const effectiveStatus = completedIds.has(match.id)
         ? 'completed'
-        : matchIsLive 
+        : matchIsLive
           ? (scraperSaysFinished ? 'completed' : 'live')
           : match.baseStatus;
 
       return {
         ...match,
         effectiveStatus,
-        result: displayResult,
-        winner: displayWinner,
+        result: scraperSaysFinished ? liveMatch.result : displayResult,
+        winner: scraperSaysFinished ? liveMatch.result?.split(' ')[0]?.toUpperCase() : displayWinner,
         scoreA: displayScoreA,
         scoreB: displayScoreB,
-        dynamicResult: scraperSaysFinished ? liveMatch.result : null,
-        dynamicScoreA: matchIsLive && liveMatch.team1Score ? `${liveMatch.team1Score}/${liveMatch.team1Wickets} (${liveMatch.team1Overs})` : null,
-        dynamicScoreB: matchIsLive ? `${liveMatch.score}/${liveMatch.wickets} (${liveMatch.overs})` : null,
-        dynamicWinner: scraperSaysFinished ? liveMatch.result?.split(' ')[0]?.toUpperCase() : null,
       };
     });
   }, [liveMatch, completedIds, getResult]);
 
+  // ─── FILTERED LIST ────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return enrichedSchedule.filter(m => {
       const statusOk = filter === 'all' || m.effectiveStatus === filter;
@@ -614,9 +815,9 @@ const Fixtures = () => {
     });
   }, [enrichedSchedule, filter, search, teamFilter]);
 
-  const liveCount     = enrichedSchedule.filter(m => m.effectiveStatus === 'live').length;
-  const completedCount= enrichedSchedule.filter(m => m.effectiveStatus === 'completed').length;
-  const upcomingCount = enrichedSchedule.filter(m => m.effectiveStatus === 'upcoming').length;
+  const liveCount      = enrichedSchedule.filter(m => m.effectiveStatus === 'live').length;
+  const completedCount = enrichedSchedule.filter(m => m.effectiveStatus === 'completed').length;
+  const upcomingCount  = enrichedSchedule.filter(m => m.effectiveStatus === 'upcoming').length;
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 space-y-8 relative z-10">
@@ -675,7 +876,13 @@ const Fixtures = () => {
             <button key={t} onClick={() => setTeamFilter(t)}
               className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all
                 ${teamFilter===t ? 'text-black font-black' : 'text-gray-500 hover:text-white'}`}
-              style={teamFilter===t && t!=='all' ? {backgroundColor:COLORS[t]+'dd'} : teamFilter===t ? {backgroundColor:'#0ea5e9'} : {}}>
+              style={
+                teamFilter===t && t!=='all'
+                  ? {backgroundColor: COLORS[t] + 'dd'}
+                  : teamFilter===t
+                    ? {backgroundColor:'#0ea5e9'}
+                    : {}
+              }>
               {t==='all' ? 'All Teams' : t}
             </button>
           ))}
@@ -683,7 +890,7 @@ const Fixtures = () => {
 
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500"/>
-          <input type="text" value={search} onChange={e=>setSearch(e.target.value)}
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search team or city…"
             className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[11px] text-white placeholder-gray-600 outline-none focus:border-ipl-neon/40 transition-colors"/>
         </div>
@@ -702,10 +909,8 @@ const Fixtures = () => {
               key={match.id}
               match={match}
               effectiveStatus={match.effectiveStatus}
-              liveMatchData={
-                teamsMatch(match.teamA, match.teamB, liveMatch?.team1?.name, liveMatch?.team2?.name)
-                  ? liveMatch : null
-              }
+              // ── Pass live data ONLY to the correctly date-matched fixture ──
+              liveMatchData={isThisFixtureLive(match, liveMatch) ? liveMatch : null}
               index={i}
             />
           ))}

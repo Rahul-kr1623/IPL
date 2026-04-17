@@ -44,13 +44,16 @@ const LoadingCard = ({ icon: Icon = RefreshCw, label, sub }) => (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WIN PROBABILITY METER
+// team1 = batted first (left side), team2 = currently batting (right side)
+// winProbT1 = team1's win probability %, winProbT2 = team2's win probability %
 // ─────────────────────────────────────────────────────────────────────────────
 const WinProbMeter = ({ team1, team2, probT1, probT2 }) => {
-  const p1 = Math.round(probT1 ?? (100 - (probT2 ?? 50)));
-  const p2 = Math.round(probT2 ?? 50);
+  const p1 = Math.max(0, Math.min(100, Math.round(probT1 ?? 50)));
+  const p2 = Math.max(0, Math.min(100, Math.round(probT2 ?? 50)));
   return (
     <div className="w-full space-y-2">
       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+        {/* team1 (bat first) on LEFT, team2 (currently batting) on RIGHT */}
         <span className="text-indigo-400">{team1} <span className="text-white ml-1">{p1}%</span></span>
         <span className="text-gray-600 text-[8px]">WIN PROBABILITY</span>
         <span className="text-red-400">{p2}% <span className="text-white ml-1">{team2}</span></span>
@@ -76,28 +79,32 @@ const WinProbMeter = ({ team1, team2, probT1, probT2 }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SCORECARD MODAL — Two innings tabs (like Google / Cricbuzz)
+// SCORECARD MODAL
+// IMPORTANT: In the data model:
+//   team1 = batted FIRST  (their score = team1Score/Wickets/Overs)
+//   team2 = batting SECOND / currently batting (their score = score/wickets/overs)
+// So: "1st Innings" tab = team1's completed innings
+//     "2nd Innings" tab = team2's current/completed innings
 // ─────────────────────────────────────────────────────────────────────────────
 const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) => {
-  // tab: 'inn1' = bowling team (batted first), 'inn2' = batting team (current/chasing)
-  const [tab, setTab] = useState('inn2'); // default to current innings
+  const [tab, setTab] = useState('inn2'); // default to current innings (team2)
 
   const isFinished = match.status === 'FINISHED' || match.status === 'RECENTLY FINISHED';
 
-  // Innings labels
-  const inn1Label = `${team1Name} Innings`; // bowled first
-  const inn2Label = `${team2Name} Innings`; // batting / batted second
+  // team1 = batted first → 1st innings tab
+  // team2 = batting second → 2nd innings tab
+  const inn1Label = `${team1Name} Innings`; // 1st innings (completed)
+  const inn2Label = `${team2Name} Innings`; // 2nd innings (current)
 
-  // Current innings data (from live scraper — batsmen/bowlers arrays)
   const currentBatsmen = match.batsmen   || [];
   const currentBowlers = match.bowlers   || [];
 
-  // First innings score display
+  // First innings: team1's score
   const firstInningsScore = match.team1Score
-    ? `${match.team1Score}/${match.team1Wickets} (${match.team1Overs})`
+    ? `${match.team1Score}${match.team1Wickets ? '/' + match.team1Wickets : ''}${match.team1Overs ? ' (' + match.team1Overs + ')' : ''}`
     : 'Yet to bat';
 
-  const hasLiveData = currentBatsmen.length > 0 || currentBowlers.length > 0;
+  const hasFirstInningsData = !!(match.team1Score && match.team1Score !== 'null' && match.team1Score !== '0');
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -123,12 +130,14 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
 
         {/* Header */}
         <div className="p-6 pb-0 flex-shrink-0">
-          {/* Match summary */}
+          {/* Match summary — team1 (bat1st) on LEFT, team2 (bat2nd) on RIGHT */}
           <div className="flex justify-around items-center mb-5">
             <div className="text-center">
               {logo1 && <img src={logo1} className="w-12 mx-auto mb-1" alt={team1Name} />}
               <p className="text-xs font-black text-white">{team1Name}</p>
+              {/* team1 = batted first, show their completed score */}
               <p className="text-[10px] font-mono text-gray-400">{firstInningsScore}</p>
+              <p className="text-[9px] text-gray-600 mt-0.5">1st Innings</p>
             </div>
             <div className="text-center space-y-1">
               <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest
@@ -145,9 +154,11 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
             <div className="text-center">
               {logo2 && <img src={logo2} className="w-12 mx-auto mb-1" alt={team2Name} />}
               <p className="text-xs font-black text-white">{team2Name}</p>
+              {/* team2 = batting second, show their current/final score */}
               <p className="text-[10px] font-mono text-ipl-neon font-bold">
                 {match.score}/{match.wickets} ({match.overs})
               </p>
+              <p className="text-[9px] text-gray-600 mt-0.5">2nd Innings</p>
             </div>
           </div>
 
@@ -177,7 +188,7 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto p-6 pt-3" style={{ scrollbarWidth: 'none' }}>
 
-          {/* ── INNINGS 1 TAB (bowling team — batted first) ── */}
+          {/* ── 1ST INNINGS TAB (team1 — batted first) ── */}
           {tab === 'inn1' && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
@@ -185,46 +196,56 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
                 <p className="text-2xl font-black text-ipl-neon font-mono">{firstInningsScore}</p>
               </div>
 
-              {/* Note: we only have live scraped data for current innings */}
-              {/* First innings detailed scorecard would need API access */}
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <BarChart2 className="w-8 h-8 text-gray-700" />
-                <p className="text-xs text-gray-500 font-black uppercase tracking-widest">
-                  First Innings Complete
-                </p>
-                <p className="text-[10px] text-gray-600 max-w-xs">
-                  Ball-by-ball data for the completed innings is not available from the scraper.
-                  The detailed first innings scorecard will be saved to the Fixtures page once
-                  the match ends.
-                </p>
-                <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/10 text-left text-[10px] w-full">
-                  <p className="text-gray-400 font-black mb-1">SUMMARY</p>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Team</span>
-                    <span className="text-white font-bold">{team1Name}</span>
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-gray-500">Score</span>
-                    <span className="text-white font-bold">{firstInningsScore}</span>
-                  </div>
-                  {match.target && (
-                    <div className="flex justify-between mt-1">
-                      <span className="text-gray-500">Set target of</span>
-                      <span className="text-ipl-neon font-bold">{match.target}</span>
+              {hasFirstInningsData ? (
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  <BarChart2 className="w-8 h-8 text-gray-700" />
+                  <p className="text-xs text-gray-500 font-black uppercase tracking-widest">
+                    1st Innings Complete
+                  </p>
+                  <p className="text-[10px] text-gray-600 max-w-xs">
+                    Ball-by-ball breakdown for the completed innings isn't available from the live scraper.
+                  </p>
+                  <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/10 text-left text-[10px] w-full">
+                    <p className="text-gray-400 font-black mb-2">SUMMARY</p>
+                    <div className="flex justify-between py-1 border-b border-white/5">
+                      <span className="text-gray-500">Team</span>
+                      <span className="text-white font-bold">{team1Name}</span>
                     </div>
-                  )}
+                    <div className="flex justify-between py-1 border-b border-white/5">
+                      <span className="text-gray-500">Score</span>
+                      <span className="text-ipl-neon font-bold">{firstInningsScore}</span>
+                    </div>
+                    {match.target && (
+                      <div className="flex justify-between py-1">
+                        <span className="text-gray-500">Set target of</span>
+                        <span className="text-yellow-400 font-bold">{match.target}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <Clock className="w-8 h-8 text-gray-700" />
+                  <p className="text-xs text-gray-500 font-black uppercase tracking-widest">
+                    Innings Not Started
+                  </p>
+                  <p className="text-[10px] text-gray-600">
+                    {team1Name} is yet to bat.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* ── INNINGS 2 TAB (current batting team) ── */}
+          {/* ── 2ND INNINGS TAB (team2 — currently batting) ── */}
           {tab === 'inn2' && (
             <div className="space-y-5">
               {/* Current score summary */}
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
                 <div>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">{team2Name} — 2nd Innings</p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">
+                    {team2Name} — {isFinished ? 'Final Score' : '2nd Innings'}
+                  </p>
                   <p className="text-2xl font-black text-ipl-neon font-mono mt-1">
                     {match.score}/{match.wickets}
                   </p>
@@ -240,6 +261,30 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
                   )}
                 </div>
               </div>
+
+              {/* Target info */}
+              {match.target && !isFinished && (
+                <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex justify-between text-[10px]">
+                  <div className="text-center">
+                    <p className="text-gray-500">Target</p>
+                    <p className="text-yellow-400 font-black text-sm">{match.target}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-gray-500">Need</p>
+                    <p className="text-white font-black text-sm">
+                      {Math.max(0, match.target - parseInt(match.score || 0))} runs
+                    </p>
+                  </div>
+                  {match.overs && (
+                    <div className="text-center">
+                      <p className="text-gray-500">Balls left</p>
+                      <p className="text-white font-black text-sm">
+                        {Math.max(0, Math.floor((20 - parseFloat(match.overs || 0)) * 6))}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Last 6 balls */}
               {match.recent?.some(b => b !== '·') && (
@@ -294,7 +339,7 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
                 <div className="flex flex-col items-center gap-2 py-6 text-center">
                   <Activity className="w-6 h-6 text-gray-700 animate-pulse" />
                   <p className="text-[10px] text-gray-600">
-                    Live batter data fetched from Cricbuzz. Will appear within 2 scrape cycles.
+                    Live batter data will appear within 2 scrape cycles (~80s).
                   </p>
                 </div>
               )}
@@ -335,9 +380,6 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
                 <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">
                   <Trophy className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
                   <p className="text-green-400 font-black text-sm italic">{match.result}</p>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    Full scorecard will be available in the Fixtures tab
-                  </p>
                 </div>
               )}
             </div>
@@ -351,6 +393,10 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HERO COMPONENT
+// Layout:
+//   LEFT  = team1 (batted first, dimmed, shows their completed score)
+//   RIGHT = team2 (currently batting, highlighted, shows live score)
+//   CENTRE = team2's current score (the "big number")
 // ─────────────────────────────────────────────────────────────────────────────
 const Hero = () => {
   const [isPlaying,  setIsPlaying]  = useState(false);
@@ -380,10 +426,12 @@ const Hero = () => {
     mouseY.set(e.clientY - (r.top + r.height / 2));
   };
 
-  const t1 = match?.team1?.name || '';
-  const t2 = match?.team2?.name || '';
-  const logo1 = getLogo(t1);
-  const logo2 = getLogo(t2);
+  // team1 = batted first (LEFT, dimmed)
+  // team2 = currently batting (RIGHT, highlighted)
+  const t1 = match?.team1?.name || '';  // batted first
+  const t2 = match?.team2?.name || '';  // currently batting
+  const logo1 = getLogo(t1);  // left team logo
+  const logo2 = getLogo(t2);  // right team logo
 
   const isLive     = match?.status === 'LIVE';
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
@@ -392,18 +440,27 @@ const Hero = () => {
   const isWarmUp   = fetchStatus === 'WARMING_UP' && !match;
   const isError    = fetchStatus === 'ERROR' && !match;
 
-  // Win probability — validated (never show 50/50 for a finished match)
-  let probT1 = match?.winProbT1 ?? (100 - (match?.winProb ?? 50));
-  let probT2 = match?.winProbT2 ?? (match?.winProb ?? 50);
+  // Win probability — from backend, correctly assigned
+  // winProbT1 = team1's (batted first) probability
+  // winProbT2 = team2's (currently batting) probability
+  let probT1 = match?.winProbT1 ?? 50;
+  let probT2 = match?.winProbT2 ?? 50;
+
+  // Override for finished matches
   if (isFinished && match?.result) {
-    const winnerMentioned = t1 && match.result.toUpperCase().startsWith(t1.toUpperCase());
-    probT1 = winnerMentioned ? 100 : 0;
-    probT2 = winnerMentioned ? 0   : 100;
+    const w = (match.result || '').toUpperCase();
+    if (t1 && w.includes(t1.toUpperCase())) { probT1 = 100; probT2 = 0; }
+    else if (t2 && w.includes(t2.toUpperCase())) { probT2 = 100; probT1 = 0; }
   }
 
   // Batters sorted: striker first
   const batters = [...(match?.batsmen || [])].sort((a, b) => (b.onStrike ? 1 : 0) - (a.onStrike ? 1 : 0));
   const bowler  = match?.bowlers?.[0] || null;
+
+  // First innings score display for team1 (left side)
+  const team1InningsDisplay = match?.team1Score
+    ? `${match.team1Score}${match.team1Wickets ? '/' + match.team1Wickets : ''} (${match.team1Overs || '20.0'})`
+    : null;
 
   return (
     <section
@@ -433,7 +490,7 @@ const Hero = () => {
             <WifiOff className="w-12 h-12 text-red-500" />
             <p className="text-white font-black text-base uppercase tracking-widest">Connection Error</p>
             <p className="text-gray-400 text-sm max-w-xs">{fetchError}</p>
-            <p className="text-gray-600 text-xs mt-1">Retrying every 20s…</p>
+            <p className="text-gray-600 text-xs mt-1">Retrying every 40s…</p>
           </div>
         )}
         {fetchStatus === 'SUCCESS' && !match && (
@@ -469,7 +526,7 @@ const Hero = () => {
                 :              'bg-red-600/20    border-red-500/30'}`}
               style={{ transform:'translateX(-50%) translateZ(80px)' }}
             >
-              {!isFinished && (
+              {!isFinished && !isBreak && (
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600" />
@@ -498,7 +555,7 @@ const Hero = () => {
             <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-8"
               style={{ transform:'translateZ(100px)' }}>
 
-              {/* Team 1 — bowled first */}
+              {/* LEFT: team1 — batted first (dimmed) */}
               <div className="text-center opacity-40 hover:opacity-70 transition-opacity">
                 {logo1
                   ? <img src={logo1} alt={t1} className="w-28 md:w-36 mx-auto drop-shadow-2xl" />
@@ -506,14 +563,14 @@ const Hero = () => {
                       <span className="text-3xl font-black text-gray-400">{t1}</span>
                     </div>}
                 <h2 className="text-lg font-bold mt-3 tracking-widest text-gray-400 uppercase">{t1}</h2>
-                {match.team1Score ? (
-                  <p className="text-sm font-mono mt-1 text-gray-500">
-                    {match.team1Score}/{match.team1Wickets} ({match.team1Overs})
-                  </p>
-                ) : <p className="text-xs text-gray-600 mt-1">Yet to bat</p>}
+                {/* Show team1's completed innings score */}
+                {team1InningsDisplay
+                  ? <p className="text-sm font-mono mt-1 text-gray-500">{team1InningsDisplay}</p>
+                  : <p className="text-xs text-gray-600 mt-1">1st Innings</p>
+                }
               </div>
 
-              {/* Centre */}
+              {/* CENTRE: live score (team2's current score) */}
               <div className="text-center">
                 {match.target && !isFinished && (
                   <p className="text-[10px] font-mono text-gray-500 mb-1 uppercase tracking-widest">
@@ -541,7 +598,7 @@ const Hero = () => {
                 )}
               </div>
 
-              {/* Team 2 — batting */}
+              {/* RIGHT: team2 — currently batting (highlighted) */}
               <div className="text-center">
                 <div className="relative">
                   {logo2
@@ -564,6 +621,7 @@ const Hero = () => {
 
             {/* Win probability meter */}
             <div className="mb-8 px-2" style={{ transform:'translateZ(60px)' }}>
+              {/* team1 on left, team2 on right — probT1 is team1's probability */}
               <WinProbMeter team1={t1} team2={t2} probT1={probT1} probT2={probT2} />
             </div>
 
@@ -578,7 +636,7 @@ const Hero = () => {
 
             {/* Batter / Bowler HUD — 3 columns */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ transform:'translateZ(40px)' }}>
-              {/* Batter 1 */}
+              {/* Striker */}
               <div className="glass bg-white/5 p-5 rounded-[1.5rem] border border-white/10 flex items-center justify-between">
                 <div>
                   <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1 flex items-center gap-1">
@@ -592,13 +650,13 @@ const Hero = () => {
                 </div>
                 {batters[0]
                   ? <div className="text-right">
-                      <span className="text-lg font-black text-ipl-neon">{batters[0].runs}*</span>
+                      <span className="text-lg font-black text-ipl-neon">{batters[0].runs}{batters[0].onStrike ? '*' : ''}</span>
                       <p className="text-[9px] text-gray-500">{batters[0].balls} (B)</p>
                     </div>
                   : <span className="text-gray-700 text-sm">—</span>}
               </div>
 
-              {/* Batter 2 */}
+              {/* Non-Striker */}
               <div className="glass bg-white/5 p-5 rounded-[1.5rem] border border-white/10 flex items-center justify-between">
                 <div>
                   <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Non-Striker</p>
@@ -647,8 +705,8 @@ const Hero = () => {
           <ScorecardModal
             match={match}
             onClose={() => setShowModal(false)}
-            team1Name={t1} team2Name={t2}
-            logo1={logo1}  logo2={logo2}
+            team1Name={t1}  team2Name={t2}
+            logo1={logo1}   logo2={logo2}
           />
         )}
       </AnimatePresence>
