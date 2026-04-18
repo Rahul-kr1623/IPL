@@ -29,7 +29,7 @@ import { existsSync } from 'fs';
 
 const TEAMS = ['CSK','MI','RCB','KKR','RR','PBKS','DC','GT','LSG','SRH'];
 const wait  = ms => new Promise(r => setTimeout(r, ms));
-const ESPN_IPL_ID = '23694';
+const ESPN_IPL_ID = '8048';
 
 // Chrome detection
 const CHROME_PATHS = [
@@ -838,6 +838,19 @@ const cbDirectFetch = async () => {
 export const scrapeLiveMatch = async () => {
   console.log('━━━ [Scraper] Starting ━━━');
 
+  // CB-Direct is the most reliable — try it FIRST
+  try {
+    const r = await cbDirectFetch();
+    if (r) { console.log('━━━ Done via CB-Direct ━━━'); return { ...r, lastUpdated: new Date() }; }
+  } catch(e) { console.log('[CB-Direct fatal]', e.message); }
+
+  // CB-Proxy as second option
+  try {
+    const r = await cbProxyFetch();
+    if (r) { console.log('━━━ Done via CB-Proxy ━━━'); return { ...r, lastUpdated: new Date() }; }
+  } catch(e) { console.log('[CB-Proxy fatal]', e.message); }
+
+  // ESPN as fallback (often returns stale data)
   try {
     const meta = await espnFindMatch();
     if (meta) {
@@ -846,24 +859,12 @@ export const scrapeLiveMatch = async () => {
         console.log('━━━ Done via ESPN ━━━');
         return { ...r, lastUpdated: new Date() };
       }
-      if (r?.score === '0') console.log('  [ESPN] Score 0, trying next...');
     }
   } catch(e) { console.log('[ESPN fatal]', e.message); }
-
-  try {
-    const r = await cbProxyFetch();
-    if (r) { console.log('━━━ Done via CB-Proxy ━━━'); return { ...r, lastUpdated: new Date() }; }
-  } catch(e) { console.log('[CB-Proxy fatal]', e.message); }
-
-  try {
-    const r = await cbDirectFetch();
-    if (r) { console.log('━━━ Done via CB-Direct ━━━'); return { ...r, lastUpdated: new Date() }; }
-  } catch(e) { console.log('[CB-Direct fatal]', e.message); }
 
   if (!CHROME_AVAILABLE) { console.log('━━━ All failed, no Chrome ━━━'); return null; }
   return await browserFallback();
 };
-
 // ─────────────────────────────────────────────────────────────────────────────
 // STANDINGS + STATS
 // ─────────────────────────────────────────────────────────────────────────────
