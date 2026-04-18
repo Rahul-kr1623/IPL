@@ -1,0 +1,26 @@
+/**
+ * routes/live.js
+ * All live match, standings, and player stats routes.
+ * Mounted at /api/v1 in index.js.
+ */
+
+import express from 'express';
+import {
+  getLiveScore,
+  getCommentary,
+  getIplData,
+  getPlayerStats,
+  getCompletedMatches,
+  getHealth,
+} from '../controllers/liveController.js';
+
+const router = express.Router();
+
+router.get('/health',            getHealth);
+router.get('/live-score',        getLiveScore);
+router.get('/commentary',        getCommentary);
+router.get('/ipl-data',          getIplData);
+router.get('/player-stats',      getPlayerStats);
+router.get('/completed-matches', getCompletedMatches);
+
+export default router;

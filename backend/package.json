@@ -1,7 +1,7 @@
 {
   "name": "ipl-2026-server",
   "version": "1.0.0",
-  "description": "Backend for Motion IPL 2026 Portal",
+  "description": "Backend for IPL 2026 Portal",
   "main": "index.js",
   "type": "module",
   "scripts": {
