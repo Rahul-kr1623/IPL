@@ -45,19 +45,20 @@ export const saveMatch = async (d) => {
     matchNumber:    d.matchNumber    || null,
     matchTitle:     d.matchTitle     || null,
     currentInnings: d.currentInnings || 2,
+    slot:           d.slot           || 'slot1',  // 'slot1' = 3:30 PM, 'slot2' = 7:30 PM
     lastUpdated:    new Date(),
   };
 
   if (d.espnId) {
-    // Upsert by espnId — safe for double headers
+    // Upsert by espnId — safe for double headers (each slot has its own doc)
     await LiveMatch.findOneAndUpdate(
       { espnId: d.espnId },
       { $set: doc },
       { upsert: true, new: true }
     );
-    // Keep at most 2 documents; purge oldest finished ones beyond that
+    // Keep at most 3 documents: 2 active slots + 1 recently finished shown as Box 3
     const count = await LiveMatch.countDocuments();
-    if (count > 2) {
+    if (count > 3) {
       const oldest = await LiveMatch.findOne({ status: { $in: ['FINISHED', 'RECENTLY FINISHED'] } })
         .sort({ lastUpdated: 1 });
       if (oldest) await LiveMatch.deleteOne({ _id: oldest._id });
@@ -92,6 +93,16 @@ export const markMatchFinished = async () => {
     {},
     { $set: { status: 'RECENTLY FINISHED', lastUpdated: new Date() } }
   );
+};
+
+/**
+ * Get the most recently FINISHED match document from MongoDB.
+ * Used for Box 3 on the homepage ("Latest Result").
+ */
+export const getLatestFinishedMatch = async () => {
+  return LiveMatch.findOne(
+    { status: { $in: ['FINISHED', 'RECENTLY FINISHED'] } }
+  ).sort({ lastUpdated: -1 });
 };
 
 /**

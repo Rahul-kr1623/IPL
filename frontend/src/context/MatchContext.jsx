@@ -1,68 +1,120 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
-const LS_MATCH = 'ipl_last_match';
-const LS_THEME = 'ipl_theme';
+const LS_SLOTS = 'ipl_live_slots_v2';
+const LS_FINISHED = 'ipl_last_finished';
+const LS_THEME  = 'ipl_theme';
 
-const saveLS = (data) => {
-  try { localStorage.setItem(LS_MATCH, JSON.stringify({ data, savedAt: new Date().toISOString() })); } catch { }
+const saveLS = (key, data) => {
+  try { localStorage.setItem(key, JSON.stringify({ data, savedAt: new Date().toISOString() })); } catch { }
 };
-const loadLS = () => {
+const loadLS = (key) => {
   try {
-    const raw = localStorage.getItem(LS_MATCH);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch { return null; }
 };
 
-const cached = loadLS();
+const cachedSlots    = loadLS(LS_SLOTS);
+const cachedFinished = loadLS(LS_FINISHED);
 
-// ─── Initial state ────────────────────────────────────────────────────────────
+// ─── Initial state ─────────────────────────────────────────────────────────────
 const initialState = {
-  currentMatch: cached?.data || null,   // primary match (or null)
-  matches: cached?.data ? [cached.data] : [],  // all matches (1 or 2 on double-header)
-  fetchStatus: cached ? 'CACHED' : 'IDLE',
+  // New slot-based live data
+  slot1: cachedSlots?.data?.slot1 || null,       // 3:30 PM match
+  slot2: cachedSlots?.data?.slot2 || null,       // 7:30 PM match
+  latestFinished: cachedFinished?.data || null,  // Latest completed match (Box 3)
+
+  // Legacy compat
+  currentMatch: cachedSlots?.data?.slot1 || null,
+  matches: cachedSlots?.data ? [cachedSlots.data.slot1, cachedSlots.data.slot2].filter(Boolean) : [],
+
+  fetchStatus: cachedSlots ? 'CACHED' : 'IDLE',
   fetchError: null,
-  lastFetched: cached?.savedAt || null,
+  lastFetched: cachedSlots?.savedAt || null,
   isStale: false,
   searchQuery: '',
   isSearchOpen: false,
   theme: localStorage.getItem(LS_THEME) || 'DEFAULT',
 };
 
-// ─── Reducer ──────────────────────────────────────────────────────────────────
+// ─── Reducer ───────────────────────────────────────────────────────────────────
 const reducer = (state, action) => {
   switch (action.type) {
     case 'FETCH_START':
-      return { ...state, fetchStatus: state.currentMatch ? 'REFRESHING' : 'LOADING' };
+      return {
+        ...state,
+        fetchStatus: (state.slot1 || state.slot2) ? 'REFRESHING' : 'LOADING',
+      };
 
     case 'FETCH_SUCCESS': {
       const raw = action.payload;
-      // New API returns { matches: [...] }, old returned a single object
-      const matchArr = Array.isArray(raw.matches) ? raw.matches : (raw._empty ? [] : [raw]);
-      const clean = matchArr.map(({ _stale, _id, __v, createdAt, updatedAt, ...m }) => m);
-      const primary = clean[0] || null;
-      if (primary) saveLS(primary);
+      // New API: { slot1, slot2, matches: [...] }
+      // Old API: { matches: [...] } or single match object
+      let slot1, slot2;
+
+      if (raw.slot1 !== undefined || raw.slot2 !== undefined) {
+        // New format
+        slot1 = raw.slot1 ? stripMeta(raw.slot1) : null;
+        slot2 = raw.slot2 ? stripMeta(raw.slot2) : null;
+      } else if (Array.isArray(raw.matches)) {
+        // Old format: matches[0] = slot1, matches[1] = slot2
+        const clean = raw.matches.map(stripMeta);
+        slot1 = clean[0] || null;
+        slot2 = clean[1] || null;
+      } else if (!raw._empty) {
+        slot1 = stripMeta(raw);
+        slot2 = null;
+      } else {
+        slot1 = null;
+        slot2 = null;
+      }
+
+      // Persist to localStorage
+      if (slot1 || slot2) saveLS(LS_SLOTS, { slot1, slot2 });
+
+      const matches = [slot1, slot2].filter(Boolean);
       return {
         ...state,
-        fetchStatus: 'SUCCESS',
-        fetchError: null,
-        lastFetched: new Date().toISOString(),
-        isStale: !!raw._stale,
-        currentMatch: primary,
-        matches: clean,
+        fetchStatus:  'SUCCESS',
+        fetchError:   null,
+        lastFetched:  new Date().toISOString(),
+        isStale:      !!raw._stale,
+        slot1,
+        slot2,
+        // Legacy compat
+        currentMatch: slot1,
+        matches,
       };
     }
 
     case 'FETCH_EMPTY':
-      return { ...state, fetchStatus: state.currentMatch ? 'REFRESHING' : 'WARMING_UP', fetchError: null, matches: [] };
+      return {
+        ...state,
+        fetchStatus: (state.slot1 || state.slot2) ? 'REFRESHING' : 'WARMING_UP',
+        fetchError: null,
+        matches: [],
+      };
 
     case 'FETCH_ERROR':
       return { ...state, fetchStatus: 'ERROR', fetchError: action.payload, isStale: true };
 
+    case 'SET_LATEST_FINISHED': {
+      const m = action.payload;
+      if (m) saveLS(LS_FINISHED, m);
+      return { ...state, latestFinished: m };
+    }
+
     case 'UPDATE_MATCH':
     case 'UPDATE_MATCH_DATA':
       if (!action.payload || action.payload._empty) return state;
-      return { ...state, currentMatch: { ...state.currentMatch, ...action.payload }, fetchStatus: 'SUCCESS', lastFetched: new Date().toISOString() };
+      return {
+        ...state,
+        currentMatch: { ...state.currentMatch, ...action.payload },
+        slot1: state.slot1 ? { ...state.slot1, ...action.payload } : null,
+        fetchStatus: 'SUCCESS',
+        lastFetched: new Date().toISOString(),
+      };
 
     case 'SET_SEARCH_QUERY': return { ...state, searchQuery: action.payload };
     case 'TOGGLE_SEARCH': return { ...state, isSearchOpen: action.payload !== undefined ? action.payload : !state.isSearchOpen };
@@ -74,30 +126,34 @@ const reducer = (state, action) => {
   }
 };
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+const stripMeta = ({ _stale, _id, __v, createdAt, updatedAt, ...m } = {}) => m;
+
+// ─── Context ───────────────────────────────────────────────────────────────────
 const MatchContext = createContext();
 
 export const MatchProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  // ── Poll live scores (slot1 + slot2) ──────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     const poll = async () => {
       if (cancelled) return;
       dispatch({ type: 'FETCH_START' });
       try {
-        // Updated to use environment variable for production
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const res = await fetch(`${API_URL}/api/v1/live-score`);
-
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
         if (cancelled) return;
 
-        if (data._empty || (Array.isArray(data.matches) && data.matches.length === 0)) {
-          dispatch({ type: 'FETCH_EMPTY' }); return;
+        const hasData = data.slot1 || data.slot2 ||
+          (Array.isArray(data.matches) && data.matches.length > 0);
+
+        if (data._empty || !hasData) {
+          dispatch({ type: 'FETCH_EMPTY' });
+          return;
         }
         if (data.error) { dispatch({ type: 'FETCH_ERROR', payload: data.error }); return; }
 
@@ -117,15 +173,37 @@ export const MatchProvider = ({ children }) => {
     return () => { cancelled = true; clearInterval(t); };
   }, []);
 
-  // Theme CSS vars
+  // ── Fetch latest finished match (Box 3) ───────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+    const fetchFinished = async () => {
+      if (cancelled) return;
+      try {
+        const res = await fetch(`${API_URL}/api/v1/latest-finished`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.match) dispatch({ type: 'SET_LATEST_FINISHED', payload: data.match });
+      } catch { /* non-critical */ }
+    };
+
+    fetchFinished();
+    // Refresh every 5 minutes (Box 3 doesn't need real-time updates)
+    const t = setInterval(fetchFinished, 5 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
+
+  // ── Theme CSS vars ─────────────────────────────────────────────────────────
   useEffect(() => {
     const root = document.documentElement;
     const themes = {
       CSK: { neon: '#F7B111', accent: '#004BA0' }, MI: { neon: '#004BA0', accent: '#F7B111' },
       RCB: { neon: '#CC0000', accent: '#1B2133' }, KKR: { neon: '#914BE3', accent: '#F7B111' },
-      RR: { neon: '#EA1A85', accent: '#0057E2' }, SRH: { neon: '#FF822A', accent: '#000000' },
-      DC: { neon: '#005CA5', accent: '#EF1B23' }, PBKS: { neon: '#ED1B24', accent: '#D7C15C' },
-      GT: { neon: '#B59453', accent: '#1B2133' }, LSG: { neon: '#0ea5e9', accent: '#F26522' },
+      RR: { neon: '#EA1A85', accent: '#0057E2' },  SRH: { neon: '#FF822A', accent: '#000000' },
+      DC: { neon: '#005CA5', accent: '#EF1B23' },  PBKS: { neon: '#ED1B24', accent: '#D7C15C' },
+      GT: { neon: '#B59453', accent: '#1B2133' },  LSG: { neon: '#0ea5e9', accent: '#F26522' },
     };
     const t = themes[state.theme] || { neon: '#0ea5e9', accent: '#f43f5e' };
     root.style.setProperty('--ipl-neon', t.neon);

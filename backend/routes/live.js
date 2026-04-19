@@ -7,6 +7,7 @@
 import express from 'express';
 import {
   getLiveScore,
+  getLatestFinished,
   getCommentary,
   getIplData,
   getPlayerStats,
@@ -18,6 +19,7 @@ const router = express.Router();
 
 router.get('/health',            getHealth);
 router.get('/live-score',        getLiveScore);
+router.get('/latest-finished',   getLatestFinished);    // Box 3: latest completed match
 router.get('/commentary',        getCommentary);
 router.get('/ipl-data',          getIplData);
 router.get('/player-stats',      getPlayerStats);

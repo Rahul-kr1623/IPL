@@ -47,6 +47,8 @@ const LiveMatchSchema = new mongoose.Schema({
   // Hero uses this to know which team to highlight on the RIGHT.
   // Add  currentInnings: d.currentInnings || 2  in saveToDb() in index.js
   currentInnings: { type: Number, default: 2 },
+  // slot: which daily match slot — 'slot1' (3:30 PM) or 'slot2' (7:30 PM)
+  slot:           { type: String, default: 'slot1', enum: ['slot1', 'slot2'] },
   lastUpdated: { type: Date, default: Date.now },
 }, { timestamps: true });
 

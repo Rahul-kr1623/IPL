@@ -4,11 +4,12 @@ import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from
 import {
   Play, Volume2, VolumeX, X, Pause,
   Activity, RefreshCw, WifiOff, Clock, Trophy, BarChart2, MapPin,
+  Sun, Moon, CheckCircle2, ChevronDown,
 } from 'lucide-react';
 import { useMatchContext } from '../context/MatchContext';
 import iplAudio from '../assets/_Ye_Khel_Hai_Sher_Jawano_Ka_Ipl_Ringtone_(by Fringster.com).mp3';
 
-// ─── Logo map ─────────────────────────────────────────────────────────────────
+// ─── Logo map ────────────────────────────────────────────────────────────────
 const LOGO = {
   CSK:'/src/assets/logos/csk_logo.png', MI:'/src/assets/logos/mi_logo.png',
   RCB:'/src/assets/logos/rcb_logo.png', KKR:'/src/assets/logos/kkr_logo.png',
@@ -28,8 +29,7 @@ const ballCls = (b) => {
   return 'bg-white/15 border-white/20 text-white';
 };
 
-// ─── Status config ────────────────────────────────────────────────────────────
-// Returns display text, colors, and whether to show the pulsing live dot
+// ─── Status config ─────────────────────────────────────────────────────────────
 const getStatusConfig = (status) => {
   switch ((status || '').toUpperCase()) {
     case 'LIVE':
@@ -41,7 +41,6 @@ const getStatusConfig = (status) => {
     case 'SUPER OVER':
       return { label: '⚡ SUPER OVER',  dot: true,  bgCls: 'bg-purple-600/20 border-purple-500/30', textCls: 'text-purple-400' };
     case 'TIMEOUT':
-      return { label: '⏸ TIMEOUT',     dot: false, bgCls: 'bg-orange-600/20 border-orange-500/30', textCls: 'text-orange-400' };
     case 'DRINK BREAK':
     case 'STRATEGIC TIMEOUT':
       return { label: '⏸ TIMEOUT',     dot: false, bgCls: 'bg-orange-600/20 border-orange-500/30', textCls: 'text-orange-400' };
@@ -56,21 +55,7 @@ const getStatusConfig = (status) => {
   }
 };
 
-// ─── Loading card ─────────────────────────────────────────────────────────────
-const LoadingCard = ({ icon: Icon = RefreshCw, label, sub }) => (
-  <div className="flex flex-col items-center gap-5 py-20 text-center">
-    <Icon className="w-12 h-12 text-ipl-neon animate-spin" />
-    <div>
-      <p className="text-white font-black text-base uppercase tracking-widest mb-1">{label}</p>
-      {sub && <p className="text-gray-500 text-xs">{sub}</p>}
-    </div>
-    {[70,50,35].map((w,i) => (
-      <div key={i} style={{width:`${w}%`}} className="h-3 rounded-full bg-white/10 animate-pulse mx-auto" />
-    ))}
-  </div>
-);
-
-// ─── Win probability meter ────────────────────────────────────────────────────
+// ─── Win probability meter ─────────────────────────────────────────────────────
 const WinProbMeter = ({ leftTeam, rightTeam, leftProb, rightProb }) => {
   const p1 = Math.max(0, Math.min(100, Math.round(leftProb  ?? 50)));
   const p2 = Math.max(0, Math.min(100, Math.round(rightProb ?? 50)));
@@ -91,9 +76,64 @@ const WinProbMeter = ({ leftTeam, rightTeam, leftProb, rightProb }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SCORECARD MODAL
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Shared table components ───────────────────────────────────────────────────
+const BattingTable = ({ batsmen }) => (
+  <>
+    <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest">Batting</p>
+    <table className="w-full text-left text-xs">
+      <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
+        <tr><th className="py-2 px-1">Batter</th><th className="py-2 px-1 text-right">R</th><th className="py-2 px-1 text-right">B</th><th className="py-2 px-1 text-right">4s</th><th className="py-2 px-1 text-right">6s</th><th className="py-2 px-1 text-right">SR</th></tr>
+      </thead>
+      <tbody className="divide-y divide-white/5">
+        {batsmen.map((bat, i) => (
+          <tr key={i} className="hover:bg-white/5">
+            <td className="py-2.5 px-1 font-bold text-white flex items-center gap-1.5">
+              {bat.onStrike && <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse inline-block flex-shrink-0" />}
+              {bat.name}
+            </td>
+            <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{bat.runs}</td>
+            <td className="py-2.5 px-1 text-right font-mono text-gray-300">{bat.balls}</td>
+            <td className="py-2.5 px-1 text-right text-amber-400">{bat.fours ?? '—'}</td>
+            <td className="py-2.5 px-1 text-right text-yellow-400">{bat.sixes ?? '—'}</td>
+            <td className="py-2.5 px-1 text-right text-gray-400">{bat.sr ?? '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+);
+
+const BowlingTable = ({ bowlers }) => (
+  <>
+    <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mt-4 mb-2">Bowling</p>
+    <table className="w-full text-left text-xs">
+      <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
+        <tr><th className="py-2 px-1">Bowler</th><th className="py-2 px-1 text-right">O</th><th className="py-2 px-1 text-right">M</th><th className="py-2 px-1 text-right">R</th><th className="py-2 px-1 text-right">W</th><th className="py-2 px-1 text-right">Eco</th></tr>
+      </thead>
+      <tbody className="divide-y divide-white/5">
+        {bowlers.map((b, i) => (
+          <tr key={i} className="hover:bg-white/5">
+            <td className="py-2.5 px-1 font-bold text-white">{b.name}</td>
+            <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.overs}</td>
+            <td className="py-2.5 px-1 text-right text-gray-500">{b.maidens ?? 0}</td>
+            <td className="py-2.5 px-1 text-right text-white">{b.runs}</td>
+            <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.wickets}</td>
+            <td className="py-2.5 px-1 text-right text-gray-400">{b.economy ?? '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+);
+
+const AwaitingData = () => (
+  <div className="flex flex-col items-center gap-2 py-6 text-center">
+    <Activity className="w-6 h-6 text-gray-700 animate-pulse" />
+    <p className="text-[10px] text-gray-600">Live data will appear within 2 scrape cycles (~80s).</p>
+  </div>
+);
+
+// ─── Scorecard Modal ───────────────────────────────────────────────────────────
 const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) => {
   const inn = match.currentInnings ?? 2;
   const [tab, setTab] = useState(inn === 1 ? 'inn1' : 'inn2');
@@ -127,7 +167,6 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
         </button>
 
         <div className="p-6 pb-0 flex-shrink-0">
-          {/* Match meta */}
           {(match.matchNumber || match.venue || match.toss) && (
             <div className="mb-4 text-center space-y-0.5">
               {match.matchNumber && <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">{match.matchNumber}</p>}
@@ -141,15 +180,12 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
           )}
 
           <div className="flex justify-around items-center mb-5">
-            {/* team1 — batted first */}
             <div className="text-center">
               {logo1 && <img src={logo1} className="w-12 mx-auto mb-1" alt={team1Name} />}
               <p className="text-xs font-black text-white">{team1Name}</p>
               <p className="text-[10px] font-mono text-gray-400">{firstInningsScore}</p>
               <p className="text-[9px] text-gray-600 mt-0.5">1st Innings</p>
             </div>
-
-            {/* Centre */}
             <div className="text-center space-y-1">
               <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${statusCfg.bgCls} ${statusCfg.textCls}`}>
                 {statusCfg.label}
@@ -157,8 +193,6 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
               {match.target && !isFirstInnings && <p className="text-[9px] text-gray-500">Target: {match.target}</p>}
               {match.result && <p className="text-green-400 font-black text-[10px] italic">{match.result}</p>}
             </div>
-
-            {/* team2 — bats second */}
             <div className="text-center">
               {logo2 && <img src={logo2} className="w-12 mx-auto mb-1" alt={team2Name} />}
               <p className="text-xs font-black text-white">{team2Name}</p>
@@ -269,80 +303,25 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
   );
 };
 
-// ─── Shared table components ──────────────────────────────────────────────────
-const BattingTable = ({ batsmen }) => (
-  <>
-    <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest">Batting</p>
-    <table className="w-full text-left text-xs">
-      <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
-        <tr><th className="py-2 px-1">Batter</th><th className="py-2 px-1 text-right">R</th><th className="py-2 px-1 text-right">B</th><th className="py-2 px-1 text-right">4s</th><th className="py-2 px-1 text-right">6s</th><th className="py-2 px-1 text-right">SR</th></tr>
-      </thead>
-      <tbody className="divide-y divide-white/5">
-        {batsmen.map((bat, i) => (
-          <tr key={i} className="hover:bg-white/5">
-            <td className="py-2.5 px-1 font-bold text-white flex items-center gap-1.5">
-              {bat.onStrike && <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse inline-block flex-shrink-0" />}
-              {bat.name}
-            </td>
-            <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{bat.runs}</td>
-            <td className="py-2.5 px-1 text-right font-mono text-gray-300">{bat.balls}</td>
-            <td className="py-2.5 px-1 text-right text-amber-400">{bat.fours ?? '—'}</td>
-            <td className="py-2.5 px-1 text-right text-yellow-400">{bat.sixes ?? '—'}</td>
-            <td className="py-2.5 px-1 text-right text-gray-400">{bat.sr ?? '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </>
-);
-
-const BowlingTable = ({ bowlers }) => (
-  <>
-    <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mt-4 mb-2">Bowling</p>
-    <table className="w-full text-left text-xs">
-      <thead className="text-[9px] text-gray-600 border-b border-white/10 uppercase font-black">
-        <tr><th className="py-2 px-1">Bowler</th><th className="py-2 px-1 text-right">O</th><th className="py-2 px-1 text-right">M</th><th className="py-2 px-1 text-right">R</th><th className="py-2 px-1 text-right">W</th><th className="py-2 px-1 text-right">Eco</th></tr>
-      </thead>
-      <tbody className="divide-y divide-white/5">
-        {bowlers.map((b, i) => (
-          <tr key={i} className="hover:bg-white/5">
-            <td className="py-2.5 px-1 font-bold text-white">{b.name}</td>
-            <td className="py-2.5 px-1 text-right font-mono text-gray-300">{b.overs}</td>
-            <td className="py-2.5 px-1 text-right text-gray-500">{b.maidens ?? 0}</td>
-            <td className="py-2.5 px-1 text-right text-white">{b.runs}</td>
-            <td className="py-2.5 px-1 text-right font-black text-ipl-neon">{b.wickets}</td>
-            <td className="py-2.5 px-1 text-right text-gray-400">{b.economy ?? '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </>
-);
-
-const AwaitingData = () => (
-  <div className="flex flex-col items-center gap-2 py-6 text-center">
-    <Activity className="w-6 h-6 text-gray-700 animate-pulse" />
-    <p className="text-[10px] text-gray-600">Live data will appear within 2 scrape cycles (~80s).</p>
+// ─── Empty Slot Card ──────────────────────────────────────────────────────────
+const EmptySlotCard = ({ slotLabel, slotIcon: SlotIcon, slotTime }) => (
+  <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
+    <motion.div
+      animate={{ opacity: [0.3, 0.6, 0.3] }}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"
+    >
+      <SlotIcon className="w-7 h-7 text-gray-600" />
+    </motion.div>
+    <div>
+      <p className="text-white font-black text-sm uppercase tracking-widest mb-1">No Match Undergoing</p>
+      <p className="text-gray-600 text-xs">No IPL match scheduled for the {slotTime} slot.</p>
+    </div>
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SINGLE MATCH CARD
-//
-// DATA MODEL:
-//   team1         = batted FIRST (always)
-//   team2         = bats SECOND  (always)
-//   currentInnings = 1 → team1 currently batting
-//                    2 → team2 currently batting / match finished
-//
-// LAYOUT:
-//   currentInnings === 1:  LEFT=team2 (yet to bat, dimmed)  RIGHT=team1 (batting, bright)
-//   currentInnings === 2:  LEFT=team1 (batted first, dimmed)  RIGHT=team2 (batting/chased, bright)
-//
-// "Currently Batting" badge only appears on the right team when status === LIVE
-// "Match Over" badge appears on the right team when FINISHED
-// ─────────────────────────────────────────────────────────────────────────────
-const MatchCard = ({ match, onOpenModal }) => {
+// ─── Live Match Card ──────────────────────────────────────────────────────────
+const MatchCard = ({ match, onOpenModal, compact = false }) => {
   const t1 = match?.team1?.name || '';
   const t2 = match?.team2?.name || '';
   const currentInnings = match?.currentInnings ?? 2;
@@ -351,26 +330,20 @@ const MatchCard = ({ match, onOpenModal }) => {
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
   const statusCfg  = getStatusConfig(match?.status);
 
-  // LEFT = not currently batting (dimmed)
-  // RIGHT = currently batting (bright)
   const leftTeam  = currentInnings === 1 ? t2 : t1;
   const rightTeam = currentInnings === 1 ? t1 : t2;
   const leftLogo  = getLogo(leftTeam);
   const rightLogo = getLogo(rightTeam);
 
-  // Left team score
   const leftScoreDisplay = currentInnings === 1
-    ? null   // t2 hasn't batted yet
+    ? null
     : (match?.team1Score
-        ? `${match.team1Score}/${match.team1Wickets || ''} (${match.team1Overs || '20.0'})`
+        ? `${match.team1Score}/${match.team1Wickets || ''} (${match.team1Overs || '20.0'})`.replace(/\/$/, '')
         : null);
 
-  // Win prob — left gets whichever team is on the left
   const leftProb  = currentInnings === 1 ? (match?.winProbT2 ?? 50) : (match?.winProbT1 ?? 50);
   const rightProb = currentInnings === 1 ? (match?.winProbT1 ?? 50) : (match?.winProbT2 ?? 50);
-
-  let finalLeftProb  = leftProb;
-  let finalRightProb = rightProb;
+  let finalLeftProb = leftProb, finalRightProb = rightProb;
   if (isFinished && match?.result) {
     const w = (match.result || '').toUpperCase();
     if (leftTeam  && w.includes(leftTeam.toUpperCase()))  { finalLeftProb = 100; finalRightProb = 0; }
@@ -380,7 +353,6 @@ const MatchCard = ({ match, onOpenModal }) => {
   const batters = [...(match?.batsmen || [])].sort((a, b) => (b.onStrike ? 1 : 0) - (a.onStrike ? 1 : 0));
   const bowler  = match?.bowlers?.[0] || null;
 
-  // Right side badge text
   const rightBadgeText = isFinished
     ? 'Match Over'
     : match?.status === 'INNINGS BREAK' ? 'Innings Break'
@@ -397,7 +369,7 @@ const MatchCard = ({ match, onOpenModal }) => {
 
   return (
     <div className="relative">
-      {/* Match meta bar — match number, venue, toss */}
+      {/* Match meta bar */}
       {(match?.matchNumber || match?.venue || match?.toss) && (
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mb-4 text-[9px] text-gray-500">
           {match.matchNumber && <span className="font-black uppercase tracking-widest text-gray-400">{match.matchNumber}</span>}
@@ -459,7 +431,7 @@ const MatchCard = ({ match, onOpenModal }) => {
           }
         </div>
 
-        {/* CENTRE — big score (always the currently batting team) */}
+        {/* CENTRE — big score */}
         <div className="text-center">
           {match?.target && currentInnings === 2 && !isFinished && (
             <p className="text-[10px] font-mono text-gray-500 mb-1 uppercase tracking-widest">
@@ -485,7 +457,6 @@ const MatchCard = ({ match, onOpenModal }) => {
           {isFinished && match?.result && (
             <p className="text-green-400 font-black text-sm mt-2 italic">{match.result}</p>
           )}
-          {/* Special status overlays */}
           {match?.status === 'INNINGS BREAK' && (
             <p className="text-yellow-400 font-black text-xs mt-2 uppercase tracking-widest">⏸ Innings Break</p>
           )}
@@ -497,7 +468,7 @@ const MatchCard = ({ match, onOpenModal }) => {
           )}
         </div>
 
-        {/* RIGHT — currently batting (bright, highlighted) */}
+        {/* RIGHT — currently batting */}
         <div className="text-center">
           <div className="relative">
             {rightLogo
@@ -584,20 +555,156 @@ const MatchCard = ({ match, onOpenModal }) => {
   );
 };
 
+// ─── Latest Finished Match Card (Box 3) ───────────────────────────────────────
+const FinishedMatchCard = ({ match, onOpenModal }) => {
+  if (!match) return null;
+
+  // Support both MongoDB shape and JSON file shape
+  const team1 = match.team1?.name || match.team1 || '';
+  const team2 = match.team2?.name || match.team2 || '';
+  const logo1 = getLogo(team1);
+  const logo2 = getLogo(team2);
+
+  // Score strings
+  const score1 = match.team1Score || (match.scoreA) || '—';
+  const score2 = match.team2Score || (match.score ? `${match.score}/${match.wickets} (${match.overs})` : match.scoreB) || '—';
+  const result = match.result || '';
+  const winner = match.winner || '';
+
+  return (
+    <div className="w-full">
+      {/* Teams row */}
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div className="flex items-center gap-3">
+          {logo1 ? <img src={logo1} alt={team1} className="w-12" /> : <span className="text-2xl font-black text-white">{team1}</span>}
+          <div>
+            <p className="text-sm font-black text-white uppercase">{team1}</p>
+            <p className="text-xs font-mono text-gray-400">{score1}</p>
+          </div>
+        </div>
+
+        <div className="text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/15 border border-green-500/30 mb-1">
+            <CheckCircle2 className="w-3 h-3 text-green-400" />
+            <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Result</span>
+          </div>
+          {match.matchNumber && (
+            <p className="text-[9px] text-gray-600 uppercase tracking-widest">{match.matchNumber}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 text-right">
+          <div>
+            <p className="text-sm font-black text-white uppercase">{team2}</p>
+            <p className="text-xs font-mono text-gray-400">{score2}</p>
+          </div>
+          {logo2 ? <img src={logo2} alt={team2} className="w-12" /> : <span className="text-2xl font-black text-white">{team2}</span>}
+        </div>
+      </div>
+
+      {/* Result text */}
+      {result && (
+        <div className="flex items-center justify-center gap-2 mb-4 p-3 rounded-xl bg-green-500/5 border border-green-500/15">
+          <Trophy className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+          <p className="text-green-400 font-black text-sm italic text-center">{result}</p>
+        </div>
+      )}
+
+      {/* Win probability bar */}
+      <div className="mb-4">
+        <WinProbMeter
+          leftTeam={team1}
+          leftProb={match.winProbT1 ?? (winner === team1 ? 100 : 0)}
+          rightTeam={team2}
+          rightProb={match.winProbT2 ?? (winner === team2 ? 100 : 0)}
+        />
+      </div>
+
+      {/* Meta info */}
+      {(match.venue || match.toss || match.date) && (
+        <div className="flex flex-wrap gap-3 text-[9px] text-gray-600 justify-center mb-4">
+          {match.venue && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{match.venue}</span>}
+          {match.toss && <span className="italic">🪙 {match.toss}</span>}
+          {match.date && <span>📅 {match.date}</span>}
+        </div>
+      )}
+
+      {/* View result button */}
+      {onOpenModal && (
+        <div className="flex justify-center">
+          <button onClick={onOpenModal}
+            className="px-8 py-3 rounded-full border border-white/20 bg-white/5 hover:bg-green-500/20 hover:border-green-500/40 transition-all text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+            View Full Scorecard
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Slot Box Wrapper ──────────────────────────────────────────────────────────
+// A premium card that wraps each slot with a label header
+const SlotBox = ({ label, labelIcon: LabelIcon, labelColor, children, accent = false, isStale }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+    className={`relative w-full rounded-[2.5rem] border overflow-hidden
+      ${accent
+        ? 'bg-white/[0.03] border-ipl-neon/20 shadow-[0_0_40px_rgba(14,165,233,0.05)]'
+        : 'bg-white/[0.02] border-white/10'
+      }`}
+  >
+    {/* Slot label header */}
+    <div className={`flex items-center gap-2.5 px-6 pt-5 pb-3 border-b border-white/5`}>
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center ${labelColor}`}>
+        <LabelIcon className="w-3.5 h-3.5" />
+      </div>
+      <span className="text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">{label}</span>
+      {isStale && (
+        <span className="ml-auto text-[9px] text-yellow-500/70 flex items-center gap-1">
+          <WifiOff className="w-2.5 h-2.5" /> Delayed
+        </span>
+      )}
+    </div>
+
+    {/* Content */}
+    <div className="p-6 md:p-8">
+      {children}
+    </div>
+  </motion.div>
+);
+
+// ─── Loading card ───────────────────────────────────────────────────────────────
+const LoadingCard = ({ label, sub }) => (
+  <div className="flex flex-col items-center gap-5 py-16 text-center">
+    <RefreshCw className="w-10 h-10 text-ipl-neon animate-spin" />
+    <div>
+      <p className="text-white font-black text-sm uppercase tracking-widest mb-1">{label}</p>
+      {sub && <p className="text-gray-500 text-xs">{sub}</p>}
+    </div>
+    {[70,50,35].map((w,i) => (
+      <div key={i} style={{width:`${w}%`}} className="h-3 rounded-full bg-white/10 animate-pulse mx-auto" />
+    ))}
+  </div>
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
-// HERO — renders 1 or 2 MatchCards depending on how many matches are live
+// HERO — 3-box vertical layout
+//
+// Box 1  (3:30 PM slot)  — slot1 from context OR "No Match Undergoing"
+// Box 2  (7:30 PM slot)  — slot2 from context OR "No Match Undergoing"
+// Box 3  (Latest Result) — latestFinished from context
 // ─────────────────────────────────────────────────────────────────────────────
 const Hero = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted,   setIsMuted]   = useState(false);
-  const [modalMatch, setModalMatch] = useState(null); // which match's modal is open
+  const [modalMatch, setModalMatch] = useState(null);
   const audioRef = useRef(new Audio(iplAudio));
 
   const { state } = useMatchContext();
-  const { matches, fetchStatus, fetchError, lastFetched, isStale } = state;
-
-  // Support both old (currentMatch) and new (matches array) shape from context
-  const matchList = matches?.length > 0 ? matches : (state.currentMatch ? [state.currentMatch] : []);
+  const { slot1, slot2, latestFinished, fetchStatus, fetchError, lastFetched, isStale } = state;
 
   useEffect(() => {
     isPlaying ? audioRef.current.play().catch(() => {}) : audioRef.current.pause();
@@ -605,28 +712,36 @@ const Hero = () => {
   }, [isPlaying]);
   useEffect(() => { audioRef.current.muted = isMuted; }, [isMuted]);
 
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const xSp = useSpring(mouseX, { damping: 30, stiffness: 100 });
-  const ySp = useSpring(mouseY, { damping: 30, stiffness: 100 });
-  const rotateX = useTransform(ySp, [-300, 300], [8, -8]);
-  const rotateY = useTransform(xSp, [-300, 300], [-8, 8]);
-  const onMouseMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    mouseX.set(e.clientX - (r.left + r.width / 2));
-    mouseY.set(e.clientY - (r.top + r.height / 2));
-  };
+  const isLoading = (fetchStatus === 'LOADING' || fetchStatus === 'IDLE') && !slot1 && !slot2;
 
-  const isLoading = (fetchStatus === 'LOADING' || fetchStatus === 'IDLE') && matchList.length === 0;
-  const isError   = fetchStatus === 'ERROR' && matchList.length === 0;
-  const isDoubleHeader = matchList.length >= 2;
+  // Build modal match info from either a live slot or the latestFinished card
+  const openModal = (match) => setModalMatch(match);
+
+  // Convert finished JSON shape to modal-compatible shape
+  const finishedAsMatch = latestFinished ? {
+    team1: { name: latestFinished.team1?.name || latestFinished.team1 || '' },
+    team2: { name: latestFinished.team2?.name || latestFinished.team2 || '' },
+    team1Score:   latestFinished.team1Score?.split('/')[0] || null,
+    team1Wickets: latestFinished.team1Score?.split('/')[1]?.split(' ')[0] || null,
+    team1Overs:   null,
+    score:        latestFinished.team2Score?.split('/')[0] || '0',
+    wickets:      latestFinished.team2Score?.split('/')[1]?.split(' ')[0] || '0',
+    overs:        '20.0',
+    result:       latestFinished.result || '',
+    winProbT1:    latestFinished.winProbT1 || (latestFinished.winner === (latestFinished.team1?.name || latestFinished.team1) ? 100 : 0),
+    winProbT2:    latestFinished.winProbT2 || (latestFinished.winner === (latestFinished.team2?.name || latestFinished.team2) ? 100 : 0),
+    status:       'FINISHED',
+    matchNumber:  latestFinished.matchNumber || null,
+    venue:        latestFinished.venue || null,
+    toss:         latestFinished.toss || null,
+    batsmen:      latestFinished.batsmen || [],
+    bowlers:      latestFinished.bowlers || [],
+    currentInnings: 2,
+    target:       latestFinished.target || null,
+  } : null;
 
   return (
-    <section
-      className="relative min-h-[90vh] w-full flex items-center justify-center py-20 px-4 overflow-hidden mt-10"
-      onMouseMove={onMouseMove}
-      onMouseLeave={() => { mouseX.set(0); mouseY.set(0); }}
-    >
+    <section className="relative w-full py-8 px-4 overflow-hidden mt-6">
       {/* Background blobs */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
         <motion.div animate={{ scale:[1,1.1,1], rotate:[0,45,0] }} transition={{ duration:15, repeat:Infinity }}
@@ -637,81 +752,90 @@ const Hero = () => {
           style={{ background:'radial-gradient(circle,#ef4444,transparent)' }} />
       </div>
 
-      <motion.div
-        style={{ rotateX, rotateY, perspective:1200, transformStyle:'preserve-3d' }}
-        className="w-full max-w-6xl glass rounded-[4rem] p-10 md:p-16 relative border border-white/10 shadow-2xl overflow-hidden"
-      >
-        {/* Loading / error / empty */}
-        {isLoading && <LoadingCard label="Connecting to live feed…" sub="First load takes ~30s" />}
-        {isError && (
-          <div className="flex flex-col items-center gap-4 py-20 text-center">
-            <WifiOff className="w-12 h-12 text-red-500" />
-            <p className="text-white font-black text-base uppercase tracking-widest">Connection Error</p>
-            <p className="text-gray-400 text-sm max-w-xs">{fetchError}</p>
-            <p className="text-gray-600 text-xs mt-1">Retrying every 40s…</p>
-          </div>
-        )}
-        {fetchStatus === 'SUCCESS' && matchList.length === 0 && (
-          <div className="flex flex-col items-center gap-4 py-20 text-center">
-            <Clock className="w-12 h-12 text-gray-500" />
-            <p className="text-white font-black text-base uppercase tracking-widest">No Live Match</p>
-            <p className="text-gray-400 text-sm">No IPL match in progress right now.</p>
-          </div>
+      <div className="w-full max-w-5xl mx-auto flex flex-col gap-6">
+
+        {/* Stale / error banner */}
+        {(isStale || fetchError) && (slot1 || slot2) && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="flex items-center gap-2 justify-center px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold uppercase tracking-widest">
+            <WifiOff className="w-3 h-3" />
+            {fetchError ? 'Offline — showing last saved data' : 'Data may be delayed'}
+            {lastFetched && (
+              <span className="text-yellow-600 ml-1 normal-case font-normal">
+                (saved {new Date(lastFetched).toLocaleTimeString()})
+              </span>
+            )}
+          </motion.div>
         )}
 
-        {/* Match content */}
-        {matchList.length > 0 && (
-          <>
-            {/* Stale banner */}
-            {(isStale || fetchError) && (
-              <div className="flex items-center gap-2 justify-center mb-5 px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold uppercase tracking-widest"
-                style={{ transform:'translateZ(20px)' }}>
-                <WifiOff className="w-3 h-3" />
-                {fetchError ? 'Offline — showing last saved data' : 'Data may be delayed'}
-                {lastFetched && (
-                  <span className="text-yellow-600 ml-1 normal-case font-normal">
-                    (saved {new Date(lastFetched).toLocaleTimeString()})
-                  </span>
-                )}
-              </div>
-            )}
+        {/* ═══════════════════════════════════════════════
+            BOX 1 — 3:30 PM Match Slot
+        ═══════════════════════════════════════════════ */}
+        <SlotBox
+          label="3:30 PM Match"
+          labelIcon={Sun}
+          labelColor="bg-amber-500/20 text-amber-400"
+          accent={!!slot1}
+          isStale={slot1?._stale}
+        >
+          {isLoading && !slot1 ? (
+            <LoadingCard label="Connecting to live feed…" sub="First load takes ~30s" />
+          ) : slot1 ? (
+            <MatchCard match={slot1} onOpenModal={() => openModal(slot1)} />
+          ) : (
+            <EmptySlotCard slotLabel="3:30 PM" slotIcon={Sun} slotTime="3:30 PM" />
+          )}
+        </SlotBox>
 
-            {/* Double-header label */}
-            {isDoubleHeader && (
-              <div className="text-center mb-8">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-ipl-neon px-4 py-1.5 rounded-full bg-ipl-neon/10 border border-ipl-neon/30">
-                  ⚡ Double Header Day
-                </span>
-              </div>
-            )}
+        {/* ═══════════════════════════════════════════════
+            BOX 2 — 7:30 PM Match Slot
+        ═══════════════════════════════════════════════ */}
+        <SlotBox
+          label="7:30 PM Match"
+          labelIcon={Moon}
+          labelColor="bg-indigo-500/20 text-indigo-400"
+          accent={!!slot2}
+          isStale={slot2?._stale}
+        >
+          {slot2 ? (
+            <MatchCard match={slot2} onOpenModal={() => openModal(slot2)} />
+          ) : (
+            <EmptySlotCard slotLabel="7:30 PM" slotIcon={Moon} slotTime="7:30 PM" />
+          )}
+        </SlotBox>
 
-            {/* Single match */}
-            {!isDoubleHeader && (
-              <MatchCard match={matchList[0]} onOpenModal={() => setModalMatch(matchList[0])} />
-            )}
-
-            {/* Double header — two side-by-side cards */}
-            {isDoubleHeader && (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                {matchList.map((m, idx) => (
-                  <div key={m.espnId || idx} className="border border-white/10 rounded-[2.5rem] p-6 bg-white/[0.02]">
-                    <MatchCard match={m} onOpenModal={() => setModalMatch(m)} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+        {/* ═══════════════════════════════════════════════
+            BOX 3 — Latest Finished Match
+        ═══════════════════════════════════════════════ */}
+        <SlotBox
+          label="Latest Result"
+          labelIcon={Trophy}
+          labelColor="bg-yellow-500/20 text-yellow-400"
+          accent={false}
+        >
+          {latestFinished ? (
+            <FinishedMatchCard
+              match={latestFinished}
+              onOpenModal={finishedAsMatch ? () => openModal(finishedAsMatch) : null}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+              <Trophy className="w-10 h-10 text-gray-700" />
+              <p className="text-sm font-black text-gray-500 uppercase tracking-widest">No Recent Results</p>
+              <p className="text-xs text-gray-600">Completed match data will appear here.</p>
+            </div>
+          )}
+        </SlotBox>
 
         {/* Timestamp */}
         {lastFetched && (
-          <p className="absolute bottom-3 right-5 text-[9px] text-gray-700 font-mono pointer-events-none">
-            {fetchStatus === 'REFRESHING' ? '⟳ refreshing…' : `Updated ${new Date(lastFetched).toLocaleTimeString()}`}
+          <p className="text-center text-[9px] text-gray-700 font-mono">
+            {fetchStatus === 'REFRESHING' ? '⟳ refreshing…' : `Live data updated ${new Date(lastFetched).toLocaleTimeString()}`}
           </p>
         )}
-      </motion.div>
+      </div>
 
-      {/* Scorecard modal — for whichever match the user clicked */}
+      {/* Scorecard modal */}
       <AnimatePresence>
         {modalMatch && (
           <ScorecardModal
@@ -725,8 +849,8 @@ const Hero = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating audio */}
-      <div className="absolute bottom-12 right-12 flex flex-col gap-5 z-30">
+      {/* Floating audio controls */}
+      <div className="fixed bottom-12 right-12 flex flex-col gap-5 z-30">
         <button onClick={() => setIsPlaying(!isPlaying)}
           className={`w-14 h-14 rounded-full glass flex items-center justify-center border border-white/10 ${isPlaying ? 'bg-ipl-neon text-black' : 'text-ipl-neon'}`}>
           {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}

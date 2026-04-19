@@ -124,8 +124,18 @@ const toTeam = (s = '') => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ESPN SCRAPER — primary source
 // ─────────────────────────────────────────────────────────────────────────────
+// Returns a single match meta (first live one found) — used by scrapeLiveMatch
 const espnFindMatch = async () => {
-  console.log('[ESPN] Finding match...');
+  const all = await espnFindAllMatches();
+  return all[0] || null;
+};
+
+// Returns ALL live IPL events (up to 2), each with slot + startTime
+const espnFindAllMatches = async () => {
+  console.log('[ESPN] Finding all live matches...');
+  const found = [];
+
+  // Source 1: personalised header (fastest)
   const hd = await fetchJSON(
     'https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta',
     {}, 'ESPN header'
@@ -140,23 +150,41 @@ const espnFindMatch = async () => {
           if (!t1 || !t2 || !TEAMS.includes(t1) || !TEAMS.includes(t2)) continue;
           if ((ev.status || '').toUpperCase() === 'PRE') continue;
           const id = ev.id || String(ev.uid || '').split('~e:')[1];
-          console.log(`  [ESPN] Header: ${t1} vs ${t2} ID:${id}`);
-          return { espnId: id, compA: t1, compB: t2 };
+          if (found.some(f => f.espnId === id)) continue;
+          const startTime = ev.date || ev.startTime || null;
+          console.log(`  [ESPN] Header match: ${t1} vs ${t2} ID:${id}`);
+          found.push({ espnId: id, compA: t1, compB: t2, startTime });
         }
       }
     }
   }
-  const sb = await fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`, {}, 'ESPN scoreboard');
+
+  // Source 2: scoreboard (catches anything header missed)
+  const sb = await fetchJSON(
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+    {}, 'ESPN scoreboard'
+  );
   for (const ev of (sb?.events || [])) {
     const comp = ev.competitions?.[0];
     const t1 = toTeam(comp?.competitors?.[0]?.team?.displayName || '');
     const t2 = toTeam(comp?.competitors?.[1]?.team?.displayName || '');
     if (!t1 || !t2 || !TEAMS.includes(t1) || !TEAMS.includes(t2)) continue;
     if (ev.status?.type?.name === 'STATUS_SCHEDULED') continue;
-    console.log(`  [ESPN] Scoreboard: ${t1} vs ${t2} ID:${ev.id}`);
-    return { espnId: ev.id, compA: t1, compB: t2 };
+    if (found.some(f => f.espnId === String(ev.id))) continue;
+    const startTime = ev.date || comp?.date || null;
+    console.log(`  [ESPN] Scoreboard match: ${t1} vs ${t2} ID:${ev.id}`);
+    found.push({ espnId: String(ev.id), compA: t1, compB: t2, startTime });
   }
-  return null;
+
+  // Sort by startTime so slot1 = early match (3:30 PM), slot2 = late match (7:30 PM)
+  found.sort((a, b) => {
+    if (!a.startTime) return 1;
+    if (!b.startTime) return -1;
+    return new Date(a.startTime) - new Date(b.startTime);
+  });
+
+  console.log(`  [ESPN] Found ${found.length} live IPL match(es)`);
+  return found.slice(0, 2); // max 2 (double-header)
 };
 
 const espnGetScore = async ({ espnId, compA, compB }) => {
@@ -891,6 +919,7 @@ const cbDirectFetch = async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN EXPORT
 // ─────────────────────────────────────────────────────────────────────────────
+// ─── Single match scrape (legacy / CB fallback) ──────────────────────────────
 export const scrapeLiveMatch = async () => {
   console.log('━━━ [Scraper] Starting ━━━');
 
@@ -898,11 +927,11 @@ export const scrapeLiveMatch = async () => {
     const meta = await espnFindMatch();
     if (meta) {
       const r = await espnGetScore(meta);
-      if (r && !(r.score === '0' && r.status === 'LIVE' && !r.team1Score)) {
+      if (r) {
+        // ✅ FIX: score === '0' is VALID at match start — never drop it
         console.log('━━━ Done via ESPN ━━━');
         return { ...r, lastUpdated: new Date() };
       }
-      if (r?.score === '0') console.log('  [ESPN] Score 0, trying next...');
     }
   } catch(e) { console.log('[ESPN fatal]', e.message); }
 
@@ -918,6 +947,49 @@ export const scrapeLiveMatch = async () => {
 
   if (!CHROME_AVAILABLE) { console.log('━━━ All failed, no Chrome ━━━'); return null; }
   return await browserFallback();
+};
+
+// ─── All-slots scrape — returns { slot1: data|null, slot2: data|null } ────────
+// slot1 = 3:30 PM (earlier) match, slot2 = 7:30 PM (later) match
+export const scrapeAllSlots = async () => {
+  console.log('━━━ [Scraper] Multi-slot scan ━━━');
+  const result = { slot1: null, slot2: null };
+
+  try {
+    const allMeta = await espnFindAllMatches();
+    if (allMeta.length === 0) {
+      console.log('  [Slots] No live IPL matches found');
+      return result;
+    }
+
+    // Fetch scores for all found events in parallel
+    const scores = await Promise.allSettled(allMeta.map(m => espnGetScore(m)));
+
+    scores.forEach((s, i) => {
+      if (s.status === 'fulfilled' && s.value) {
+        const data = { ...s.value, startTime: allMeta[i].startTime, lastUpdated: new Date() };
+        if (i === 0) result.slot1 = data;
+        else         result.slot2 = data;
+      }
+    });
+  } catch(e) { console.log('[Slots ESPN fatal]', e.message); }
+
+  // If ESPN returned nothing for slot1, try CB fallbacks
+  if (!result.slot1) {
+    try {
+      const r = await cbProxyFetch();
+      if (r) { result.slot1 = { ...r, lastUpdated: new Date() }; }
+    } catch(e) { /* ignore */ }
+  }
+  if (!result.slot1) {
+    try {
+      const r = await cbDirectFetch();
+      if (r) { result.slot1 = { ...r, lastUpdated: new Date() }; }
+    } catch(e) { /* ignore */ }
+  }
+
+  console.log(`  [Slots] slot1=${result.slot1 ? result.slot1.team1?.name + ' vs ' + result.slot1.team2?.name : 'empty'} | slot2=${result.slot2 ? result.slot2.team1?.name + ' vs ' + result.slot2.team2?.name : 'empty'}`);
+  return result;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
