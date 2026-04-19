@@ -1,20 +1,23 @@
 /**
  * dbService.js
  * All MongoDB read/write operations for live match data.
- * Import this from controllers and the scheduler — never write Mongoose calls
- * directly in routes or index.js.
+ *
+ * Double-header support: we store UP TO 2 live match documents simultaneously.
+ * Each document is keyed by espnId so they never overwrite each other.
+ * When a new espnId comes in that doesn't exist, we add it.
+ * When an espnId we already have comes in, we update it in-place.
+ * We never store more than 2 documents (purge oldest finished ones if needed).
  */
 
 import LiveMatch from '../models/LiveMatch.js';
 
 /**
- * Save a scraped match object to MongoDB.
- * Clears previous documents first (single-document collection pattern).
- * @param {Object} d - Scraped/mapped match data
+ * Save a scraped match to MongoDB.
+ * Upserts by espnId so double-headers store as two separate documents.
+ * Falls back to deleteMany+insert if espnId is null (legacy behaviour).
  */
 export const saveMatch = async (d) => {
-  await LiveMatch.deleteMany({});
-  await new LiveMatch({
+  const doc = {
     team1:          d.team1,
     team2:          d.team2,
     score:          d.score          || '0',
@@ -38,22 +41,51 @@ export const saveMatch = async (d) => {
     rrr:            d.rrr            || null,
     source:         d.source         || 'unknown',
     espnId:         d.espnId         || null,
+    venue:          d.venue          || null,
+    matchNumber:    d.matchNumber    || null,
+    matchTitle:     d.matchTitle     || null,
     currentInnings: d.currentInnings || 2,
     lastUpdated:    new Date(),
-  }).save();
+  };
+
+  if (d.espnId) {
+    // Upsert by espnId — safe for double headers
+    await LiveMatch.findOneAndUpdate(
+      { espnId: d.espnId },
+      { $set: doc },
+      { upsert: true, new: true }
+    );
+    // Keep at most 2 documents; purge oldest finished ones beyond that
+    const count = await LiveMatch.countDocuments();
+    if (count > 2) {
+      const oldest = await LiveMatch.findOne({ status: { $in: ['FINISHED', 'RECENTLY FINISHED'] } })
+        .sort({ lastUpdated: 1 });
+      if (oldest) await LiveMatch.deleteOne({ _id: oldest._id });
+    }
+  } else {
+    // Legacy fallback: single-doc collection
+    await LiveMatch.deleteMany({});
+    await new LiveMatch(doc).save();
+  }
 };
 
 /**
- * Get the most recently updated live match document.
- * @returns {Object|null} Mongoose document or null
+ * Get all current live match documents, sorted newest first.
+ * Returns an array — will have 2 items on double-header days.
+ */
+export const getAllMatches = async () => {
+  return LiveMatch.find().sort({ lastUpdated: -1 }).limit(2);
+};
+
+/**
+ * Get only the most recently updated live match document.
  */
 export const getLatestMatch = async () => {
   return LiveMatch.findOne().sort({ lastUpdated: -1 });
 };
 
 /**
- * Mark the current live match as RECENTLY FINISHED.
- * Used when the scraper hits MAX_FAILS consecutive nulls.
+ * Mark all current live matches as RECENTLY FINISHED.
  */
 export const markMatchFinished = async () => {
   await LiveMatch.updateMany(
@@ -63,8 +95,7 @@ export const markMatchFinished = async () => {
 };
 
 /**
- * Delete all live match documents (for debug/reset).
- * @returns {number} Count of deleted documents
+ * Delete all live match documents (debug/reset).
  */
 export const clearAllMatches = async () => {
   const result = await LiveMatch.deleteMany({});

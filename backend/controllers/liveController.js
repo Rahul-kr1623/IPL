@@ -8,7 +8,7 @@
  *   - returns plain JSON — no logic beyond formatting
  */
 
-import { getLatestMatch } from '../services/dbService.js';
+import { getLatestMatch, getAllMatches } from '../services/dbService.js';
 import standingsCache from '../utils/standingsCache.js';
 import {
   COMPLETED_MATCHES,
@@ -17,20 +17,28 @@ import {
 } from '../utils/matchDataEngine.js';
 
 // ─── GET /api/v1/live-score ───────────────────────────────────────────────────
+// Returns { matches: [...] } — always an array.
+// On normal days: 1 item. On double-header days: 2 items.
+// Frontend checks matches.length to decide single vs dual card layout.
 export const getLiveScore = async (req, res) => {
   try {
-    const data = await getLatestMatch();
-    if (!data) {
+    const docs = await getAllMatches();
+    if (!docs || docs.length === 0) {
       return res.json({
         _empty: true,
         status: 'FETCHING',
         message: 'Scraper warming up…',
+        matches: [],
       });
     }
-    const age = Date.now() - new Date(data.lastUpdated).getTime();
-    return res.json({ ...data.toObject(), _stale: age > 10 * 60 * 1000 });
+    const age0 = Date.now() - new Date(docs[0].lastUpdated).getTime();
+    const matches = docs.map(d => ({
+      ...d.toObject(),
+      _stale: (Date.now() - new Date(d.lastUpdated).getTime()) > 10 * 60 * 1000,
+    }));
+    return res.json({ matches, _stale: age0 > 10 * 60 * 1000 });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message, matches: [] });
   }
 };
 

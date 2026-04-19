@@ -18,7 +18,8 @@ const cached = loadLS();
 
 // ─── Initial state ────────────────────────────────────────────────────────────
 const initialState = {
-  currentMatch: cached?.data || null,
+  currentMatch: cached?.data || null,   // primary match (or null)
+  matches: cached?.data ? [cached.data] : [],  // all matches (1 or 2 on double-header)
   fetchStatus: cached ? 'CACHED' : 'IDLE',
   fetchError: null,
   lastFetched: cached?.savedAt || null,
@@ -35,13 +36,25 @@ const reducer = (state, action) => {
       return { ...state, fetchStatus: state.currentMatch ? 'REFRESHING' : 'LOADING' };
 
     case 'FETCH_SUCCESS': {
-      const { _stale, _id, __v, createdAt, updatedAt, ...clean } = action.payload;
-      saveLS(clean);
-      return { ...state, fetchStatus: 'SUCCESS', fetchError: null, lastFetched: new Date().toISOString(), isStale: !!_stale, currentMatch: clean };
+      const raw = action.payload;
+      // New API returns { matches: [...] }, old returned a single object
+      const matchArr = Array.isArray(raw.matches) ? raw.matches : (raw._empty ? [] : [raw]);
+      const clean = matchArr.map(({ _stale, _id, __v, createdAt, updatedAt, ...m }) => m);
+      const primary = clean[0] || null;
+      if (primary) saveLS(primary);
+      return {
+        ...state,
+        fetchStatus: 'SUCCESS',
+        fetchError: null,
+        lastFetched: new Date().toISOString(),
+        isStale: !!raw._stale,
+        currentMatch: primary,
+        matches: clean,
+      };
     }
 
     case 'FETCH_EMPTY':
-      return { ...state, fetchStatus: state.currentMatch ? 'REFRESHING' : 'WARMING_UP', fetchError: null };
+      return { ...state, fetchStatus: state.currentMatch ? 'REFRESHING' : 'WARMING_UP', fetchError: null, matches: [] };
 
     case 'FETCH_ERROR':
       return { ...state, fetchStatus: 'ERROR', fetchError: action.payload, isStale: true };
@@ -83,7 +96,9 @@ export const MatchProvider = ({ children }) => {
 
         if (cancelled) return;
 
-        if (data._empty) { dispatch({ type: 'FETCH_EMPTY' }); return; }
+        if (data._empty || (Array.isArray(data.matches) && data.matches.length === 0)) {
+          dispatch({ type: 'FETCH_EMPTY' }); return;
+        }
         if (data.error) { dispatch({ type: 'FETCH_ERROR', payload: data.error }); return; }
 
         dispatch({ type: 'FETCH_SUCCESS', payload: data });
