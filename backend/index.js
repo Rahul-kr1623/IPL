@@ -32,6 +32,7 @@ import {
   restoreStateFromDb,
   startScheduler,
 } from './services/scheduler.js';
+import { loadCompletedMatches } from './services/completedMatchService.js';
 
 dotenv.config();
 
@@ -81,6 +82,46 @@ mongoose
 
       // Restore freeze state in case server restarted mid-match
       await restoreStateFromDb();
+
+      // Load+seed completed matches (hardcoded → MongoDB, then DB → in-memory cache)
+      await loadCompletedMatches();
+
+      // Seed CompletedMatch MongoDB from hardcoded list if collection is empty
+      try {
+        const CompletedMatch = (await import('./models/CompletedMatch.js')).default;
+        const { COMPLETED_MATCHES } = await import('./utils/matchDataEngine.js');
+        const existing = await CompletedMatch.countDocuments();
+        if (existing < COMPLETED_MATCHES.length) {
+          console.log(`[Seed] CompletedMatch has ${existing} docs, hardcoded has ${COMPLETED_MATCHES.length} — seeding...`);
+          for (const m of COMPLETED_MATCHES) {
+            const key = `hardcoded_${m.id}`;
+            await CompletedMatch.updateOne(
+              { matchKey: key },
+              { $setOnInsert: {
+                matchKey:    key,
+                teamA:       m.teamA,
+                teamB:       m.teamB,
+                winner:      m.winner,
+                result:      m.result,
+                scoreA:      m.scoreA,
+                wA:          m.wA,
+                ovA:         String(m.ovA),
+                scoreB:      m.scoreB,
+                wB:          m.wB,
+                ovB:         String(m.ovB),
+                date:        m.date,
+                finishedAt:  new Date(`${m.date} 20:00:00 UTC+5:30`),
+              }},
+              { upsert: true }
+            );
+          }
+          console.log(`[Seed] Seeded ${COMPLETED_MATCHES.length} completed matches into MongoDB`);
+        } else {
+          console.log(`[Seed] CompletedMatch already has ${existing} docs — skipping seed`);
+        }
+      } catch(e) {
+        console.error('[Seed] CompletedMatch seed error:', e.message);
+      }
 
       // Load initial standings cache
       await updateStandingsAndStats();

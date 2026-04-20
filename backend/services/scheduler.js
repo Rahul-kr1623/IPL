@@ -162,11 +162,19 @@ const processSlot = async (slotKey, data) => {
       s.matchFinishedAt = Date.now();
       console.log(`  [${slotKey}] 🔒 Frozen for 20 min`);
 
-      // ✅ Write completed scorecard to JSON file (architecture tier 3)
+      // ✅ Write to BOTH stores so data survives Render redeploys
+      // Tier 1: MongoDB CompletedMatch (persistent)
+      try {
+        const { saveCompletedMatch: saveToDB } = await import('../services/completedMatchService.js');
+        await saveToDB(data);
+      } catch(e) {
+        console.error(`  [${slotKey}] ⚠️ CompletedMatch MongoDB save failed: ${e.message}`);
+      }
+      // Tier 2: JSON file (fast local reads, non-persistent across redeploys)
       try {
         saveCompletedMatch(data);
       } catch(e) {
-        console.error(`  [${slotKey}] ⚠️ seasonStore save failed: ${e.message}`);
+        console.error(`  [${slotKey}] ⚠️ seasonStore JSON save failed: ${e.message}`);
       }
     }
 

@@ -16,6 +16,7 @@ import {
   getCapLeaders,
 } from '../utils/matchDataEngine.js';
 import { getLatestFinishedFromJson, getAllCompletedFromJson } from '../utils/seasonStore.js';
+import { getCompletedMatchesForAPI } from '../services/completedMatchService.js';
 
 // ─── GET /api/v1/live-score ───────────────────────────────────────────────────
 // Returns { slot1: Match|null, slot2: Match|null }
@@ -75,20 +76,28 @@ export const getLiveScore = async (req, res) => {
 };
 
 // ─── GET /api/v1/latest-finished ─────────────────────────────────────────────
-// Returns the most recently completed match.
-// Priority: JSON file (tier 3) → MongoDB fallback
+// Priority: CompletedMatch MongoDB (persistent across redeploys)
+//        → seasonStore JSON (fast, written during session)
+//        → LiveMatch MongoDB fallback (in case of cold start)
 export const getLatestFinished = async (req, res) => {
   try {
-    // Tier 3: JSON file (fast, zero DB cost)
+    // Tier 1: CompletedMatch collection — persistent MongoDB, survives Render redeploys
+    const apiData = await getCompletedMatchesForAPI();
+    if (apiData.recent && apiData.recent.length > 0) {
+      const latest = apiData.recent[0]; // sorted finishedAt desc
+      return res.json({ match: latest, source: 'completedMatch' });
+    }
+
+    // Tier 2: seasonStore JSON (written during same uptime session)
     const jsonResult = getLatestFinishedFromJson();
     if (jsonResult) {
       return res.json({ match: jsonResult, source: 'json' });
     }
 
-    // Fallback: MongoDB (for matches finished before JSON file was set up)
+    // Tier 3: LiveMatch MongoDB fallback
     const mongoResult = await getLatestFinishedMatch();
     if (mongoResult) {
-      return res.json({ match: mongoResult.toObject(), source: 'mongodb' });
+      return res.json({ match: mongoResult.toObject(), source: 'liveMatch' });
     }
 
     return res.json({ match: null, source: 'none' });

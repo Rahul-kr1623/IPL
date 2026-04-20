@@ -112,6 +112,10 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
   const t2 = match?.team2?.name || '';
   const inn = match?.currentInnings ?? 2;
 
+  // Play has started = overs > 0 or batsmen data available or 1st innings completed
+  const oversFloat  = parseFloat(match?.overs || '0');
+  const playStarted = oversFloat > 0 || (match?.batsmen?.length > 0) || (match?.team1Score != null);
+
   // Left = bat-first team, Right = currently batting team
   const leftCode  = inn === 1 ? t2 : t1;
   const rightCode = inn === 1 ? t1 : t2;
@@ -122,6 +126,17 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
 
   const winner = isFinished && match?.result
     ? (match.result.toUpperCase().includes(t1.toUpperCase()) ? t1 : t2)
+    : null;
+
+  // Innings labels
+  const leftLabel  = inn === 2 ? '1st Innings' : null;  // left team batted first
+  const rightLabel = isFinished
+    ? 'Match Over'
+    : match?.status === 'INNINGS BREAK' ? 'Innings Break'
+    : match?.status === 'RAIN DELAY'    ? '🌧 Rain Delay'
+    : match?.status === 'SUPER OVER'    ? '⚡ Super Over'
+    : (isLive && playStarted)           ? 'Currently Batting'
+    : isLive                            ? 'Toss Awaited'
     : null;
 
   const topBarBg = t1 && t2
@@ -188,12 +203,19 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
             {/* Teams + centre score */}
             <div className="flex items-center justify-between gap-2 mb-4">
               {/* Left team — batted first (dimmed while 2nd innings live) */}
-              <TeamChip
-                code={leftCode}
-                score={leftScore}
-                isWinner={isFinished && winner === leftCode}
-                dimmed={isLive && inn === 2}
-              />
+              <div className="flex flex-col items-center gap-1">
+                <TeamChip
+                  code={leftCode}
+                  score={leftScore}
+                  isWinner={isFinished && winner === leftCode}
+                  dimmed={isLive && inn === 2 && playStarted}
+                />
+                {leftLabel && (
+                  <span className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 text-gray-600 font-black uppercase tracking-widest">
+                    {leftLabel}
+                  </span>
+                )}
+              </div>
 
               {/* Centre — live score */}
               <div className="flex-1 text-center">
@@ -235,12 +257,28 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
               </div>
 
               {/* Right team — currently batting */}
-              <TeamChip
-                code={rightCode}
-                score={isFinished ? `${match.score}/${match.wickets}(${match.overs})`.replace('/(', ' (') : null}
-                isWinner={isFinished && winner === rightCode}
-                dimmed={false}
-              />
+              <div className="flex flex-col items-center gap-1">
+                <TeamChip
+                  code={rightCode}
+                  score={isFinished ? `${match.score}/${match.wickets}(${match.overs})`.replace('/(', ' (') : null}
+                  isWinner={isFinished && winner === rightCode}
+                  dimmed={false}
+                />
+                {rightLabel && (
+                  <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest
+                    ${isFinished                           ? 'bg-green-500/10 text-green-400'
+                    : match?.status === 'INNINGS BREAK'   ? 'bg-yellow-500/10 text-yellow-400'
+                    : match?.status === 'RAIN DELAY'      ? 'bg-blue-500/10 text-blue-400'
+                    : (isLive && playStarted)             ? 'bg-ipl-neon/15 text-ipl-neon'
+                    :                                       'bg-white/5 text-gray-500'}`}>
+                    {rightLabel}
+                  </span>
+                )}
+                {/* 2nd Innings label */}
+                {inn === 2 && isLive && playStarted && (
+                  <span className="text-[8px] text-gray-600 uppercase tracking-widest">2nd Innings</span>
+                )}
+              </div>
             </div>
 
             {/* Toss */}
@@ -297,15 +335,24 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
 //        or MongoDB object      (team1:{name:"KKR"}, team2:{name:"RR"}, score:"145", ...)
 // ─────────────────────────────────────────────────────────────────────────────
 const LatestResultBox = ({ finished }) => {
-  // Normalise team codes — seasonStore gives strings, MongoDB gives {name}
-  const t1 = typeof finished?.team1 === 'string' ? finished.team1 : finished?.team1?.name || '';
-  const t2 = typeof finished?.team2 === 'string' ? finished.team2 : finished?.team2?.name || '';
+  // Normalise team codes — handles all shapes:
+  //   CompletedMatch API: { teamA, teamB }
+  //   seasonStore JSON:   { team1: "KKR", team2: "RR" } (strings)
+  //   LiveMatch MongoDB:  { team1: { name: "KKR" }, team2: { name: "RR" } }
+  const t1 = finished?.teamA
+           || (typeof finished?.team1 === 'string' ? finished.team1 : finished?.team1?.name)
+           || '';
+  const t2 = finished?.teamB
+           || (typeof finished?.team2 === 'string' ? finished.team2 : finished?.team2?.name)
+           || '';
 
-  const score1 = finished?.team1Score || null;
-  const score2 = finished?.team2Score
-    || (finished?.score
-        ? `${finished.score}/${finished.wickets} (${finished.overs})`
-        : null);
+  // Score strings — handles all formats:
+  //   CompletedMatch API: scoreA = "192/5 (20)" already formatted
+  //   seasonStore JSON:   team1Score = "192/5 (20.0)"
+  //   LiveMatch MongoDB:  score/wickets/overs separate
+  const score1 = finished?.scoreA || finished?.team1Score || null;
+  const score2 = finished?.scoreB || finished?.team2Score
+    || (finished?.score ? `${finished.score}/${finished.wickets} (${finished.overs})` : null);
 
   const winner = finished?.winner
     || (finished?.result

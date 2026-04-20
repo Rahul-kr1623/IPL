@@ -353,19 +353,32 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
   const batters = [...(match?.batsmen || [])].sort((a, b) => (b.onStrike ? 1 : 0) - (a.onStrike ? 1 : 0));
   const bowler  = match?.bowlers?.[0] || null;
 
+  // Play has started = at least 1 ball bowled (overs > 0) or batsmen data present
+  const oversFloat   = parseFloat(match?.overs || '0');
+  const playStarted  = oversFloat > 0 || (match?.batsmen?.length > 0) || (match?.team1Score != null);
+
+  // Left side label: "1st Innings" when right team is batting 1st, else completed score label
+  // Right side label: only show "Currently Batting" once play has started
+  const leftBadgeText = currentInnings === 2
+    ? '1st Innings'    // left team (t1) batted first
+    : null;            // left team hasn't batted yet — no badge
+
   const rightBadgeText = isFinished
     ? 'Match Over'
     : match?.status === 'INNINGS BREAK' ? 'Innings Break'
     : match?.status === 'RAIN DELAY'    ? 'Rain Delay'
     : match?.status === 'SUPER OVER'    ? 'Super Over!'
-    : isLive ? 'Currently Batting' : (match?.status || '');
+    : (isLive && playStarted) ? 'Currently Batting'
+    : isLive ? 'Toss Awaited'
+    : (match?.status || '');
 
   const rightBadgeCls = isFinished
     ? 'bg-green-500/20 text-green-400'
     : match?.status === 'INNINGS BREAK' ? 'bg-yellow-500/20 text-yellow-400'
     : match?.status === 'RAIN DELAY'    ? 'bg-blue-500/20 text-blue-400'
     : match?.status === 'SUPER OVER'    ? 'bg-purple-500/20 text-purple-400'
-    : 'bg-ipl-neon/20 text-ipl-neon';
+    : (isLive && playStarted)           ? 'bg-ipl-neon/20 text-ipl-neon'
+    : 'bg-white/10 text-gray-400';
 
   return (
     <div className="relative">
@@ -415,7 +428,7 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
       <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-8"
         style={{ transform: 'translateZ(100px)' }}>
 
-        {/* LEFT — not batting (dimmed) */}
+        {/* LEFT — not currently batting (dimmed) */}
         <div className="text-center opacity-40 hover:opacity-70 transition-opacity">
           {leftLogo
             ? <img src={leftLogo} alt={leftTeam} className="w-28 md:w-36 mx-auto drop-shadow-2xl" />
@@ -426,9 +439,14 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           {leftScoreDisplay
             ? <p className="text-sm font-mono mt-1 text-gray-500">{leftScoreDisplay}</p>
             : <p className="text-xs text-gray-600 mt-1">
-                {currentInnings === 1 ? 'Yet to bat' : '1st Innings'}
+                {currentInnings === 1 ? 'Yet to bat' : null}
               </p>
           }
+          {leftBadgeText && (
+            <span className="text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase bg-white/10 text-gray-500 mt-1 inline-block">
+              {leftBadgeText}
+            </span>
+          )}
         </div>
 
         {/* CENTRE — big score */}
@@ -473,16 +491,20 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           <div className="relative">
             {rightLogo
               ? <img src={rightLogo} alt={rightTeam}
-                  className={`w-28 md:w-40 mx-auto drop-shadow-2xl ${isLive ? 'animate-pulse' : ''}`} />
+                  className={`w-28 md:w-40 mx-auto drop-shadow-2xl ${(isLive && playStarted) ? 'animate-pulse' : ''}`} />
               : <div className="w-32 h-20 mx-auto flex items-center justify-center">
                   <span className="text-3xl font-black text-white">{rightTeam}</span>
                 </div>}
-            {isLive && <Activity className="absolute -top-2 -right-2 w-5 h-5 text-ipl-neon animate-bounce" />}
+            {(isLive && playStarted) && <Activity className="absolute -top-2 -right-2 w-5 h-5 text-ipl-neon animate-bounce" />}
           </div>
           <h2 className="text-xl font-black mt-3 tracking-tighter text-white uppercase italic">{rightTeam}</h2>
           <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase ${rightBadgeCls}`}>
             {rightBadgeText}
           </span>
+          {/* Show "2nd Innings" label when right team is chasing */}
+          {currentInnings === 2 && isLive && playStarted && (
+            <p className="text-[8px] text-gray-600 mt-1 uppercase tracking-widest">2nd Innings</p>
+          )}
         </div>
       </div>
 

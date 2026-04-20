@@ -200,6 +200,39 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
 
   console.log(`  [ESPN] gpkg keys: [${Object.keys(gpkg).join(', ')}]`);
 
+  // ── DIAGNOSTIC DUMP (helps debug empty batsmen/bowlers) ───────────────────
+  // Logs a compact summary of every data source ESPN provides
+  const diagInn = (gpkg.innings || []).map((inn, i) => {
+    const batters = (inn.batting?.batsmen || []).length;
+    const bwlrs   = (inn.bowling?.bowlers || []).length;
+    return `inn[${i}]: ${inn.team?.abbreviation||'?'} runs=${inn.runs||inn.score||'?'} wkts=${inn.wickets||'?'} batters=${batters} bowlers=${bwlrs}`;
+  });
+  console.log(`  [ESPN] innings dump: ${diagInn.length ? diagInn.join(' | ') : 'EMPTY'}`);
+  console.log(`  [ESPN] batterBoxScores=${gpkg.batterBoxScores?.length||0} bowlerBoxScores=${gpkg.bowlerBoxScores?.length||0} plays=${gpkg.plays?.length||0} leaders=${gpkg.leaders?.length||0}`);
+  if (gpkg.batterBoxScores?.length) {
+    const sample = gpkg.batterBoxScores.slice(0, 3).map(b =>
+      `${b.athlete?.displayName||'?'}(active=${b.active}) stats=${JSON.stringify(b.stats?.slice(0,3))}`
+    );
+    console.log(`  [ESPN] batterBoxScores sample: ${sample.join(' | ')}`);
+  }
+  if (gpkg.bowlerBoxScores?.length) {
+    const sample = gpkg.bowlerBoxScores.slice(0, 2).map(b =>
+      `${b.athlete?.displayName||'?'} stats=${JSON.stringify(b.stats?.slice(0,3))}`
+    );
+    console.log(`  [ESPN] bowlerBoxScores sample: ${sample.join(' | ')}`);
+  }
+  // Dump winProbability shape so we can wire it correctly
+  if (gpkg.winProbability || gpkg.winProbabilities) {
+    const wp = gpkg.winProbability || gpkg.winProbabilities;
+    console.log(`  [ESPN] winProb type=${Array.isArray(wp)?'array':'object'} sample=${JSON.stringify(wp).substring(0,120)}`);
+  }
+  // Dump situation (live CRR, RRR, on-strike batter from scoreboard)
+  const situation = header.situation || summary.header?.situation;
+  if (situation) {
+    console.log(`  [ESPN] situation keys: ${Object.keys(situation).join(', ')}`);
+    console.log(`  [ESPN] situation sample: ${JSON.stringify(situation).substring(0,200)}`);
+  }
+
   // ── STATUS ─────────────────────────────────────────────────────────────────
   const stType   = header.status?.type || {};
   const stDetail = (stType.detail || stType.shortDetail || '').toUpperCase();
@@ -950,45 +983,63 @@ export const scrapeLiveMatch = async () => {
 };
 
 // ─── All-slots scrape — returns { slot1: data|null, slot2: data|null } ────────
-// slot1 = 3:30 PM (earlier) match, slot2 = 7:30 PM (later) match
+// slot1 = 3:30 PM IST (afternoon), slot2 = 7:30 PM IST (evening)
+// Assignment is by startTime hour, NOT array index.
+// 7:30 PM IST = 14:00 UTC → any match with UTC hour >= 13 goes to slot2.
 export const scrapeAllSlots = async () => {
-  console.log('━━━ [Scraper] Multi-slot scan ━━━');
+  console.log('\u254c\u254c\u254c [Scraper] Multi-slot scan \u254c\u254c\u254c');
   const result = { slot1: null, slot2: null };
 
   try {
     const allMeta = await espnFindAllMatches();
     if (allMeta.length === 0) {
-      console.log('  [Slots] No live IPL matches found');
-      return result;
-    }
-
-    // Fetch scores for all found events in parallel
-    const scores = await Promise.allSettled(allMeta.map(m => espnGetScore(m)));
-
-    scores.forEach((s, i) => {
-      if (s.status === 'fulfilled' && s.value) {
+      console.log('  [Slots] No live IPL matches found from ESPN');
+    } else {
+      const scores = await Promise.allSettled(allMeta.map(m => espnGetScore(m)));
+      scores.forEach((s, i) => {
+        if (s.status !== 'fulfilled' || !s.value) return;
         const data = { ...s.value, startTime: allMeta[i].startTime, lastUpdated: new Date() };
-        if (i === 0) result.slot1 = data;
-        else         result.slot2 = data;
-      }
-    });
+
+        // Assign slot by UTC hour of match startTime
+        // 7:30 PM IST = 14:00 UTC. Threshold = 13 to handle slight variations.
+        let assignedSlot = 'slot1';
+        if (allMeta[i].startTime) {
+          const utcHour = new Date(allMeta[i].startTime).getUTCHours();
+          assignedSlot = utcHour >= 13 ? 'slot2' : 'slot1';
+          console.log(`  [Slots] ${data.team1?.name} vs ${data.team2?.name} startUTC=${utcHour}h → ${assignedSlot}`);
+        } else {
+          assignedSlot = i === 0 ? 'slot1' : 'slot2';
+          console.log(`  [Slots] ${data.team1?.name} vs ${data.team2?.name} no-time → ${assignedSlot} (by index)`);
+        }
+
+        if (!result[assignedSlot]) {
+          result[assignedSlot] = data;
+        } else {
+          const other = assignedSlot === 'slot1' ? 'slot2' : 'slot1';
+          if (!result[other]) {
+            result[other] = data;
+            console.log(`  [Slots] ${assignedSlot} already filled, reassigned to ${other}`);
+          }
+        }
+      });
+    }
   } catch(e) { console.log('[Slots ESPN fatal]', e.message); }
 
-  // If ESPN returned nothing for slot1, try CB fallbacks
-  if (!result.slot1) {
+  // CB fallbacks only when both slots are empty
+  if (!result.slot1 && !result.slot2) {
     try {
       const r = await cbProxyFetch();
       if (r) { result.slot1 = { ...r, lastUpdated: new Date() }; }
     } catch(e) { /* ignore */ }
   }
-  if (!result.slot1) {
+  if (!result.slot1 && !result.slot2) {
     try {
       const r = await cbDirectFetch();
       if (r) { result.slot1 = { ...r, lastUpdated: new Date() }; }
     } catch(e) { /* ignore */ }
   }
 
-  console.log(`  [Slots] slot1=${result.slot1 ? result.slot1.team1?.name + ' vs ' + result.slot1.team2?.name : 'empty'} | slot2=${result.slot2 ? result.slot2.team1?.name + ' vs ' + result.slot2.team2?.name : 'empty'}`);
+  console.log(`  [Slots] FINAL slot1=${result.slot1 ? result.slot1.team1?.name + ' vs ' + result.slot1.team2?.name : 'empty'} | slot2=${result.slot2 ? result.slot2.team1?.name + ' vs ' + result.slot2.team2?.name : 'empty'}`);
   return result;
 };
 
