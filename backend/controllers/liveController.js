@@ -16,7 +16,6 @@ import {
   getCapLeaders,
 } from '../utils/matchDataEngine.js';
 import { getLatestFinishedFromJson, getAllCompletedFromJson } from '../utils/seasonStore.js';
-import { getCompletedMatchesForAPI } from '../services/completedMatchService.js';
 
 // ─── GET /api/v1/live-score ───────────────────────────────────────────────────
 // Returns { slot1: Match|null, slot2: Match|null }
@@ -81,12 +80,8 @@ export const getLiveScore = async (req, res) => {
 //        → LiveMatch MongoDB fallback (in case of cold start)
 export const getLatestFinished = async (req, res) => {
   try {
-    // Tier 1: CompletedMatch collection — persistent MongoDB, survives Render redeploys
-    const apiData = await getCompletedMatchesForAPI();
-    if (apiData.recent && apiData.recent.length > 0) {
-      const latest = apiData.recent[0]; // sorted finishedAt desc
-      return res.json({ match: latest, source: 'completedMatch' });
-    }
+    // Tier 1 was previously a CompletedMatch collection, but it's not present.
+    // Falling back directly to Tier 2 (seasonStore) and Tier 3 (LiveMatch).
 
     // Tier 2: seasonStore JSON (written during same uptime session)
     const jsonResult = getLatestFinishedFromJson();
