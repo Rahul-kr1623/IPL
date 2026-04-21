@@ -66,6 +66,18 @@ const normalizeOvers = (raw) => {
   return '0.0';
 };
 
+const oversToBalls = (ov) => {
+  if (!ov) return 0;
+  const [o, b] = String(ov).split('.');
+  return (parseInt(o || 0) * 6) + (parseInt(b || 0));
+};
+
+const oversToFloat = (ov) => {
+  if (!ov) return 0;
+  const [o, b] = String(ov).split('.');
+  return (parseInt(o || 0)) + ((parseInt(b || 0)) / 6);
+};
+
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
 const fetchRaw = (url, hdrs = {}, ms = 15000) => new Promise((res, rej) => {
   const lib = url.startsWith('https') ? https : http;
@@ -426,30 +438,81 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     const ps0 = parseScoreStr(comp0?.score || '');
     const ps1 = parseScoreStr(comp1?.score || '');
 
+    const comp0Overs = parseFloat(ps0?.overs || '0');
+    const comp1Overs = parseFloat(ps1?.overs || '0');
+
+    const comp0LikelyCompleted =
+      comp0Overs >= 19.5 ||
+      (ps0?.runs && !ps1?.runs);
+
+    const comp1LikelyCompleted =
+      comp1Overs >= 19.5 ||
+      (ps1?.runs && !ps0?.runs);
+
     if (ps0 && ps1) {
-      const o0 = parseFloat(ps0.overs || '0'), o1 = parseFloat(ps1.overs || '0');
-      // Higher overs = more likely completed innings = batted first
-      if (o0 >= 20 || o0 > o1) {
-        team1Name = ct0; team2Name = ct1;
-        firstInningsRuns = ps0.runs; firstInningsWkts = ps0.wickets; firstInningsOvers = ps0.overs || '20';
-        score = ps1.runs; wickets = ps1.wickets; overs = ps1.overs || '0.0';
-        target = parseInt(ps0.runs) + 1;
+      // Whichever innings has more overs is usually first innings completed score
+      if (comp0LikelyCompleted && comp0Overs >= comp1Overs) {
+        team1Name = ct0;
+        team2Name = ct1;
+
+        firstInningsRuns = ps0.runs;
+        firstInningsWkts = ps0.wickets;
+        firstInningsOvers = ps0.overs || '20.0';
+
+        score = ps1.runs;
+        wickets = ps1.wickets;
+        overs = ps1.overs || '0.0';
+
+        target = parseInt(firstInningsRuns) + 1;
+      } else if (comp1LikelyCompleted && comp1Overs >= comp0Overs) {
+        team1Name = ct1;
+        team2Name = ct0;
+
+        firstInningsRuns = ps1.runs;
+        firstInningsWkts = ps1.wickets;
+        firstInningsOvers = ps1.overs || '20.0';
+
+        score = ps0.runs;
+        wickets = ps0.wickets;
+        overs = ps0.overs || '0.0';
+
+        target = parseInt(firstInningsRuns) + 1;
       } else {
-        team1Name = ct1; team2Name = ct0;
-        firstInningsRuns = ps1.runs; firstInningsWkts = ps1.wickets; firstInningsOvers = ps1.overs || '20';
-        score = ps0.runs; wickets = ps0.wickets; overs = ps0.overs || '0.0';
-        target = parseInt(ps1.runs) + 1;
+        // Still in first innings
+        if (comp0Overs >= comp1Overs) {
+          team1Name = ct0;
+          team2Name = ct1;
+          score = ps0.runs;
+          wickets = ps0.wickets;
+          overs = ps0.overs || '0.0';
+        } else {
+          team1Name = ct1;
+          team2Name = ct0;
+          score = ps1.runs;
+          wickets = ps1.wickets;
+          overs = ps1.overs || '0.0';
+        }
       }
     } else if (ps0) {
-      team1Name = ct0; team2Name = ct1;
-      score = ps0.runs; wickets = ps0.wickets; overs = ps0.overs || '0.0';
+      team1Name = ct0;
+      team2Name = ct1;
+      score = ps0.runs;
+      wickets = ps0.wickets;
+      overs = ps0.overs || '0.0';
     } else if (ps1) {
-      team1Name = ct1; team2Name = ct0;
-      score = ps1.runs; wickets = ps1.wickets; overs = ps1.overs || '0.0';
+      team1Name = ct1;
+      team2Name = ct0;
+      score = ps1.runs;
+      wickets = ps1.wickets;
+      overs = ps1.overs || '0.0';
     } else {
-      team1Name = ct0; team2Name = ct1;
+      team1Name = ct0;
+      team2Name = ct1;
     }
-    console.log(`  [ESPN] score-string fallback: team1=${team1Name} | team2=${team2Name} ${score}/${wickets}`);
+
+    console.log(
+      `  [ESPN] score-string fallback: team1=${team1Name} firstInn=${firstInningsRuns || 'N/A'}/${firstInningsWkts || 'N/A'} (${firstInningsOvers || 'N/A'}) | team2=${team2Name} live=${score}/${wickets} (${overs}) target=${target || 'N/A'}`
+    );
   }
 
   // Final safety net
@@ -676,6 +739,8 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     if (bowlers.length) console.log(`  [Bowlers] from leaders: ${bowlers.length}`);
   }
 
+
+
   // ── RECENT BALLS ──────────────────────────────────────────────────────────
   const plays = gpkg.plays || gpkg.scoringPlays || [];
   const recent = ['·', '·', '·', '·', '·', '·'];
@@ -705,9 +770,51 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     };
   }).filter(Boolean);
 
+  // Commentary-based fallback for striker/non-striker/bowler
+  if (batsmen.length === 0 || bowlers.length === 0) {
+    const commentaryText = commentary
+      .map(c => c.text || '')
+      .join(' ');
+
+    const batterMatches = [
+      ...commentaryText.matchAll(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)\s+(\d+)\((\d+)\)/g)
+    ];
+
+    batterMatches.slice(0, 2).forEach((m, idx) => {
+      const name = m[1];
+      if (!name) return;
+      if (batsmen.find(b => b.name === name)) return;
+
+      batsmen.push({
+        name,
+        runs: parseInt(m[2] || 0),
+        balls: parseInt(m[3] || 0),
+        fours: 0,
+        sixes: 0,
+        sr: '0.0',
+        onStrike: idx === 0,
+      });
+    });
+
+    const bowlerMatch = commentaryText.match(
+      /(?:to|bowling)\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)/i
+    );
+
+    if (bowlerMatch && bowlers.length === 0) {
+      bowlers.push({
+        name: bowlerMatch[1],
+        overs: '0.0',
+        maidens: 0,
+        runs: 0,
+        wickets: 0,
+        economy: '0.0',
+      });
+    }
+  }
+
   // ── WIN PROBABILITY ───────────────────────────────────────────────────────
   const scoreInt = parseInt(score) || 0;
-  const oversFloat = parseFloat(overs) || 0;
+  const oversFloat = oversToFloat(overs);
   let crr = null, rrr = null, winProbT1 = 50, winProbT2 = 50;
 
   if (gpkg.currentRunRate) crr = parseFloat(gpkg.currentRunRate);
@@ -812,7 +919,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
 
     requiredBalls:
       overs
-        ? Math.max(120 - Math.round(parseFloat(overs) * 6), 0)
+        ? Math.max(120 - oversToBalls(overs), 0)
         : null,
 
     projectedScore:
@@ -850,7 +957,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         team2Prob: Math.min((winProbT2 || 50) + 3, 95),
       },
       {
-        over: parseFloat(overs || 0),
+        over: oversToFloat(overs || 0),
         team1Prob: winProbT1 || 50,
         team2Prob: winProbT2 || 50,
       },
@@ -894,7 +1001,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
             : 0,
       },
       {
-        over: parseFloat(overs || 0),
+        over: oversToFloat(overs || 0),
         team1Score: parseInt(firstInningsRuns || score || 0),
         team2Score:
           currentInningsNum === 2
@@ -921,7 +1028,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     bowlers: bowlers.slice(0, 2),
 
     currentBowler:
-      bowlers[0] || null,
+      bowlers[bowlers.length - 1] || null,
 
     commentary: commentary.slice(0, 10),
 
@@ -1507,23 +1614,23 @@ export const debugSources = async (req, res) => {
 
   // Cricbuzz proxy
   try {
-    const r    = await fetch('https://cricbuzz-live.vercel.app/v1/matches');
+    const r = await fetch('https://cricbuzz-live.vercel.app/v1/matches');
     const data = await r.json();
     results.cbProxy = {
-      status:     r.status,
+      status: r.status,
       matchCount: data?.data?.matches?.length || 0,
       firstMatch: data?.data?.matches?.[0] || null,
-      raw:        JSON.stringify(data).substring(0, 500),
+      raw: JSON.stringify(data).substring(0, 500),
     };
   } catch (e) { results.cbProxy = { error: e.message }; }
 
   // ESPN scoreboard header
   try {
-    const r    = await fetch('https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta');
+    const r = await fetch('https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta');
     const data = await r.json();
     const events = data?.sports?.[0]?.leagues?.[0]?.events || [];
     results.espnHeader = {
-      status:     r.status,
+      status: r.status,
       eventCount: events.length,
       firstEvent: events[0] || null,
     };
@@ -1531,10 +1638,10 @@ export const debugSources = async (req, res) => {
 
   // ESPN IPL scoreboard
   try {
-    const r    = await fetch('https://site.api.espn.com/apis/site/v2/sports/cricket/8048/scoreboard');
+    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/cricket/8048/scoreboard');
     const data = await r.json();
     results.espn23694 = {
-      status:     r.status,
+      status: r.status,
       eventCount: data?.events?.length || 0,
       firstEvent: data?.events?.[0]?.name || null,
     };
@@ -1542,29 +1649,29 @@ export const debugSources = async (req, res) => {
 
   // Cricbuzz direct
   try {
-    const r    = await fetch('https://www.cricbuzz.com/api/cricket-match/live-scores', {
+    const r = await fetch('https://www.cricbuzz.com/api/cricket-match/live-scores', {
       headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.cricbuzz.com/' },
     });
     const text = await r.text();
     results.cricbuzzDirect = {
-      status:     r.status,
+      status: r.status,
       bodyLength: text.length,
-      isJSON:     text.startsWith('{'),
-      preview:    text.substring(0, 200),
+      isJSON: text.startsWith('{'),
+      preview: text.substring(0, 200),
     };
   } catch (e) { results.cricbuzzDirect = { error: e.message }; }
 
   // Cricbuzz standings for known series IDs
   for (const sid of ['9241', '9237', '9300']) {
     try {
-      const r    = await fetch(`https://www.cricbuzz.com/api/cricket-series/${sid}/standings`);
+      const r = await fetch(`https://www.cricbuzz.com/api/cricket-series/${sid}/standings`);
       const text = await r.text();
       results[`cbStandings_${sid}`] = { status: r.status, bodyLength: text.length, preview: text.substring(0, 150) };
     } catch (e) { results[`cbStandings_${sid}`] = { error: e.message }; }
   }
 
   res.json({
-    timestamp:  new Date().toISOString(),
+    timestamp: new Date().toISOString(),
     serverTime: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
     results,
   });
@@ -1596,10 +1703,10 @@ export const debugReset = async (req, res) => {
 
 // ─── GET /api/v1/debug/clear-freeze ──────────────────────────────────────────
 export const debugClearFreeze = (req, res) => {
-  scraperState.matchFinishedAt       = null;
+  scraperState.matchFinishedAt = null;
   scraperState.finishedConfirmations = 0;
-  scraperState.lastKnownMatchKey     = null;
-  scraperState.lastLiveScore         = null;
+  scraperState.lastKnownMatchKey = null;
+  scraperState.lastLiveScore = null;
   res.json({ cleared: true, message: 'Freeze cleared. Next scrape will run immediately.' });
 };
 
@@ -1607,7 +1714,7 @@ export const debugClearFreeze = (req, res) => {
 export const debugEspnDump = async (req, res) => {
   try {
     // Step 1: find current live match ID from header
-    const hdRes  = await fetch('https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta');
+    const hdRes = await fetch('https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta');
     const hdData = await hdRes.json();
 
     let espnId = null, matchName = null;
@@ -1615,7 +1722,7 @@ export const debugEspnDump = async (req, res) => {
       for (const league of (sport.leagues || [])) {
         for (const ev of (league.events || [])) {
           if ((ev.status || '').toUpperCase() !== 'PRE') {
-            espnId    = ev.id || String(ev.uid || '').split('~e:')[1];
+            espnId = ev.id || String(ev.uid || '').split('~e:')[1];
             matchName = ev.name || ev.shortName;
             break;
           }
@@ -1627,11 +1734,11 @@ export const debugEspnDump = async (req, res) => {
 
     // Fallback via scoreboard
     if (!espnId) {
-      const sbRes  = await fetch('https://site.api.espn.com/apis/site/v2/sports/cricket/23694/scoreboard');
+      const sbRes = await fetch('https://site.api.espn.com/apis/site/v2/sports/cricket/23694/scoreboard');
       const sbData = await sbRes.json();
       for (const ev of (sbData.events || [])) {
         if (ev.status?.type?.name !== 'STATUS_SCHEDULED') {
-          espnId    = ev.id;
+          espnId = ev.id;
           matchName = ev.name;
           break;
         }
@@ -1640,7 +1747,7 @@ export const debugEspnDump = async (req, res) => {
 
     if (!espnId) {
       return res.json({
-        error:        'No live match found right now. Try during a match.',
+        error: 'No live match found right now. Try during a match.',
         headerEvents: hdData?.sports?.[0]?.leagues?.[0]?.events?.map(e => ({
           id: e.id, name: e.name, status: e.status,
         })) || [],
@@ -1648,73 +1755,73 @@ export const debugEspnDump = async (req, res) => {
     }
 
     // Step 2: full summary
-    const sumRes  = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/cricket/23694/summary?contentorigin=espn&event=${espnId}&lang=en&region=in`);
+    const sumRes = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/cricket/23694/summary?contentorigin=espn&event=${espnId}&lang=en&region=in`);
     const summary = await sumRes.json();
-    const gpkg    = summary.gamepackageJSON || {};
+    const gpkg = summary.gamepackageJSON || {};
 
     res.json({
       espnId,
       matchName,
       summaryTopKeys: Object.keys(summary),
-      gpkgTopKeys:    Object.keys(gpkg),
-      status:         summary.header?.competitions?.[0]?.status?.type,
-      notes:          (summary.header?.competitions?.[0]?.notes || []).slice(0, 5),
+      gpkgTopKeys: Object.keys(gpkg),
+      status: summary.header?.competitions?.[0]?.status?.type,
+      notes: (summary.header?.competitions?.[0]?.notes || []).slice(0, 5),
       competitors: (summary.header?.competitions?.[0]?.competitors || []).map(c => ({
-        team:           c.team?.displayName,
-        score:          c.score,
-        homeAway:       c.homeAway,
-        winner:         c.winner,
+        team: c.team?.displayName,
+        score: c.score,
+        homeAway: c.homeAway,
+        winner: c.winner,
         linescoresCount: (c.linescores || []).length,
-        linescores:     (c.linescores || []).slice(0, 5),
-        athletesCount:  (c.athletes || []).length,
-        sampleAthlete:  c.athletes?.[0],
+        linescores: (c.linescores || []).slice(0, 5),
+        athletesCount: (c.athletes || []).length,
+        sampleAthlete: c.athletes?.[0],
       })),
-      linescore:       gpkg.linescore,
-      inningsCount:    (gpkg.innings || []).length,
+      linescore: gpkg.linescore,
+      inningsCount: (gpkg.innings || []).length,
       innings: (gpkg.innings || []).map((inn, i) => ({
-        index:      i,
-        allKeys:    Object.keys(inn),
-        team:       inn.team?.displayName || inn.team?.abbreviation,
-        runs:       inn.runs || inn.score,
-        wickets:    inn.wickets,
-        overs:      inn.overs || inn.totalOvers,
-        battingKeys:   inn.batting ? Object.keys(inn.batting) : null,
-        batsmenCount:  (inn.batting?.batsmen || []).length,
+        index: i,
+        allKeys: Object.keys(inn),
+        team: inn.team?.displayName || inn.team?.abbreviation,
+        runs: inn.runs || inn.score,
+        wickets: inn.wickets,
+        overs: inn.overs || inn.totalOvers,
+        battingKeys: inn.batting ? Object.keys(inn.batting) : null,
+        batsmenCount: (inn.batting?.batsmen || []).length,
         sampleBatsman: inn.batting?.batsmen?.[0],
         allBatsmen: (inn.batting?.batsmen || []).slice(0, 4).map(b => ({
-          name:    b.athlete?.displayName || b.name,
-          runs:    b.runs || b.score,
-          balls:   b.balls || b.facedBalls,
-          fours:   b.fours,
-          sixes:   b.sixes,
-          sr:      b.strikeRate || b.sr,
-          active:  b.active,
+          name: b.athlete?.displayName || b.name,
+          runs: b.runs || b.score,
+          balls: b.balls || b.facedBalls,
+          fours: b.fours,
+          sixes: b.sixes,
+          sr: b.strikeRate || b.sr,
+          active: b.active,
           onStrike: b.onStrike,
           allKeys: Object.keys(b),
         })),
-        bowlingKeys:  inn.bowling ? Object.keys(inn.bowling) : null,
+        bowlingKeys: inn.bowling ? Object.keys(inn.bowling) : null,
         bowlersCount: (inn.bowling?.bowlers || []).length,
         allBowlers: (inn.bowling?.bowlers || []).slice(0, 3).map(b => ({
-          name:    b.athlete?.displayName || b.name,
+          name: b.athlete?.displayName || b.name,
           wickets: b.wickets,
-          runs:    b.runs || b.conceded,
-          overs:   b.overs || b.totalOvers,
+          runs: b.runs || b.conceded,
+          overs: b.overs || b.totalOvers,
           economy: b.economy || b.er,
           allKeys: Object.keys(b),
         })),
       })),
-      batterBoxScoresCount:  (gpkg.batterBoxScores || []).length,
+      batterBoxScoresCount: (gpkg.batterBoxScores || []).length,
       batterBoxScoresSample: (gpkg.batterBoxScores || []).slice(0, 2).map(b => ({
         name: b.athlete?.displayName, active: b.active, stats: b.stats, allKeys: Object.keys(b),
       })),
-      bowlerBoxScoresCount:  (gpkg.bowlerBoxScores || []).length,
+      bowlerBoxScoresCount: (gpkg.bowlerBoxScores || []).length,
       bowlerBoxScoresSample: (gpkg.bowlerBoxScores || []).slice(0, 2).map(b => ({
         name: b.athlete?.displayName, stats: b.stats, allKeys: Object.keys(b),
       })),
-      playsCount:  (gpkg.plays || []).length,
+      playsCount: (gpkg.plays || []).length,
       recentPlays: (gpkg.plays || []).slice(-5).map(p => ({
-        text:         p.text,
-        period:       p.period,
+        text: p.text,
+        period: p.period,
         participants: (p.participants || []).map(pp => ({
           role: pp.role || pp.type, name: pp.athlete?.displayName, allKeys: Object.keys(pp),
         })),
@@ -1724,14 +1831,14 @@ export const debugEspnDump = async (req, res) => {
         name: l.name, abbreviation: l.abbreviation,
         leadersCount: (l.leaders || []).length, topLeader: l.leaders?.[0],
       })),
-      winProbability:  gpkg.winProbability  || gpkg.winProbabilities || 'NOT PRESENT',
-      currentRunRate:  gpkg.currentRunRate  || 'NOT PRESENT',
-      requiredRunRate: gpkg.requiredRunRate  || 'NOT PRESENT',
+      winProbability: gpkg.winProbability || gpkg.winProbabilities || 'NOT PRESENT',
+      currentRunRate: gpkg.currentRunRate || 'NOT PRESENT',
+      requiredRunRate: gpkg.requiredRunRate || 'NOT PRESENT',
       scoringPlaysCount: (gpkg.scoringPlays || []).length,
-      hasScorecard:      !!gpkg.scorecard,
-      hasTeamStats:      !!gpkg.teamStats,
-      hasMomentum:       !!gpkg.momentum,
-      hasPartnership:    !!gpkg.partnership,
+      hasScorecard: !!gpkg.scorecard,
+      hasTeamStats: !!gpkg.teamStats,
+      hasMomentum: !!gpkg.momentum,
+      hasPartnership: !!gpkg.partnership,
     });
 
   } catch (e) {
