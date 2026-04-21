@@ -311,6 +311,7 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
                         )}
                         <span className="text-white font-bold">{bat.name}</span>
                       </div>
+
                       <span className="font-mono text-ipl-neon font-black">
                         {bat.runs}
                         <span className="text-white/40 font-normal">
@@ -319,9 +320,13 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
                       </span>
                     </div>
                   ))}
+
                 {match.currentBowler && (
                   <div className="flex items-center justify-between text-xs border-t border-white/5 pt-2">
-                    <span className="text-gray-400">{match.currentBowler.name}</span>
+                    <span className="text-gray-400">
+                      {match.currentBowler.name}
+                    </span>
+
                     <span className="font-mono text-gray-300">
                       {match.currentBowler.wickets}/{match.currentBowler.runs} ({match.currentBowler.overs})
                     </span>
