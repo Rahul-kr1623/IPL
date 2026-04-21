@@ -1740,9 +1740,6 @@ export const debugEspnDump = async (req, res) => {
 };
 
 export {
-  scrapeLiveMatch,
-  espnFindMatch,
-  espnFindAllMatches,
   getFixturesData,
   cbProxyFetch,
   cbDirectFetch,
