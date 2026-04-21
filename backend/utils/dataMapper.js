@@ -1,28 +1,83 @@
 export const mapRawDataToInsights = (rawApiData) => {
-  // Dynamically map API response to the specific chart format for Recharts
-  // Since real Cricbuzz API schemas vary, we extract relevant fields safely
-  
-  const currentOver = parseFloat(rawApiData?.overs || '18.4');
-  const currentScore = parseInt(rawApiData?.score || '180');
-  const currentWinProb = rawApiData?.winProb || 62;
+  const currentOver = parseFloat(rawApiData?.overs || 0);
+  const currentScore = parseInt(rawApiData?.score || 0);
+  const firstInningsScore = parseInt(rawApiData?.team1Score || 0);
+  const currentWinProb = parseInt(
+    rawApiData?.winProbT2 ??
+    rawApiData?.winProb ??
+    50
+  );
 
-  // Map to the Live Win Prob LineChart format
-  const winProbData = [
-    { over: 0, prob: 50 },
-    { over: 5, prob: 48 },
-    { over: 10, prob: 52 },
-    { over: 15, prob: 58 },
-    { over: Math.floor(currentOver) || 18, prob: currentWinProb }
-  ];
+  // Use backend timeline if available
+  const winProbData =
+    rawApiData?.winProbabilityTimeline?.length > 0
+      ? rawApiData.winProbabilityTimeline.map((item) => ({
+        over: Number(item.over),
+        prob: Number(
+          item.team2Prob ??
+          item.prob ??
+          currentWinProb
+        ),
+      }))
+      : [
+        { over: 0, prob: 50 },
+        { over: Math.max(currentOver - 15, 0), prob: 48 },
+        { over: Math.max(currentOver - 10, 0), prob: 52 },
+        { over: Math.max(currentOver - 5, 0), prob: 58 },
+        { over: currentOver || 1, prob: currentWinProb },
+      ];
 
-  // Map to the Momentum Shift AreaChart format
-  const momentumData = [
-    { over: 1, team1: 8, team2: 10 },
-    { over: 5, team1: 45, team2: 40 },
-    { over: 10, team1: 88, team2: 78 },
-    { over: 15, team1: 142, team2: 135 },
-    { over: Math.floor(currentOver) || 18, team1: currentScore, team2: currentScore - 5 },
-  ];
+  // Use backend innings timeline if available
+  const momentumData =
+    rawApiData?.inningsTimeline?.length > 0
+      ? rawApiData.inningsTimeline
+        .map((item) => ({
+          over: Number(item.over),
+          team1: Number(item.team1Score || 0),
+          team2: Number(item.team2Score || 0),
+        }))
+        .sort((a, b) => a.over - b.over)
+      : (() => {
+        const points = [
+          {
+            over: 1,
+            team1: Math.round(firstInningsScore * 0.08),
+            team2: 0,
+          },
+          {
+            over: 5,
+            team1: Math.round(firstInningsScore * 0.28),
+            team2: 0,
+          },
+          {
+            over: 10,
+            team1: Math.round(firstInningsScore * 0.52),
+            team2: 0,
+          },
+          {
+            over: 15,
+            team1: Math.round(firstInningsScore * 0.78),
+            team2: 0,
+          },
+          {
+            over: 20,
+            team1: firstInningsScore,
+            team2: currentScore,
+          },
+          {
+            over: currentOver || 1,
+            team1: firstInningsScore,
+            team2: currentScore,
+          },
+        ];
 
-  return { winProbData, momentumData };
+        return points
+          .filter((item) => item.over <= Math.max(currentOver, 20))
+          .sort((a, b) => a.over - b.over);
+      })();
+
+  return {
+    winProbData,
+    momentumData,
+  };
 };
