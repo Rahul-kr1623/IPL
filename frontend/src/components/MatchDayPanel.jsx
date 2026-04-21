@@ -117,15 +117,20 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
   const playStarted = oversFloat > 0 || (match?.batsmen?.length > 0) || (match?.team1Score != null);
 
   // Left = bat-first team, Right = currently batting team
-  const leftCode = t1;
-  const rightCode = t2;
+  const leftCode = t1 || '';
+  const rightCode = t2 || '';
 
   const leftScore = match?.team1Score
-    ? `${match.team1Score}/${match.team1Wickets || ''} (${match.team1Overs || '20.0'})`
+    ? `${match?.team1Score}/${match?.team1Wickets || ''} (${match.team1Overs || '20.0'})`
     : 'Yet to bat';
 
-  const winner = isFinished && match?.result
-    ? (match.result.toUpperCase().includes(t1.toUpperCase()) ? t1 : t2)
+  const winner =
+  isFinished && match?.result && t1 && t2
+    ? (
+        match.result.toUpperCase().includes(t1.toUpperCase())
+          ? t1
+          : t2
+      )
     : null;
 
   // Innings labels
@@ -139,7 +144,8 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
             : isLive ? 'Toss Awaited'
               : null;
 
-  const topBarBg = t1 && t2
+  const topBarBg =
+  t1 && t2
     ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
     : 'rgba(255,255,255,0.05)';
 
@@ -365,12 +371,17 @@ const LatestResultBox = ({ finished }) => {
   const score2 = finished?.scoreB || finished?.team2Score
     || (finished?.score ? `${finished.score}/${finished.wickets} (${finished.overs})` : null);
 
-  const winner = finished?.winner
-    || (finished?.result
-      ? (finished.result.toUpperCase().includes(t1.toUpperCase()) ? t1 : t2)
-      : null);
+  const winner =
+  isFinished && match?.result && t1 && t2
+    ? (
+        match.result.toUpperCase().includes(t1.toUpperCase())
+          ? t1
+          : t2
+      )
+    : null;
 
-  const topBarBg = t1 && t2
+  const topBarBg =
+  t1 && t2
     ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
     : 'rgba(255,255,255,0.05)';
 

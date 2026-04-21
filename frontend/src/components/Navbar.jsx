@@ -36,13 +36,13 @@ const Navbar = () => {
   // currentInnings: 1 = team1 is batting (1st innings), 2 = team2 is batting (2nd innings)
   const battingTeam =
     match?.currentInnings === 2
-      ? match.team2
-      : match.team1;
+      ? match?.team2
+      : match?.team1;
 
   const otherTeam =
     match?.currentInnings === 2
-      ? match.team1
-      : match.team2;
+      ? match?.team1
+      : match?.team2;
   // otherScore = the completed innings score of the non-batting team (only in 2nd innings)
   const otherScore =
     match?.currentInnings === 2

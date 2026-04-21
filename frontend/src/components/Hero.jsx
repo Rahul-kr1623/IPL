@@ -11,21 +11,21 @@ import iplAudio from '../assets/_Ye_Khel_Hai_Sher_Jawano_Ka_Ipl_Ringtone_(by Fri
 
 // ─── Logo map ────────────────────────────────────────────────────────────────
 const LOGO = {
-  CSK:'/src/assets/logos/csk_logo.png', MI:'/src/assets/logos/mi_logo.png',
-  RCB:'/src/assets/logos/rcb_logo.png', KKR:'/src/assets/logos/kkr_logo.png',
-  RR:'/src/assets/logos/rr_logo.png',   PBKS:'/src/assets/logos/pbks_logo.png',
-  DC:'/src/assets/logos/dc_logo.png',   GT:'/src/assets/logos/gt_logo.png',
-  LSG:'/src/assets/logos/lsg_logo.png', SRH:'/src/assets/logos/srh_logo.png',
+  CSK: '/src/assets/logos/csk_logo.png', MI: '/src/assets/logos/mi_logo.png',
+  RCB: '/src/assets/logos/rcb_logo.png', KKR: '/src/assets/logos/kkr_logo.png',
+  RR: '/src/assets/logos/rr_logo.png', PBKS: '/src/assets/logos/pbks_logo.png',
+  DC: '/src/assets/logos/dc_logo.png', GT: '/src/assets/logos/gt_logo.png',
+  LSG: '/src/assets/logos/lsg_logo.png', SRH: '/src/assets/logos/srh_logo.png',
 };
 const getLogo = (n) => n ? LOGO[n.toUpperCase()] || null : null;
 
 // ─── Ball color ───────────────────────────────────────────────────────────────
 const ballCls = (b) => {
-  if (b === '6')  return 'bg-yellow-500 border-yellow-300 text-black scale-110 shadow-[0_0_10px_#eab308]';
-  if (b === '4')  return 'bg-amber-400  border-amber-200  text-black';
-  if (b === 'W')  return 'bg-red-600    border-red-400    text-white animate-pulse shadow-[0_0_10px_#dc2626]';
+  if (b === '6') return 'bg-yellow-500 border-yellow-300 text-black scale-110 shadow-[0_0_10px_#eab308]';
+  if (b === '4') return 'bg-amber-400  border-amber-200  text-black';
+  if (b === 'W') return 'bg-red-600    border-red-400    text-white animate-pulse shadow-[0_0_10px_#dc2626]';
   if (b === 'WD' || b === 'NB') return 'bg-purple-600 border-purple-400 text-white';
-  if (b === '·' || b === '0')   return 'bg-white/5   border-white/10  text-gray-600';
+  if (b === '·' || b === '0') return 'bg-white/5   border-white/10  text-gray-600';
   return 'bg-white/15 border-white/20 text-white';
 };
 
@@ -33,31 +33,31 @@ const ballCls = (b) => {
 const getStatusConfig = (status) => {
   switch ((status || '').toUpperCase()) {
     case 'LIVE':
-      return { label: 'LIVE', dot: true,  bgCls: 'bg-red-600/20 border-red-500/30',    textCls: 'text-red-400' };
+      return { label: 'LIVE', dot: true, bgCls: 'bg-red-600/20 border-red-500/30', textCls: 'text-red-400' };
     case 'INNINGS BREAK':
       return { label: 'INNINGS BREAK', dot: false, bgCls: 'bg-yellow-600/20 border-yellow-500/30', textCls: 'text-yellow-400' };
     case 'RAIN DELAY':
-      return { label: '🌧 RAIN DELAY',  dot: false, bgCls: 'bg-blue-600/20 border-blue-500/30',   textCls: 'text-blue-400' };
+      return { label: '🌧 RAIN DELAY', dot: false, bgCls: 'bg-blue-600/20 border-blue-500/30', textCls: 'text-blue-400' };
     case 'SUPER OVER':
-      return { label: '⚡ SUPER OVER',  dot: true,  bgCls: 'bg-purple-600/20 border-purple-500/30', textCls: 'text-purple-400' };
+      return { label: '⚡ SUPER OVER', dot: true, bgCls: 'bg-purple-600/20 border-purple-500/30', textCls: 'text-purple-400' };
     case 'TIMEOUT':
     case 'DRINK BREAK':
     case 'STRATEGIC TIMEOUT':
-      return { label: '⏸ TIMEOUT',     dot: false, bgCls: 'bg-orange-600/20 border-orange-500/30', textCls: 'text-orange-400' };
+      return { label: '⏸ TIMEOUT', dot: false, bgCls: 'bg-orange-600/20 border-orange-500/30', textCls: 'text-orange-400' };
     case 'ABANDONED':
     case 'POSTPONED':
-      return { label: status,           dot: false, bgCls: 'bg-gray-600/20 border-gray-500/30',   textCls: 'text-gray-400' };
+      return { label: status, dot: false, bgCls: 'bg-gray-600/20 border-gray-500/30', textCls: 'text-gray-400' };
     case 'FINISHED':
     case 'RECENTLY FINISHED':
-      return { label: 'RESULT',         dot: false, bgCls: 'bg-green-600/20 border-green-500/30', textCls: 'text-green-400', icon: 'trophy' };
+      return { label: 'RESULT', dot: false, bgCls: 'bg-green-600/20 border-green-500/30', textCls: 'text-green-400', icon: 'trophy' };
     default:
-      return { label: status || 'LIVE', dot: false, bgCls: 'bg-white/10 border-white/20',          textCls: 'text-white' };
+      return { label: status || 'LIVE', dot: false, bgCls: 'bg-white/10 border-white/20', textCls: 'text-white' };
   }
 };
 
 // ─── Win probability meter ─────────────────────────────────────────────────────
 const WinProbMeter = ({ leftTeam, rightTeam, leftProb, rightProb }) => {
-  const p1 = Math.max(0, Math.min(100, Math.round(leftProb  ?? 50)));
+  const p1 = Math.max(0, Math.min(100, Math.round(leftProb ?? 50)));
   const p2 = Math.max(0, Math.min(100, Math.round(rightProb ?? 50)));
   return (
     <div className="w-full space-y-2">
@@ -141,8 +141,8 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
   const isFinished = match.status === 'FINISHED' || match.status === 'RECENTLY FINISHED';
   const isFirstInnings = inn === 1;
 
-  const firstInningsScore = match.team1Score
-    ? `${match.team1Score}${match.team1Wickets ? '/' + match.team1Wickets : ''} (${match.team1Overs || '20.0'})`
+  const firstInningsScore = match?.team1Score
+    ? `${match?.team1Score}${match?.team1Wickets ? '/' + match?.team1Wickets : ''} (${match.team1Overs || '20.0'})`
     : isFirstInnings ? `${match.score}/${match.wickets} (${match.overs})` : 'Yet to bat';
 
   const secondInningsScore = !isFirstInnings
@@ -326,36 +326,36 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
   const t2 = match?.team2?.name || '';
   const currentInnings = match?.currentInnings ?? 2;
 
-  const isLive     = match?.status === 'LIVE';
+  const isLive = match?.status === 'LIVE';
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
-  const statusCfg  = getStatusConfig(match?.status);
+  const statusCfg = getStatusConfig(match?.status);
 
-  const leftTeam  = currentInnings === 1 ? t2 : t1;
+  const leftTeam = currentInnings === 1 ? t2 : t1;
   const rightTeam = currentInnings === 1 ? t1 : t2;
-  const leftLogo  = getLogo(leftTeam);
+  const leftLogo = getLogo(leftTeam);
   const rightLogo = getLogo(rightTeam);
 
   const leftScoreDisplay = currentInnings === 1
     ? null
     : (match?.team1Score
-        ? `${match.team1Score}/${match.team1Wickets || ''} (${match.team1Overs || '20.0'})`.replace(/\/$/, '')
-        : null);
+      ? `${match?.team1Score}/${match?.team1Wickets || ''} (${match.team1Overs || '20.0'})`.replace(/\/$/, '')
+      : null);
 
-  const leftProb  = currentInnings === 1 ? (match?.winProbT2 ?? 50) : (match?.winProbT1 ?? 50);
+  const leftProb = currentInnings === 1 ? (match?.winProbT2 ?? 50) : (match?.winProbT1 ?? 50);
   const rightProb = currentInnings === 1 ? (match?.winProbT1 ?? 50) : (match?.winProbT2 ?? 50);
   let finalLeftProb = leftProb, finalRightProb = rightProb;
   if (isFinished && match?.result) {
     const w = (match.result || '').toUpperCase();
-    if (leftTeam  && w.includes(leftTeam.toUpperCase()))  { finalLeftProb = 100; finalRightProb = 0; }
+    if (leftTeam && w.includes(leftTeam.toUpperCase())) { finalLeftProb = 100; finalRightProb = 0; }
     if (rightTeam && w.includes(rightTeam.toUpperCase())) { finalRightProb = 100; finalLeftProb = 0; }
   }
 
   const batters = [...(match?.batsmen || [])].sort((a, b) => (b.onStrike ? 1 : 0) - (a.onStrike ? 1 : 0));
-  const bowler  = match?.bowlers?.[0] || null;
+  const bowler = match?.bowlers?.[0] || null;
 
   // Play has started = at least 1 ball bowled (overs > 0) or batsmen data present
-  const oversFloat   = parseFloat(match?.overs || '0');
-  const playStarted  = oversFloat > 0 || (match?.batsmen?.length > 0) || (match?.team1Score != null);
+  const oversFloat = parseFloat(match?.overs || '0');
+  const playStarted = oversFloat > 0 || (match?.batsmen?.length > 0) || (match?.team1Score != null);
 
   // Left side label: "1st Innings" when right team is batting 1st, else completed score label
   // Right side label: only show "Currently Batting" once play has started
@@ -366,19 +366,19 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
   const rightBadgeText = isFinished
     ? 'Match Over'
     : match?.status === 'INNINGS BREAK' ? 'Innings Break'
-    : match?.status === 'RAIN DELAY'    ? 'Rain Delay'
-    : match?.status === 'SUPER OVER'    ? 'Super Over!'
-    : (isLive && playStarted) ? 'Currently Batting'
-    : isLive ? 'Toss Awaited'
-    : (match?.status || '');
+      : match?.status === 'RAIN DELAY' ? 'Rain Delay'
+        : match?.status === 'SUPER OVER' ? 'Super Over!'
+          : (isLive && playStarted) ? 'Currently Batting'
+            : isLive ? 'Toss Awaited'
+              : (match?.status || '');
 
   const rightBadgeCls = isFinished
     ? 'bg-green-500/20 text-green-400'
     : match?.status === 'INNINGS BREAK' ? 'bg-yellow-500/20 text-yellow-400'
-    : match?.status === 'RAIN DELAY'    ? 'bg-blue-500/20 text-blue-400'
-    : match?.status === 'SUPER OVER'    ? 'bg-purple-500/20 text-purple-400'
-    : (isLive && playStarted)           ? 'bg-ipl-neon/20 text-ipl-neon'
-    : 'bg-white/10 text-gray-400';
+      : match?.status === 'RAIN DELAY' ? 'bg-blue-500/20 text-blue-400'
+        : match?.status === 'SUPER OVER' ? 'bg-purple-500/20 text-purple-400'
+          : (isLive && playStarted) ? 'bg-ipl-neon/20 text-ipl-neon'
+            : 'bg-white/10 text-gray-400';
 
   return (
     <div className="relative">
@@ -414,7 +414,7 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
 
       {/* Recent balls */}
       <div className="flex justify-center gap-2 mb-10 mt-8" style={{ transform: 'translateZ(50px)' }}>
-        {(match?.recent?.length ? match.recent : ['·','·','·','·','·','·']).map((ball, i) => (
+        {(match?.recent?.length ? match.recent : ['·', '·', '·', '·', '·', '·']).map((ball, i) => (
           <motion.div key={`${ball}-${i}`}
             initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.05 }}
@@ -433,14 +433,14 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           {leftLogo
             ? <img src={leftLogo} alt={leftTeam} className="w-28 md:w-36 mx-auto drop-shadow-2xl" />
             : <div className="w-32 h-20 mx-auto flex items-center justify-center">
-                <span className="text-3xl font-black text-gray-400">{leftTeam}</span>
-              </div>}
+              <span className="text-3xl font-black text-gray-400">{leftTeam}</span>
+            </div>}
           <h2 className="text-lg font-bold mt-3 tracking-widest text-gray-400 uppercase">{leftTeam}</h2>
           {leftScoreDisplay
             ? <p className="text-sm font-mono mt-1 text-gray-500">{leftScoreDisplay}</p>
             : <p className="text-xs text-gray-600 mt-1">
-                {currentInnings === 1 ? 'Yet to bat' : null}
-              </p>
+              {currentInnings === 1 ? 'Yet to bat' : null}
+            </p>
           }
           {leftBadgeText && (
             <span className="text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase bg-white/10 text-gray-500 mt-1 inline-block">
@@ -491,10 +491,10 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           <div className="relative">
             {rightLogo
               ? <img src={rightLogo} alt={rightTeam}
-                  className={`w-28 md:w-40 mx-auto drop-shadow-2xl ${(isLive && playStarted) ? 'animate-pulse' : ''}`} />
+                className={`w-28 md:w-40 mx-auto drop-shadow-2xl ${(isLive && playStarted) ? 'animate-pulse' : ''}`} />
               : <div className="w-32 h-20 mx-auto flex items-center justify-center">
-                  <span className="text-3xl font-black text-white">{rightTeam}</span>
-                </div>}
+                <span className="text-3xl font-black text-white">{rightTeam}</span>
+              </div>}
             {(isLive && playStarted) && <Activity className="absolute -top-2 -right-2 w-5 h-5 text-ipl-neon animate-bounce" />}
           </div>
           <h2 className="text-xl font-black mt-3 tracking-tighter text-white uppercase italic">{rightTeam}</h2>
@@ -537,9 +537,9 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           </div>
           {batters[0]
             ? <div className="text-right">
-                <span className="text-lg font-black text-ipl-neon">{batters[0].runs}{batters[0].onStrike ? '*' : ''}</span>
-                <p className="text-[9px] text-gray-500">{batters[0].balls} (B)</p>
-              </div>
+              <span className="text-lg font-black text-ipl-neon">{batters[0].runs}{batters[0].onStrike ? '*' : ''}</span>
+              <p className="text-[9px] text-gray-500">{batters[0].balls} (B)</p>
+            </div>
             : <span className="text-gray-700 text-sm">—</span>}
         </div>
 
@@ -552,9 +552,9 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           </div>
           {batters[1]
             ? <div className="text-right">
-                <span className="text-lg font-black text-white">{batters[1].runs}</span>
-                <p className="text-[9px] text-gray-500">{batters[1].balls} (B)</p>
-              </div>
+              <span className="text-lg font-black text-white">{batters[1].runs}</span>
+              <p className="text-[9px] text-gray-500">{batters[1].balls} (B)</p>
+            </div>
             : <span className="text-gray-700 text-sm">—</span>}
         </div>
 
@@ -567,9 +567,9 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           </div>
           {bowler
             ? <div className="text-right">
-                <span className="text-lg font-black text-white">{bowler.wickets}-{bowler.runs}</span>
-                <p className="text-[9px] text-gray-500">{bowler.overs} Ov</p>
-              </div>
+              <span className="text-lg font-black text-white">{bowler.wickets}-{bowler.runs}</span>
+              <p className="text-[9px] text-gray-500">{bowler.overs} Ov</p>
+            </div>
             : <span className="text-gray-700 text-sm">—</span>}
         </div>
       </div>
@@ -588,7 +588,7 @@ const FinishedMatchCard = ({ match, onOpenModal }) => {
   const logo2 = getLogo(team2);
 
   // Score strings
-  const score1 = match.team1Score || (match.scoreA) || '—';
+  const score1 = match?.team1Score || (match.scoreA) || '—';
   const score2 = match.team2Score || (match.score ? `${match.score}/${match.wickets} (${match.overs})` : match.scoreB) || '—';
   const result = match.result || '';
   const winner = match.winner || '';
@@ -706,8 +706,8 @@ const LoadingCard = ({ label, sub }) => (
       <p className="text-white font-black text-sm uppercase tracking-widest mb-1">{label}</p>
       {sub && <p className="text-gray-500 text-xs">{sub}</p>}
     </div>
-    {[70,50,35].map((w,i) => (
-      <div key={i} style={{width:`${w}%`}} className="h-3 rounded-full bg-white/10 animate-pulse mx-auto" />
+    {[70, 50, 35].map((w, i) => (
+      <div key={i} style={{ width: `${w}%` }} className="h-3 rounded-full bg-white/10 animate-pulse mx-auto" />
     ))}
   </div>
 );
@@ -721,7 +721,7 @@ const LoadingCard = ({ label, sub }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 const Hero = () => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted,   setIsMuted]   = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [modalMatch, setModalMatch] = useState(null);
   const audioRef = useRef(new Audio(iplAudio));
 
@@ -729,7 +729,7 @@ const Hero = () => {
   const { slot1, slot2, latestFinished, fetchStatus, fetchError, lastFetched, isStale } = state;
 
   useEffect(() => {
-    isPlaying ? audioRef.current.play().catch(() => {}) : audioRef.current.pause();
+    isPlaying ? audioRef.current.play().catch(() => { }) : audioRef.current.pause();
     audioRef.current.loop = true;
   }, [isPlaying]);
   useEffect(() => { audioRef.current.muted = isMuted; }, [isMuted]);
@@ -743,35 +743,35 @@ const Hero = () => {
   const finishedAsMatch = latestFinished ? {
     team1: { name: latestFinished.team1?.name || latestFinished.team1 || '' },
     team2: { name: latestFinished.team2?.name || latestFinished.team2 || '' },
-    team1Score:   latestFinished.team1Score?.split('/')[0] || null,
+    team1Score: latestFinished.team1Score?.split('/')[0] || null,
     team1Wickets: latestFinished.team1Score?.split('/')[1]?.split(' ')[0] || null,
-    team1Overs:   null,
-    score:        latestFinished.team2Score?.split('/')[0] || '0',
-    wickets:      latestFinished.team2Score?.split('/')[1]?.split(' ')[0] || '0',
-    overs:        '20.0',
-    result:       latestFinished.result || '',
-    winProbT1:    latestFinished.winProbT1 || (latestFinished.winner === (latestFinished.team1?.name || latestFinished.team1) ? 100 : 0),
-    winProbT2:    latestFinished.winProbT2 || (latestFinished.winner === (latestFinished.team2?.name || latestFinished.team2) ? 100 : 0),
-    status:       'FINISHED',
-    matchNumber:  latestFinished.matchNumber || null,
-    venue:        latestFinished.venue || null,
-    toss:         latestFinished.toss || null,
-    batsmen:      latestFinished.batsmen || [],
-    bowlers:      latestFinished.bowlers || [],
+    team1Overs: null,
+    score: latestFinished.team2Score?.split('/')[0] || '0',
+    wickets: latestFinished.team2Score?.split('/')[1]?.split(' ')[0] || '0',
+    overs: '20.0',
+    result: latestFinished.result || '',
+    winProbT1: latestFinished.winProbT1 || (latestFinished.winner === (latestFinished.team1?.name || latestFinished.team1) ? 100 : 0),
+    winProbT2: latestFinished.winProbT2 || (latestFinished.winner === (latestFinished.team2?.name || latestFinished.team2) ? 100 : 0),
+    status: 'FINISHED',
+    matchNumber: latestFinished.matchNumber || null,
+    venue: latestFinished.venue || null,
+    toss: latestFinished.toss || null,
+    batsmen: latestFinished.batsmen || [],
+    bowlers: latestFinished.bowlers || [],
     currentInnings: 2,
-    target:       latestFinished.target || null,
+    target: latestFinished.target || null,
   } : null;
 
   return (
     <section className="relative w-full py-8 px-4 overflow-hidden mt-6">
       {/* Background blobs */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <motion.div animate={{ scale:[1,1.1,1], rotate:[0,45,0] }} transition={{ duration:15, repeat:Infinity }}
+        <motion.div animate={{ scale: [1, 1.1, 1], rotate: [0, 45, 0] }} transition={{ duration: 15, repeat: Infinity }}
           className="absolute top-[-10%] left-[-5%] w-[60%] h-[60%] rounded-full opacity-10 blur-[100px]"
-          style={{ background:'radial-gradient(circle,#6366f1,transparent)' }} />
-        <motion.div animate={{ scale:[1.1,1,1.1], rotate:[45,0,45] }} transition={{ duration:12, repeat:Infinity }}
+          style={{ background: 'radial-gradient(circle,#6366f1,transparent)' }} />
+        <motion.div animate={{ scale: [1.1, 1, 1.1], rotate: [45, 0, 45] }} transition={{ duration: 12, repeat: Infinity }}
           className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[60%] rounded-full opacity-10 blur-[100px]"
-          style={{ background:'radial-gradient(circle,#ef4444,transparent)' }} />
+          style={{ background: 'radial-gradient(circle,#ef4444,transparent)' }} />
       </div>
 
       <div className="w-full max-w-5xl mx-auto flex flex-col gap-6">
