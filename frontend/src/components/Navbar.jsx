@@ -45,8 +45,10 @@ const Navbar = () => {
       : match?.team2;
   // otherScore = the completed innings score of the non-batting team (only in 2nd innings)
   const otherScore =
-    match?.currentInnings === 2
-      ? match?.team1Score
+    match?.currentInnings === 2 &&
+      match?.team1Score !== null &&
+      match?.team1Score !== undefined
+      ? `${match.team1Score}/${match.team1Wickets ?? 0}`
       : null;
 
   return (
@@ -133,12 +135,18 @@ const Navbar = () => {
               {match && (
                 <>
                   <span className="font-black text-white group-hover:text-ipl-neon transition-colors">
-                    {battingTeam?.name} {match.score}/{match.wickets}
+                    {battingTeam?.name || 'TBD'} {match?.score ?? 0}/{match?.wickets ?? 0}
                   </span>
-                  <span className="text-gray-500 text-[10px]">({match.overs})</span>
+
+                  <span className="text-gray-500 text-[10px]">
+                    ({match?.overs || '0.0'})
+                  </span>
+
                   <span className="text-gray-600 italic text-[10px]">v</span>
+
                   <span className="font-bold text-gray-400">
-                    {otherTeam?.name}{otherScore ? ` ${otherScore}` : ''}
+                    {otherTeam?.name || 'TBD'}
+                    {otherScore ? ` ${otherScore}` : ''}
                   </span>
                 </>
               )}

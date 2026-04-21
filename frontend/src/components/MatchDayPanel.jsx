@@ -120,21 +120,30 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
   const leftCode = t1 || '';
   const rightCode = t2 || '';
 
-  const leftScore = match?.team1Score
-    ? `${match?.team1Score}/${match?.team1Wickets || ''} (${match.team1Overs || '20.0'})`
-    : 'Yet to bat';
+  const leftScore =
+    match?.team1Score !== null &&
+      match?.team1Score !== undefined
+      ? `${match.team1Score}/${match.team1Wickets ?? 0} (${match.team1Overs || '20.0'})`
+      : 'Yet to bat';
 
   const winner =
-  isFinished && match?.result && t1 && t2
-    ? (
-        match.result.toUpperCase().includes(t1.toUpperCase())
+    finished?.result && t1 && t2
+      ? (
+        finished.result.toUpperCase().includes(t1.toUpperCase())
           ? t1
-          : t2
+          : finished.result.toUpperCase().includes(t2.toUpperCase())
+            ? t2
+            : null
       )
-    : null;
+      : null;
 
   // Innings labels
-  const leftLabel = inn === 2 ? '1st Innings' : null;  // left team batted first
+  const leftInningsLabel =
+    match?.currentInnings === 2 &&
+      match?.team1Score !== null &&
+      match?.team1Score !== undefined
+      ? '1ST INNINGS'
+      : null;  // left team batted first
   const rightLabel = isFinished
     ? 'Match Over'
     : match?.status === 'INNINGS BREAK' ? 'Innings Break'
@@ -145,9 +154,9 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
               : null;
 
   const topBarBg =
-  t1 && t2
-    ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
-    : 'rgba(255,255,255,0.05)';
+    t1 && t2
+      ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
+      : 'rgba(255,255,255,0.05)';
 
   const borderCls = isLive
     ? 'border-red-500/30 shadow-[0_0_24px_rgba(239,68,68,0.05)]'
@@ -218,9 +227,9 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
                   isWinner={isFinished && winner === leftCode}
                   dimmed={isLive && inn === 2 && playStarted}
                 />
-                {leftLabel && (
+                {leftInningsLabel && (
                   <span className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 text-gray-600 font-black uppercase tracking-widest">
-                    {leftLabel}
+                    {leftInningsLabel}
                   </span>
                 )}
               </div>
@@ -372,18 +381,20 @@ const LatestResultBox = ({ finished }) => {
     || (finished?.score ? `${finished.score}/${finished.wickets} (${finished.overs})` : null);
 
   const winner =
-  isFinished && match?.result && t1 && t2
-    ? (
-        match.result.toUpperCase().includes(t1.toUpperCase())
+    finished?.result && t1 && t2
+      ? (
+        finished.result.toUpperCase().includes(t1.toUpperCase())
           ? t1
-          : t2
+          : finished.result.toUpperCase().includes(t2.toUpperCase())
+            ? t2
+            : null
       )
-    : null;
+      : null;
 
   const topBarBg =
-  t1 && t2
-    ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
-    : 'rgba(255,255,255,0.05)';
+    t1 && t2
+      ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
+      : 'rgba(255,255,255,0.05)';
 
   const dateStr = finished?.completedAt
     ? new Date(finished.completedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
