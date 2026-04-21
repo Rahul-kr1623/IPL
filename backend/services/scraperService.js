@@ -1498,7 +1498,6 @@ const browserFallback = async () => {
  * In production, they are available but require a secret header for safety — see debugRoutes.js.
  */
 
-import { scrapeLiveMatch } from '../services/scraperService.js';
 import { clearAllMatches } from '../services/dbService.js';
 import scraperState from '../utils/scraperState.js';
 
