@@ -54,13 +54,22 @@ export const getLiveScore = async (req, res) => {
       const slotKey = d.slot === 'slot2' ? 'slot2' : 'slot1';
       // Only use the most recent doc for each slot
       if (!bySlot[slotKey] ||
-          new Date(d.lastUpdated) > new Date(bySlot[slotKey].lastUpdated)) {
+        new Date(d.lastUpdated) > new Date(bySlot[slotKey].lastUpdated)) {
         bySlot[slotKey] = d;
       }
     }
 
-    const slot1 = bySlot.slot1 ? mapDoc(bySlot.slot1) : null;
-    const slot2 = bySlot.slot2 ? mapDoc(bySlot.slot2) : null;
+    let slot1 = bySlot.slot1 ? mapDoc(bySlot.slot1) : null;
+    let slot2 = bySlot.slot2 ? mapDoc(bySlot.slot2) : null;
+
+    // Prevent evening match from showing in afternoon slot
+    if (
+      slot1 &&
+      slot2 &&
+      slot1.matchId === slot2.matchId
+    ) {
+      slot1 = null;
+    }
 
     return res.json({
       slot1,
@@ -119,12 +128,12 @@ export const getIplData = (req, res) => {
 // ─── GET /api/v1/player-stats ─────────────────────────────────────────────────
 export const getPlayerStats = (req, res) => {
   const caps = getCapLeaders(PLAYER_STATS);
-  const c    = standingsCache.data;
+  const c = standingsCache.data;
   res.json({
     topBatsmen: c.topBatsmen?.length > 3 ? c.topBatsmen : caps.topBatsmen,
     topBowlers: c.topBowlers?.length > 3 ? c.topBowlers : caps.topBowlers,
-    orangeCap:  c.orangeCap  ?? caps.orangeCap,
-    purpleCap:  c.purpleCap  ?? caps.purpleCap,
+    orangeCap: c.orangeCap ?? caps.orangeCap,
+    purpleCap: c.purpleCap ?? caps.purpleCap,
   });
 };
 
@@ -144,14 +153,14 @@ export const getCompletedMatches = (req, res) => {
   res.json({
     completedIds: COMPLETED_MATCHES.map(m => m.id),
     results: COMPLETED_MATCHES.map(m => ({
-      id:      m.id,
-      teamA:   m.teamA,
-      teamB:   m.teamB,
-      winner:  m.winner,
-      result:  m.result,
-      scoreA:  `${m.scoreA}/${m.wA} (${m.ovA})`,
-      scoreB:  `${m.scoreB}/${m.wB} (${m.ovB})`,
-      date:    m.date,
+      id: m.id,
+      teamA: m.teamA,
+      teamB: m.teamB,
+      winner: m.winner,
+      result: m.result,
+      scoreA: `${m.scoreA}/${m.wA} (${m.ovA})`,
+      scoreB: `${m.scoreB}/${m.wB} (${m.ovB})`,
+      date: m.date,
     })),
     source: 'memory',
   });
@@ -162,9 +171,9 @@ import scraperState from '../utils/scraperState.js';
 
 export const getHealth = (req, res) => {
   res.json({
-    status:  'ok',
-    time:    new Date(),
-    frozen:  !!scraperState.matchFinishedAt,
-    uptime:  Math.floor(process.uptime()),
+    status: 'ok',
+    time: new Date(),
+    frozen: !!scraperState.matchFinishedAt,
+    uptime: Math.floor(process.uptime()),
   });
 };

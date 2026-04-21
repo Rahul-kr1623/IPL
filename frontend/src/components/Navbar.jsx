@@ -6,17 +6,17 @@ import { useMatchContext } from '../context/MatchContext';
 import CommandPalette from './CommandPalette';
 
 const navLinks = [
-  { name: 'Live Now',    href: '/',         live: true },
-  { name: 'Fixtures',   href: '/fixtures' },
-  { name: 'Teams',      href: '/teams' },
-  { name: 'Players Hub',href: '/players' },
-  { name: 'Stats',      href: '/stats' },
+  { name: 'Live Now', href: '/', live: true },
+  { name: 'Fixtures', href: '/fixtures' },
+  { name: 'Teams', href: '/teams' },
+  { name: 'Players Hub', href: '/players' },
+  { name: 'Stats', href: '/stats' },
 ];
 
 const Navbar = () => {
-  const [isScrolled,    setIsScrolled]    = useState(false);
-  const [hoveredIndex,  setHoveredIndex]  = useState(null);
-  const [mobileMenu,    setMobileMenu]    = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [mobileMenu, setMobileMenu] = useState(false);
 
   const { state, dispatch } = useMatchContext();
   const { currentMatch: match, fetchStatus, isStale } = state;
@@ -30,25 +30,30 @@ const Navbar = () => {
   const isFetching = ['LOADING', 'WARMING_UP', 'IDLE'].includes(fetchStatus) && !match;
   const isRefreshing = fetchStatus === 'REFRESHING';
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
-  const isLive     = match?.status === 'LIVE';
-  const isOffline  = fetchStatus === 'ERROR';
+  const isLive = match?.status === 'LIVE';
+  const isOffline = fetchStatus === 'ERROR';
 
   // currentInnings: 1 = team1 is batting (1st innings), 2 = team2 is batting (2nd innings)
-  const isFirstInnings = !match || match.currentInnings !== 2;
-  const battingTeam = match ? (isFirstInnings ? match.team1 : match.team2) : null;
-  const otherTeam   = match ? (isFirstInnings ? match.team2 : match.team1) : null;
+  const battingTeam =
+    match?.currentInnings === 2
+      ? match.team2
+      : match.team1;
+
+  const otherTeam =
+    match?.currentInnings === 2
+      ? match.team1
+      : match.team2;
   // otherScore = the completed innings score of the non-batting team (only in 2nd innings)
-  const otherScore  = !isFirstInnings ? match?.team1Score : null;
+  const otherScore = !isFirstInnings ? match?.team1Score : null;
 
   return (
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className={`fixed top-0 w-full z-50 transition-all duration-500 border-b border-white/10 ${
-        isScrolled
+      className={`fixed top-0 w-full z-50 transition-all duration-500 border-b border-white/10 ${isScrolled
           ? 'py-2 bg-ipl-dark/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)]'
           : 'py-5 bg-transparent backdrop-blur-sm'
-      }`}
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 lg:px-6 w-full grid grid-cols-2 lg:grid-cols-[auto_1fr_auto] items-center gap-4 xl:gap-8">
 
@@ -104,11 +109,11 @@ const Navbar = () => {
               }
               <span className={`text-[10px] font-bold uppercase tracking-widest
                 ${isOffline ? 'text-yellow-500' : 'text-ipl-neon'}`}>
-                {isFetching          ? 'LOADING'
-                : isOffline && match ? 'CACHED'
-                : isFinished         ? 'RESULT'
-                : isLive             ? 'LIVE'
-                :                     'RECENT'}
+                {isFetching ? 'LOADING'
+                  : isOffline && match ? 'CACHED'
+                    : isFinished ? 'RESULT'
+                      : isLive ? 'LIVE'
+                        : 'RECENT'}
               </span>
             </div>
 
@@ -190,12 +195,12 @@ const Navbar = () => {
               </p>
               {match
                 ? <div className="flex justify-between items-end">
-                    <span className="text-2xl font-bold">{battingTeam?.name} {match.score}/{match.wickets} <span className="text-base font-normal text-ipl-neon">({match.overs} ov)</span></span>
-                    <span className="text-gray-400 font-mono text-sm">{otherTeam?.name}{otherScore ? ` ${otherScore}` : ''}</span>
-                  </div>
+                  <span className="text-2xl font-bold">{battingTeam?.name} {match.score}/{match.wickets} <span className="text-base font-normal text-ipl-neon">({match.overs} ov)</span></span>
+                  <span className="text-gray-400 font-mono text-sm">{otherTeam?.name}{otherScore ? ` ${otherScore}` : ''}</span>
+                </div>
                 : <p className="text-gray-500 text-sm italic">
-                    {isFetching ? 'Fetching live data…' : 'No match in progress'}
-                  </p>
+                  {isFetching ? 'Fetching live data…' : 'No match in progress'}
+                </p>
               }
             </div>
           </motion.div>

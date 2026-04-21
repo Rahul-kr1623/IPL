@@ -26,18 +26,18 @@ import { useMatchContext } from '../context/MatchContext';
 
 // ─── Logos + colors ───────────────────────────────────────────────────────────
 const LOGOS = {
-  CSK: '/src/assets/logos/csk_logo.png', MI:  '/src/assets/logos/mi_logo.png',
+  CSK: '/src/assets/logos/csk_logo.png', MI: '/src/assets/logos/mi_logo.png',
   RCB: '/src/assets/logos/rcb_logo.png', KKR: '/src/assets/logos/kkr_logo.png',
-  RR:  '/src/assets/logos/rr_logo.png',  PBKS:'/src/assets/logos/pbks_logo.png',
-  DC:  '/src/assets/logos/dc_logo.png',  GT:  '/src/assets/logos/gt_logo.png',
+  RR: '/src/assets/logos/rr_logo.png', PBKS: '/src/assets/logos/pbks_logo.png',
+  DC: '/src/assets/logos/dc_logo.png', GT: '/src/assets/logos/gt_logo.png',
   LSG: '/src/assets/logos/lsg_logo.png', SRH: '/src/assets/logos/srh_logo.png',
 };
 const COLORS = {
-  CSK:'#F7B111', MI:'#004BA0', RCB:'#CC0000', KKR:'#3A225D',
-  RR:'#EA1A85',  PBKS:'#ED1B24', DC:'#005CA5', GT:'#B59453',
-  LSG:'#0ea5e9', SRH:'#FF822A',
+  CSK: '#F7B111', MI: '#004BA0', RCB: '#CC0000', KKR: '#3A225D',
+  RR: '#EA1A85', PBKS: '#ED1B24', DC: '#005CA5', GT: '#B59453',
+  LSG: '#0ea5e9', SRH: '#FF822A',
 };
-const getLogo  = (c) => LOGOS[c?.toUpperCase()] || null;
+const getLogo = (c) => LOGOS[c?.toUpperCase()] || null;
 const getColor = (c) => COLORS[c?.toUpperCase()] || '#555555';
 
 // ─── TeamChip ─────────────────────────────────────────────────────────────────
@@ -48,8 +48,8 @@ const TeamChip = ({ code, score, isWinner, dimmed }) => {
       {src
         ? <img src={src} alt={code} className="w-14 h-14 object-contain drop-shadow-lg" />
         : <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
-            <span className="text-xs font-black text-gray-300">{code}</span>
-          </div>
+          <span className="text-xs font-black text-gray-300">{code}</span>
+        </div>
       }
       <span className="text-sm font-black uppercase tracking-wide text-white">{code}</span>
       {score && <span className="text-[10px] font-mono text-gray-300 text-center leading-snug">{score}</span>}
@@ -61,11 +61,11 @@ const TeamChip = ({ code, score, isWinner, dimmed }) => {
 // ─── Ball dot ─────────────────────────────────────────────────────────────────
 const BallDot = ({ b }) => {
   const cls =
-    b === 'W'                   ? 'bg-red-500 text-white' :
-    b === '6'                   ? 'bg-yellow-400 text-black' :
-    b === '4'                   ? 'bg-amber-400 text-black' :
-    b === 'WD' || b === 'NB'    ? 'bg-purple-500 text-white' :
-                                  'bg-white/10 text-gray-500';
+    b === 'W' ? 'bg-red-500 text-white' :
+      b === '6' ? 'bg-yellow-400 text-black' :
+        b === '4' ? 'bg-amber-400 text-black' :
+          b === 'WD' || b === 'NB' ? 'bg-purple-500 text-white' :
+            'bg-white/10 text-gray-500';
   return (
     <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border border-white/10 ${cls}`}>
       {b === '·' ? '' : b}
@@ -76,14 +76,14 @@ const BallDot = ({ b }) => {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const map = {
-    'LIVE':              { label: 'LIVE',         cls: 'bg-red-500/15 text-red-400 border-red-500/30',       dot: true  },
-    'INNINGS BREAK':     { label: 'INNINGS BREAK', cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', dot: false },
-    'RAIN DELAY':        { label: '🌧 RAIN DELAY',  cls: 'bg-blue-500/15 text-blue-400 border-blue-500/30',    dot: false },
-    'SUPER OVER':        { label: '⚡ SUPER OVER',  cls: 'bg-purple-500/15 text-purple-400 border-purple-500/30', dot: true  },
-    'TIMEOUT':           { label: '⏸ TIMEOUT',     cls: 'bg-orange-500/15 text-orange-400 border-orange-500/30', dot: false },
-    'FINISHED':          { label: 'RESULT',        cls: 'bg-green-500/15 text-green-400 border-green-500/30',   dot: false },
-    'RECENTLY FINISHED': { label: 'RESULT',        cls: 'bg-green-500/15 text-green-400 border-green-500/30',   dot: false },
-    'ABANDONED':         { label: 'ABANDONED',     cls: 'bg-gray-500/15 text-gray-400 border-gray-500/30',     dot: false },
+    'LIVE': { label: 'LIVE', cls: 'bg-red-500/15 text-red-400 border-red-500/30', dot: true },
+    'INNINGS BREAK': { label: 'INNINGS BREAK', cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', dot: false },
+    'RAIN DELAY': { label: '🌧 RAIN DELAY', cls: 'bg-blue-500/15 text-blue-400 border-blue-500/30', dot: false },
+    'SUPER OVER': { label: '⚡ SUPER OVER', cls: 'bg-purple-500/15 text-purple-400 border-purple-500/30', dot: true },
+    'TIMEOUT': { label: '⏸ TIMEOUT', cls: 'bg-orange-500/15 text-orange-400 border-orange-500/30', dot: false },
+    'FINISHED': { label: 'RESULT', cls: 'bg-green-500/15 text-green-400 border-green-500/30', dot: false },
+    'RECENTLY FINISHED': { label: 'RESULT', cls: 'bg-green-500/15 text-green-400 border-green-500/30', dot: false },
+    'ABANDONED': { label: 'ABANDONED', cls: 'bg-gray-500/15 text-gray-400 border-gray-500/30', dot: false },
   };
   const cfg = map[status?.toUpperCase()] || { label: status || '—', cls: 'bg-white/10 text-gray-400 border-white/10', dot: false };
   return (
@@ -104,40 +104,40 @@ const StatusBadge = ({ status }) => {
 // match: live match object (team1:{name}, team2:{name}, score, wickets, ...)
 // ─────────────────────────────────────────────────────────────────────────────
 const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
-  const isLive     = match?.status === 'LIVE';
+  const isLive = match?.status === 'LIVE';
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
-  const isBreak    = match?.status === 'INNINGS BREAK';
+  const isBreak = match?.status === 'INNINGS BREAK';
 
   const t1 = match?.team1?.name || '';
   const t2 = match?.team2?.name || '';
   const inn = match?.currentInnings ?? 2;
 
   // Play has started = overs > 0 or batsmen data available or 1st innings completed
-  const oversFloat  = parseFloat(match?.overs || '0');
+  const oversFloat = parseFloat(match?.overs || '0');
   const playStarted = oversFloat > 0 || (match?.batsmen?.length > 0) || (match?.team1Score != null);
 
   // Left = bat-first team, Right = currently batting team
-  const leftCode  = inn === 1 ? t2 : t1;
-  const rightCode = inn === 1 ? t1 : t2;
+  const leftCode = t1;
+  const rightCode = t2;
 
-  const leftScore = inn === 2 && match?.team1Score
-    ? `${match.team1Score}/${match.team1Wickets || ''}(${match.team1Overs || '20.0'})`.replace('//', '/').replace('/(', ' (')
-    : inn === 1 ? 'Yet to bat' : null;
+  const leftScore = match?.team1Score
+    ? `${match.team1Score}/${match.team1Wickets || ''} (${match.team1Overs || '20.0'})`
+    : 'Yet to bat';
 
   const winner = isFinished && match?.result
     ? (match.result.toUpperCase().includes(t1.toUpperCase()) ? t1 : t2)
     : null;
 
   // Innings labels
-  const leftLabel  = inn === 2 ? '1st Innings' : null;  // left team batted first
+  const leftLabel = inn === 2 ? '1st Innings' : null;  // left team batted first
   const rightLabel = isFinished
     ? 'Match Over'
     : match?.status === 'INNINGS BREAK' ? 'Innings Break'
-    : match?.status === 'RAIN DELAY'    ? '🌧 Rain Delay'
-    : match?.status === 'SUPER OVER'    ? '⚡ Super Over'
-    : (isLive && playStarted)           ? 'Currently Batting'
-    : isLive                            ? 'Toss Awaited'
-    : null;
+      : match?.status === 'RAIN DELAY' ? '🌧 Rain Delay'
+        : match?.status === 'SUPER OVER' ? '⚡ Super Over'
+          : (isLive && playStarted) ? 'Currently Batting'
+            : isLive ? 'Toss Awaited'
+              : null;
 
   const topBarBg = t1 && t2
     ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
@@ -176,7 +176,9 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
               <WifiOff className="w-4 h-4 text-gray-600" />
             </div>
-            <p className="text-xs text-gray-500 uppercase tracking-widest font-black">No match undergoing</p>
+            <p className="text-xs text-gray-500 uppercase tracking-widest font-black">
+              No match today in this time slot
+            </p>
             <Link to="/fixtures" className="text-[9px] text-ipl-neon/50 hover:text-ipl-neon transition-colors">
               View full schedule →
             </Link>
@@ -266,11 +268,11 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
                 />
                 {rightLabel && (
                   <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest
-                    ${isFinished                           ? 'bg-green-500/10 text-green-400'
-                    : match?.status === 'INNINGS BREAK'   ? 'bg-yellow-500/10 text-yellow-400'
-                    : match?.status === 'RAIN DELAY'      ? 'bg-blue-500/10 text-blue-400'
-                    : (isLive && playStarted)             ? 'bg-ipl-neon/15 text-ipl-neon'
-                    :                                       'bg-white/5 text-gray-500'}`}>
+                    ${isFinished ? 'bg-green-500/10 text-green-400'
+                      : match?.status === 'INNINGS BREAK' ? 'bg-yellow-500/10 text-yellow-400'
+                        : match?.status === 'RAIN DELAY' ? 'bg-blue-500/10 text-blue-400'
+                          : (isLive && playStarted) ? 'bg-ipl-neon/15 text-ipl-neon'
+                            : 'bg-white/5 text-gray-500'}`}>
                     {rightLabel}
                   </span>
                 )}
@@ -297,26 +299,31 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
             )}
 
             {/* Batsmen + bowler strip */}
-            {!isFinished && match.batsmen?.length > 0 && (
+            {!isFinished && (
               <div className="bg-white/[0.04] rounded-2xl px-4 py-3 space-y-2">
-                {match.batsmen.slice(0, 2).map((bat, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      {bat.onStrike && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse flex-shrink-0" />
-                      )}
-                      <span className="text-white font-bold">{bat.name}</span>
+                {[match.currentBatsman, match.nonStriker]
+                  .filter(Boolean)
+                  .map((bat, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        {bat.onStrike && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse flex-shrink-0" />
+                        )}
+                        <span className="text-white font-bold">{bat.name}</span>
+                      </div>
+                      <span className="font-mono text-ipl-neon font-black">
+                        {bat.runs}
+                        <span className="text-white/40 font-normal">
+                          ({bat.balls})
+                        </span>
+                      </span>
                     </div>
-                    <span className="font-mono text-ipl-neon font-black">
-                      {bat.runs}<span className="text-white/40 font-normal">({bat.balls})</span>
-                    </span>
-                  </div>
-                ))}
-                {match.bowlers?.[0] && (
+                  ))}
+                {match.currentBowler && (
                   <div className="flex items-center justify-between text-xs border-t border-white/5 pt-2">
-                    <span className="text-gray-400">{match.bowlers[0].name}</span>
+                    <span className="text-gray-400">{match.currentBowler.name}</span>
                     <span className="font-mono text-gray-300">
-                      {match.bowlers[0].wickets}/{match.bowlers[0].runs} ({match.bowlers[0].overs})
+                      {match.currentBowler.wickets}/{match.currentBowler.runs} ({match.currentBowler.overs})
                     </span>
                   </div>
                 )}
@@ -340,11 +347,11 @@ const LatestResultBox = ({ finished }) => {
   //   seasonStore JSON:   { team1: "KKR", team2: "RR" } (strings)
   //   LiveMatch MongoDB:  { team1: { name: "KKR" }, team2: { name: "RR" } }
   const t1 = finished?.teamA
-           || (typeof finished?.team1 === 'string' ? finished.team1 : finished?.team1?.name)
-           || '';
+    || (typeof finished?.team1 === 'string' ? finished.team1 : finished?.team1?.name)
+    || '';
   const t2 = finished?.teamB
-           || (typeof finished?.team2 === 'string' ? finished.team2 : finished?.team2?.name)
-           || '';
+    || (typeof finished?.team2 === 'string' ? finished.team2 : finished?.team2?.name)
+    || '';
 
   // Score strings — handles all formats:
   //   CompletedMatch API: scoreA = "192/5 (20)" already formatted
@@ -356,8 +363,8 @@ const LatestResultBox = ({ finished }) => {
 
   const winner = finished?.winner
     || (finished?.result
-        ? (finished.result.toUpperCase().includes(t1.toUpperCase()) ? t1 : t2)
-        : null);
+      ? (finished.result.toUpperCase().includes(t1.toUpperCase()) ? t1 : t2)
+      : null);
 
   const topBarBg = t1 && t2
     ? `linear-gradient(90deg, ${getColor(t1)}, ${getColor(t2)})`
