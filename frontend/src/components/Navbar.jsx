@@ -44,15 +44,18 @@ const Navbar = () => {
       ? match.team1
       : match.team2;
   // otherScore = the completed innings score of the non-batting team (only in 2nd innings)
-  const otherScore = !isFirstInnings ? match?.team1Score : null;
+  const otherScore =
+    match?.currentInnings === 2
+      ? match?.team1Score
+      : null;
 
   return (
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       className={`fixed top-0 w-full z-50 transition-all duration-500 border-b border-white/10 ${isScrolled
-          ? 'py-2 bg-ipl-dark/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)]'
-          : 'py-5 bg-transparent backdrop-blur-sm'
+        ? 'py-2 bg-ipl-dark/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)]'
+        : 'py-5 bg-transparent backdrop-blur-sm'
         }`}
     >
       <div className="max-w-7xl mx-auto px-4 lg:px-6 w-full grid grid-cols-2 lg:grid-cols-[auto_1fr_auto] items-center gap-4 xl:gap-8">

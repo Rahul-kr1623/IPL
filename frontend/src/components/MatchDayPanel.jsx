@@ -298,7 +298,6 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
               </div>
             )}
 
-            {/* Batsmen + bowler strip */}
             {!isFinished && (
               <div className="bg-white/[0.04] rounded-2xl px-4 py-3 space-y-2">
                 {[match.currentBatsman, match.nonStriker]
