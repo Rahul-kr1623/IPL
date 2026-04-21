@@ -11,6 +11,8 @@ const TEAM_COLORS = {
 const getTeamKey = (name) => Object.keys(TEAM_COLORS).find(k => name?.toUpperCase().includes(k)) || null;
 const nrrColor = (nrr) => { const n = parseFloat(nrr); return isNaN(n) ? 'text-gray-500' : n > 0 ? 'text-green-400' : n < 0 ? 'text-red-400' : 'text-gray-400'; };
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const IntelHub = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [iplData, setIplData] = useState(null);
@@ -22,7 +24,7 @@ const IntelHub = () => {
   useEffect(() => {
     const fetch_ = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/v1/ipl-data');
+        const res = await fetch(`${API_URL}/api/v1/ipl-data`);
         const json = await res.json();
         setIplData(json);
         setLoading(json.loading || false);
@@ -111,7 +113,7 @@ const IntelHub = () => {
               {orangeCap ? (
                 <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/20 p-3 rounded-xl">
                   <div className="w-9 h-9 rounded-full bg-orange-500/20 border border-orange-400/40 flex items-center justify-center text-xs font-black text-orange-400 flex-shrink-0">
-                    {orangeCap.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    {orangeCap.name?.split(' ')?.map(n => n[0])?.join('')?.slice(0, 2)?.toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-black text-white truncate">{orangeCap.name}</p>
@@ -131,7 +133,7 @@ const IntelHub = () => {
               {purpleCap ? (
                 <div className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 p-3 rounded-xl">
                   <div className="w-9 h-9 rounded-full bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-xs font-black text-purple-400 flex-shrink-0">
-                    {purpleCap.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    {purpleCap.name?.split(' ')?.map(n => n[0])?.join('')?.slice(0, 2)?.toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-black text-white truncate">{purpleCap.name}</p>

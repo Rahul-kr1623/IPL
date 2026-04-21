@@ -17,6 +17,8 @@ const POLLS = [
   { q: 'Will a wicket fall this over?', opts: ['Yes', 'No'] },
 ];
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const PulseEngagement = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [commentary, setCommentary] = useState([]);
@@ -32,7 +34,7 @@ const PulseEngagement = () => {
   useEffect(() => {
     const fetch_ = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/v1/commentary');
+        const res = await fetch(`${API_URL}/api/v1/commentary`);
         const json = await res.json();
         if (json.commentary?.length > 0) setCommentary(json.commentary);
         setLoading(false);

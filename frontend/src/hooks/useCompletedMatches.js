@@ -15,6 +15,8 @@ import { useState, useEffect } from 'react';
 const CACHE_KEY = 'ipl_completed_matches';
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export const useCompletedMatches = () => {
   const [data, setData] = useState(() => {
     // Load from localStorage cache
@@ -34,7 +36,7 @@ export const useCompletedMatches = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res  = await fetch('http://localhost:5000/api/v1/completed-matches');
+        const res  = await fetch(`${API_URL}/api/v1/completed-matches`);
         const json = await res.json();
         setData(json);
         // Cache it
