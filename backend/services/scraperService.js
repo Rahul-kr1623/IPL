@@ -238,12 +238,44 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     const wp = gpkg.winProbability || gpkg.winProbabilities;
     console.log(`  [ESPN] winProb type=${Array.isArray(wp) ? 'array' : 'object'} sample=${JSON.stringify(wp).substring(0, 120)}`);
   }
-  // Dump situation (live CRR, RRR, on-strike batter from scoreboard)
-  const situation = header.situation || summary.header?.situation;
-  if (situation) {
+  // ── SITUATION (live CRR, RRR, on-strike batter, overs from scoreboard) ─────
+  // ESPN populates header.situation even when gpkg.innings is empty.
+  // We extract everything useful from it so the score-string fallback path
+  // still gets accurate overs and player data.
+  const situation = header.situation || summary.header?.situation || {};
+  if (Object.keys(situation).length) {
     console.log(`  [ESPN] situation keys: ${Object.keys(situation).join(', ')}`);
-    console.log(`  [ESPN] situation sample: ${JSON.stringify(situation).substring(0, 200)}`);
+    console.log(`  [ESPN] situation sample: ${JSON.stringify(situation).substring(0, 300)}`);
   }
+
+  // Pre-read overs from situation so score-string fallback can use it
+  const situationOvers = (() => {
+    const raw = situation.balls != null
+      ? `${Math.floor(situation.balls / 6)}.${situation.balls % 6}`   // ESPN sometimes gives total balls
+      : (situation.period != null
+          ? String(situation.period)                                    // over number
+          : (situation.overs ?? situation.currentOver ?? null));
+    return raw ? normalizeOvers(String(raw)) : null;
+  })();
+
+  // Pre-read on-strike batter, non-striker, bowler from situation
+  const situationStriker = situation.onStrike?.athlete?.displayName
+    || situation.batter?.athlete?.displayName
+    || situation.pitcher?.battingAthlete?.displayName
+    || null;
+  const situationNonStriker = situation.nonStrike?.athlete?.displayName
+    || situation.nonStriker?.athlete?.displayName
+    || null;
+  const situationBowler = situation.pitcher?.athlete?.displayName
+    || situation.bowler?.athlete?.displayName
+    || null;
+  const situationBatterRuns   = parseInt(situation.onStrike?.runs ?? situation.batter?.runs ?? situation.onStrike?.score ?? 0) || 0;
+  const situationBatterBalls  = parseInt(situation.onStrike?.balls ?? situation.batter?.balls ?? 0) || 0;
+  const situationNsRuns       = parseInt(situation.nonStrike?.runs ?? situation.nonStriker?.runs ?? 0) || 0;
+  const situationNsBalls      = parseInt(situation.nonStrike?.balls ?? situation.nonStriker?.balls ?? 0) || 0;
+  const situationBowlerWkts   = parseInt(situation.pitcher?.wickets ?? 0) || 0;
+  const situationBowlerRuns   = parseInt(situation.pitcher?.runs ?? 0) || 0;
+  const situationBowlerOvers  = normalizeOvers(String(situation.pitcher?.overs ?? situation.pitcher?.over ?? '0'));
 
   // ── STATUS ─────────────────────────────────────────────────────────────────
   const stType = header.status?.type || {};
@@ -485,13 +517,13 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         firstInningsOvers = psBat.overs || '20.0';
         score   = psChase.runs;
         wickets = psChase.wickets;
-        overs   = psChase.overs || '0.0';
+        overs   = psChase.overs || situationOvers || '0.0';
         target  = parseInt(firstInningsRuns) + 1;
       } else if (psBat && !psChase) {
         // Only first innings score visible
         score   = psBat.runs;
         wickets = psBat.wickets;
-        overs   = psBat.overs || '0.0';
+        overs   = psBat.overs || situationOvers || '0.0';
       }
     };
 
@@ -502,12 +534,12 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     } else if (ps0 && !ps1) {
       // Signal 3: only comp0 has a score → comp0 is batting
       team1Name = ct1; team2Name = ct0;
-      score = ps0.runs; wickets = ps0.wickets; overs = ps0.overs || '0.0';
+      score = ps0.runs; wickets = ps0.wickets; overs = ps0.overs || situationOvers || '0.0';
       console.log(`  [ESPN] score-string fallback (only comp0 has score)`);
     } else if (!ps0 && ps1) {
       // Signal 3: only comp1 has a score → comp1 is batting
       team1Name = ct0; team2Name = ct1;
-      score = ps1.runs; wickets = ps1.wickets; overs = ps1.overs || '0.0';
+      score = ps1.runs; wickets = ps1.wickets; overs = ps1.overs || situationOvers || '0.0';
       console.log(`  [ESPN] score-string fallback (only comp1 has score)`);
     } else if (ps0 && ps1) {
       // Both have scores — now use overs heuristic ONLY when one innings is
@@ -555,6 +587,47 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
 
   // ── BATSMEN — multi-strategy extraction ───────────────────────────────────
   const batsmen = [];
+
+  // Strategy 0: situation (header.situation) — highest priority, real-time
+  // ESPN populates this even when gpkg.innings is empty (score-string fallback path).
+  if (situationStriker) {
+    batsmen.push({
+      name:     situationStriker,
+      runs:     situationBatterRuns,
+      balls:    situationBatterBalls,
+      fours:    0, sixes: 0,
+      sr:       situationBatterBalls > 0
+        ? parseFloat((situationBatterRuns / situationBatterBalls * 100).toFixed(1))
+        : 0,
+      onStrike: true,
+    });
+    if (situationNonStriker) {
+      batsmen.push({
+        name:     situationNonStriker,
+        runs:     situationNsRuns,
+        balls:    situationNsBalls,
+        fours:    0, sixes: 0,
+        sr:       situationNsBalls > 0
+          ? parseFloat((situationNsRuns / situationNsBalls * 100).toFixed(1))
+          : 0,
+        onStrike: false,
+      });
+    }
+    console.log(`  [Batsmen] S0 situation: striker=${situationStriker} ns=${situationNonStriker || 'none'}`);
+  }
+  if (situationBowler) {
+    bowlers.push({
+      name:    situationBowler,
+      overs:   situationBowlerOvers,
+      maidens: 0,
+      runs:    situationBowlerRuns,
+      wickets: situationBowlerWkts,
+      economy: situationBowlerOvers !== '0.0' && parseFloat(situationBowlerOvers) > 0
+        ? parseFloat((situationBowlerRuns / parseFloat(situationBowlerOvers) * 6).toFixed(1))
+        : 0,
+    });
+    console.log(`  [Bowlers] S0 situation: bowler=${situationBowler}`);
+  }
 
   // Strategy 1: innings[current].batting.batsmen
   // ESPN rarely sets b.active/b.notOut on cricket data — never filter them out completely.
@@ -879,6 +952,10 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
 
   if (gpkg.currentRunRate) crr = parseFloat(gpkg.currentRunRate);
   if (gpkg.requiredRunRate) rrr = parseFloat(gpkg.requiredRunRate);
+  // situation.runRate / situation.requiredRunRate when gpkg is empty
+  if (!crr && situation.runRate)         crr = parseFloat(situation.runRate);
+  if (!crr && situation.currentRunRate)  crr = parseFloat(situation.currentRunRate);
+  if (!rrr && situation.requiredRunRate) rrr = parseFloat(situation.requiredRunRate);
   if (!crr && oversFloat > 0) crr = parseFloat((scoreInt / oversFloat).toFixed(2));
 
   if (target && oversFloat > 0) {

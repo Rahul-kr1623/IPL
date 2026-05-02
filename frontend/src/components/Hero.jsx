@@ -332,15 +332,19 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
 
   // ── BATTING SIDE LOGIC ───────────────────────────────────────────────────
   // team1 ALWAYS bats first (scraper guarantees this).
-  // currentInnings=1 → team1 is currently batting (rightTeam).
-  // currentInnings=2 → team2 is currently batting (rightTeam), team1 batted first (leftTeam).
+  // currentInnings=1 → team1 is currently batting.
+  // currentInnings=2 → team2 is currently batting, team1 already completed their innings.
   //
-  // Defensive guard: if innings=2 but no target exists yet AND team1Score looks like
-  // a live score (i.e. same as match.score), ESPN mis-labelled the innings — treat as 1.
-  const effectiveInnings = (() => {
-    if (currentInnings === 2 && !match?.target && !match?.team1Score) return 1;
-    return currentInnings;
-  })();
+  // We trust the scraper's currentInnings value directly — it is set by the
+  // scraper as: `firstInningsRuns ? 2 : 1` which is reliable.
+  // The only safe override: if no target AND no team1Score at all AND innings=2,
+  // it's likely a scraper glitch on very first over — treat as 1.
+  const effectiveInnings = (
+    currentInnings === 2 &&
+    !match?.target &&
+    !match?.team1Score &&
+    parseFloat(match?.overs || 0) < 1
+  ) ? 1 : currentInnings;
 
   // batting team = team currently scoring; fielding team = the other one
   const battingTeam  = effectiveInnings === 1 ? t1 : t2;
