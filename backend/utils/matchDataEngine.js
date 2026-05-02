@@ -102,8 +102,65 @@ export const COMPLETED_MATCHES = [
   // ── ADD NEW MATCHES HERE after each result ──
 ];
 
+// ─── SEASON JSON LOADER (Bug 6 fix) ──────────────────────────────────────────
+// Reads /data/seasons/2026.json (written by scheduler on every FINISHED match)
+// and converts its entries to the same shape as COMPLETED_MATCHES so the
+// points table always stays up to date without manual hardcoding.
+//
+// Matches dated on or before 19 APR 2026 are skipped (already in hardcoded array).
+// If the JSON file doesn't exist or can't be parsed, returns [] silently.
+
+import { readFileSync, existsSync } from 'fs';
+import { dirname, join }            from 'path';
+import { fileURLToPath }            from 'url';
+
+const __engineDir    = dirname(fileURLToPath(import.meta.url));
+const SEASON_JSON    = join(__engineDir, '../data/seasons/2026.json');
+const HARDCODED_UPTO = new Date('2026-04-19T23:59:59Z'); // last hardcoded match date
+
+const _parseSeasonScore = (s = '') => {
+  const overs = (s.match(/\(([^)]+)\)/) || [])[1]?.trim() || '20.0';
+  const bare  = s.replace(/\([^)]+\)/, '').trim();
+  const [runs = '0', wkts = '0'] = bare.split('/');
+  return { runs: parseInt(runs) || 0, wickets: parseInt(wkts) || 0, overs };
+};
+
+const loadJsonMatches = () => {
+  try {
+    if (!existsSync(SEASON_JSON)) return [];
+    const raw    = JSON.parse(readFileSync(SEASON_JSON, 'utf8'));
+    const list   = raw?.completedMatches || [];
+    const extras = list
+      .filter(m => {
+        const d = new Date(m.date || '');
+        return !isNaN(d.getTime()) && d > HARDCODED_UPTO;
+      })
+      .map((m, idx) => {
+        const t1 = _parseSeasonScore(m.team1Score);
+        const t2 = _parseSeasonScore(m.team2Score);
+        return {
+          id:     1000 + idx,
+          teamA:  m.team1  || '',  teamB:  m.team2  || '',
+          winner: m.winner || null,
+          scoreA: t1.runs,  wA: t1.wickets, ovA: t1.overs,
+          scoreB: t2.runs,  wB: t2.wickets, ovB: t2.overs,
+          result: m.result || '',  date: m.date || '',
+        };
+      });
+    if (extras.length)
+      console.log(`[matchDataEngine] +${extras.length} match(es) merged from seasonStore JSON`);
+    return extras;
+  } catch (e) {
+    console.warn('[matchDataEngine] loadJsonMatches error:', e.message);
+    return [];
+  }
+};
+
 // ─── POINTS TABLE CALCULATOR ──────────────────────────────────────────────────
-export const calculatePointsTable = (matches = COMPLETED_MATCHES) => {
+// Bug 6: default arg now merges hardcoded + JSON so the table is always current.
+// Passing an explicit matches array (e.g. in unit tests) still works as before.
+export const calculatePointsTable = (matches = null) => {
+  const resolvedMatches = matches ?? [...COMPLETED_MATCHES, ...loadJsonMatches()];
   const TEAMS = ['CSK','MI','RCB','KKR','RR','PBKS','DC','GT','LSG','SRH'];
   const t = {};
   TEAMS.forEach(team => {
@@ -114,7 +171,7 @@ export const calculatePointsTable = (matches = COMPLETED_MATCHES) => {
     };
   });
 
-  matches.forEach(m => {
+  resolvedMatches.forEach(m => {
     if (!t[m.teamA] || !t[m.teamB]) return;
     const rA = parseInt(m.scoreA)||0, rB = parseInt(m.scoreB)||0;
     // Use actual balls faced — if all out before 20 overs, use 120 balls

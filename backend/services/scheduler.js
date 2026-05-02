@@ -2,15 +2,12 @@
  * scheduler.js
  * All recurring background jobs.
  *
- * Architecture (matching ESPNCricinfo/Cricbuzz pattern):
- *   Live in-play score  → MongoDB (single upsert per slot)       every 40s
- *   Completed scorecards → JSON files in /data/seasons/          once on FINISH
- *   Standings (12h)     → in-memory standingsCache
- *
- * runLiveSyncAllSlots() runs every 40 seconds and:
- *   1. Scrapes ESPN for ALL live IPL events (slot1 + slot2)
- *   2. Saves each slot to MongoDB
- *   3. On FINISHED: writes scorecard to /data/seasons/2026.json
+ * BUG FIXES in this version:
+ *   Bug 2 — Stale score detection: sameScoreCount per slot.
+ *   Bug 4 — INNINGS BREAK treated as finish: reset finishedConfirmations
+ *            on ANY non-FINISHED status, not just 'LIVE'.
+ *   Bug 5 — Double-header finish race: per-slot savedToDb flag guards
+ *            MongoDB write so it only fires once per match.
  */
 
 import { scrapeAllSlots, scrapeIPLStandingsAndStats } from './scraperService.js';
@@ -29,16 +26,33 @@ import {
 } from '../utils/matchDataEngine.js';
 import { saveCompletedMatch } from '../utils/seasonStore.js';
 
-// ─── Per-slot state ────────────────────────────────────────────────────────────
-// We keep independent fail/finish counters for each slot so a 7:30 PM match
-// finishing doesn't freeze the 3:30 PM slot's state.
+// ─── Per-slot state ─────────────────────────────────────────────────────────
 const slotState = {
-  slot1: { consecutiveFails: 0, finishedConfirmations: 0, matchFinishedAt: null, lastLiveScore: null, lastKey: null },
-  slot2: { consecutiveFails: 0, finishedConfirmations: 0, matchFinishedAt: null, lastLiveScore: null, lastKey: null },
+  slot1: {
+    consecutiveFails: 0, finishedConfirmations: 0, matchFinishedAt: null,
+    lastLiveScore: null, lastKey: null,
+    sameScoreCount: 0, lastScoreStr: null,   // Bug 2
+    savedToDb: false,                         // Bug 5
+  },
+  slot2: {
+    consecutiveFails: 0, finishedConfirmations: 0, matchFinishedAt: null,
+    lastLiveScore: null, lastKey: null,
+    sameScoreCount: 0, lastScoreStr: null,   // Bug 2
+    savedToDb: false,                         // Bug 5
+  },
 };
 
-// ─── Standings update ─────────────────────────────────────────────────────────
+// 6 polls × 40 s = 4 min of the same score before we flag a stall (Bug 2)
+const STALE_SCORE_THRESHOLD = 6;
 
+// Statuses that must NEVER count toward finishedConfirmations (Bug 4)
+const NON_FINISH_STATUSES = new Set([
+  'LIVE', 'INNINGS BREAK', 'RAIN DELAY', 'TIMEOUT',
+  'DRINK BREAK', 'STRATEGIC TIMEOUT', 'SUPER OVER',
+  'ABANDONED', 'POSTPONED',
+]);
+
+// ─── Standings update ────────────────────────────────────────────────────────
 export const updateStandingsAndStats = async () => {
   const t = new Date().toLocaleTimeString();
   console.log(`\n[${t}] 📊 Updating standings & stats (12h cycle)...`);
@@ -61,10 +75,10 @@ export const updateStandingsAndStats = async () => {
       };
     } else {
       standingsCache.data = {
-        pointsTable:      computed,
+        pointsTable: computed,
         ...computedCaps,
-        lastUpdated:      new Date(),
-        source:           'computed',
+        lastUpdated: new Date(),
+        source: 'computed',
         matchesAccounted: COMPLETED_MATCHES.length,
       };
     }
@@ -72,28 +86,33 @@ export const updateStandingsAndStats = async () => {
     console.error('❌ Standings update error:', err.message);
     standingsCache.data = {
       ...standingsCache.data,
-      pointsTable:  computed,
-      lastUpdated:  new Date(),
-      source:       'computed',
+      pointsTable: computed,
+      lastUpdated: new Date(),
+      source: 'computed',
     };
   }
 };
 
-// ─── Single slot processor ────────────────────────────────────────────────────
-/**
- * Process one slot's data through the state machine.
- * @param {string} slotKey  'slot1' | 'slot2'
- * @param {object|null} data  Scraped match data (null = nothing found)
- */
+// ─── Helper: reset slot to clean state ──────────────────────────────────────
+const resetSlot = (s, reason, slotKey) => {
+  console.log(`  [${slotKey}] 🔄 Reset: ${reason}`);
+  s.matchFinishedAt      = null;
+  s.finishedConfirmations = 0;
+  s.lastLiveScore        = null;
+  s.sameScoreCount       = 0;
+  s.lastScoreStr         = null;
+  s.savedToDb            = false;
+};
+
+// ─── Single slot processor ───────────────────────────────────────────────────
 const processSlot = async (slotKey, data) => {
   const s = slotState[slotKey];
 
-  // ── Nothing found for this slot ──────────────────────────────────────────
+  // ── Nothing found for this slot ────────────────────────────────────────
   if (!data) {
-    // If this slot was live before and we've lost it, count as fail
     if (s.lastKey) {
       s.consecutiveFails++;
-      if (s.consecutiveFails >= MAX_FAILS && s.lastKey) {
+      if (s.consecutiveFails >= MAX_FAILS) {
         console.log(`⚠️  [${slotKey}] Max fails — auto-marking finished`);
         await markMatchFinished();
         s.matchFinishedAt = Date.now();
@@ -104,7 +123,7 @@ const processSlot = async (slotKey, data) => {
     return;
   }
 
-  // ── Check freeze ─────────────────────────────────────────────────────────
+  // ── Check freeze ──────────────────────────────────────────────────────
   if (s.matchFinishedAt) {
     const elapsed = Date.now() - s.matchFinishedAt;
     if (elapsed < FREEZE_MS) {
@@ -112,40 +131,55 @@ const processSlot = async (slotKey, data) => {
       return;
     }
     // Freeze expired
-    s.matchFinishedAt = null;
     s.lastKey = null;
-    s.finishedConfirmations = 0;
-    s.lastLiveScore = null;
-    console.log(`  [${slotKey}] 🔓 Freeze expired`);
+    resetSlot(s, 'freeze expired', slotKey);
   }
 
   s.consecutiveFails = 0;
   const newKey = `${data.team1?.name}_${data.team2?.name}`;
 
-  // New match detected mid-freeze
-  if (s.matchFinishedAt && s.lastKey && s.lastKey !== newKey) {
-    console.log(`  [${slotKey}] 🆕 New match during freeze — clearing`);
-    s.matchFinishedAt = null;
-    s.finishedConfirmations = 0;
-    s.lastLiveScore = null;
-  }
-
+  // New match started (either mid-freeze or between freeze and new match)
   if (s.lastKey && s.lastKey !== newKey) {
-    console.log(`  [${slotKey}] 🆕 Match changed: ${s.lastKey} → ${newKey}`);
-    s.matchFinishedAt = null;
-    s.finishedConfirmations = 0;
-    s.lastLiveScore = null;
+    resetSlot(s, `match changed ${s.lastKey} → ${newKey}`, slotKey);
   }
 
   s.lastKey = newKey;
 
-  // ── Validate FINISHED ────────────────────────────────────────────────────
+  // ── Bug 2: Stale-score detection ─────────────────────────────────────
+  // Fingerprint includes overs so all-dot overs (no run change) still advance.
+  const scoreFingerprint = `${data.score}/${data.wickets}@${data.overs}`;
+
+  if (scoreFingerprint === s.lastScoreStr) {
+    s.sameScoreCount++;
+    if (s.sameScoreCount >= STALE_SCORE_THRESHOLD &&
+        ['LIVE', 'SUPER OVER'].includes(data.status)) {
+      console.log(
+        `  ⚠️  [${slotKey}] Stale score: "${scoreFingerprint}" for` +
+        ` ${s.sameScoreCount} polls (~${Math.round(s.sameScoreCount * 40 / 60)}min).` +
+        ` ESPN data may be frozen.`
+      );
+    }
+  } else {
+    s.sameScoreCount = 0;
+    s.lastScoreStr   = scoreFingerprint;
+  }
+
+  // ── Bug 4: Reset finish counter on any non-FINISHED status ───────────
+  // This prevents INNINGS BREAK / RAIN DELAY from silently accumulating
+  // confirmations across the break.
+  if (NON_FINISH_STATUSES.has(data.status) && s.finishedConfirmations > 0) {
+    console.log(`  [${slotKey}] 🔄 Status="${data.status}" — resetting finish counter (was ${s.finishedConfirmations})`);
+    s.finishedConfirmations = 0;
+  }
+
+  // ── Validate FINISHED ─────────────────────────────────────────────────
   if (data.status === 'FINISHED') {
     const winner = data.result?.match(/^([A-Z]{2,4})\s+won/i)?.[1]?.toUpperCase();
     if (!winner || (winner !== data.team1?.name && winner !== data.team2?.name)) {
       console.log(`  [${slotKey}] ⚠️ Invalid winner "${winner}" — treating as LIVE`);
       data.status = 'LIVE';
       data.result = '';
+      s.finishedConfirmations = 0; // Bug 4: explicit reset after demotion
     }
     if (s.lastLiveScore && parseInt(s.lastLiveScore) > 100 && parseInt(data.score) < 30) {
       console.log(`  [${slotKey}] ⚠️ Score drop ${s.lastLiveScore}→${data.score}. Skipping.`);
@@ -153,7 +187,7 @@ const processSlot = async (slotKey, data) => {
     }
   }
 
-  // ── FINISHED handler ─────────────────────────────────────────────────────
+  // ── FINISHED handler ──────────────────────────────────────────────────
   if (data.status === 'FINISHED') {
     s.finishedConfirmations++;
     console.log(`  [${slotKey}] 🏁 FINISHED ${s.finishedConfirmations}/${NEED_CONFIRM}: ${data.result}`);
@@ -162,19 +196,28 @@ const processSlot = async (slotKey, data) => {
       s.matchFinishedAt = Date.now();
       console.log(`  [${slotKey}] 🔒 Frozen for 20 min`);
 
-      // ✅ Write to BOTH stores so data survives Render redeploys
-      // Tier 1: MongoDB CompletedMatch (persistent)
-      try {
-        const { saveCompletedMatch: saveToDB } = await import('../services/completedMatchService.js');
-        await saveToDB(data);
-      } catch(e) {
-        console.error(`  [${slotKey}] ⚠️ CompletedMatch MongoDB save failed: ${e.message}`);
-      }
-      // Tier 2: JSON file (fast local reads, non-persistent across redeploys)
-      try {
-        saveCompletedMatch(data);
-      } catch(e) {
-        console.error(`  [${slotKey}] ⚠️ seasonStore JSON save failed: ${e.message}`);
+      // Bug 5: per-slot savedToDb flag prevents duplicate writes on double-headers
+      if (!s.savedToDb) {
+        s.savedToDb = true;
+
+        // Tier 1: MongoDB CompletedMatch (persistent across redeploys)
+        try {
+          const { saveCompletedMatch: saveToDB } = await import('../services/completedMatchService.js');
+          await saveToDB(data);
+          console.log(`  [${slotKey}] ✅ Saved to MongoDB CompletedMatch`);
+        } catch (e) {
+          console.error(`  [${slotKey}] ⚠️ CompletedMatch MongoDB save failed: ${e.message}`);
+        }
+
+        // Tier 2: JSON file (fast local reads, non-persistent across redeploys)
+        try {
+          saveCompletedMatch(data);
+          console.log(`  [${slotKey}] ✅ Saved to seasonStore JSON`);
+        } catch (e) {
+          console.error(`  [${slotKey}] ⚠️ seasonStore JSON save failed: ${e.message}`);
+        }
+      } else {
+        console.log(`  [${slotKey}] ℹ️ DB already saved this session — skipping duplicate write`);
       }
     }
 
@@ -184,17 +227,11 @@ const processSlot = async (slotKey, data) => {
       })].filter(Boolean);
     }
 
-    // Attach slot info and save to MongoDB
     await saveMatch({ ...data, slot: slotKey });
     return;
   }
 
-  // ── LIVE / INNINGS BREAK etc. ─────────────────────────────────────────────
-  if (s.finishedConfirmations > 0 && data.status === 'LIVE') {
-    console.log(`  [${slotKey}] 🔄 Back to LIVE — reset finish counter`);
-    s.finishedConfirmations = 0;
-  }
-
+  // ── LIVE / INNINGS BREAK / other in-progress statuses ────────────────
   if (data.score && parseInt(data.score) > 5) {
     s.lastLiveScore = data.score;
   }
@@ -223,17 +260,15 @@ const processSlot = async (slotKey, data) => {
     }
   }
 
-  // Save live data to MongoDB (architecture tier 1: real-time upsert)
   await saveMatch({ ...data, slot: slotKey });
 };
 
-// ─── Main sync cycle ──────────────────────────────────────────────────────────
-
+// ─── Main sync cycle ─────────────────────────────────────────────────────────
 export const runLiveSyncAllSlots = async () => {
   const t = new Date().toLocaleTimeString();
   console.log(`\n[${t}] 🤖 Scraping all slots...`);
 
-  // Global freeze check for backwards compat (slot1 state mirrors old scraperState)
+  // Global freeze check for backwards compat
   const s = scraperState;
   if (s.matchFinishedAt) {
     const elapsed = Date.now() - s.matchFinishedAt;
@@ -259,8 +294,7 @@ export const runLiveSyncAllSlots = async () => {
 // Keep old export name for any code still importing it
 export const runLiveSync = runLiveSyncAllSlots;
 
-// ─── Startup helpers ──────────────────────────────────────────────────────────
-
+// ─── Startup helpers ─────────────────────────────────────────────────────────
 export const restoreStateFromDb = async () => {
   try {
     const ex = await getLatestMatch();
@@ -281,7 +315,7 @@ export const restoreStateFromDb = async () => {
 };
 
 export const startScheduler = () => {
-  setInterval(runLiveSyncAllSlots,      40_000);             // every 40s
-  setInterval(updateStandingsAndStats, 12 * 60 * 60_000);   // every 12h
+  setInterval(runLiveSyncAllSlots,      40_000);
+  setInterval(updateStandingsAndStats, 12 * 60 * 60_000);
   console.log('⏰ Scheduler started (live: 40s, standings: 12h)');
 };

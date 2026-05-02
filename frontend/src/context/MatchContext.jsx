@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
-const LS_SLOTS = 'ipl_live_slots_v2';
+const LS_SLOTS    = 'ipl_live_slots_v2';
 const LS_FINISHED = 'ipl_last_finished';
-const LS_THEME  = 'ipl_theme';
+const LS_THEME    = 'ipl_theme';
 
 const saveLS = (key, data) => {
   try { localStorage.setItem(key, JSON.stringify({ data, savedAt: new Date().toISOString() })); } catch { }
@@ -18,29 +18,31 @@ const loadLS = (key) => {
 const cachedSlots    = loadLS(LS_SLOTS);
 const cachedFinished = loadLS(LS_FINISHED);
 
-// ─── Initial state ─────────────────────────────────────────────────────────────
+// ─── Initial state ──────────────────────────────────────────────────────────
 const initialState = {
-  // New slot-based live data
-  slot1: cachedSlots?.data?.slot1 || null,       // 3:30 PM match
-  slot2: cachedSlots?.data?.slot2 || null,       // 7:30 PM match
-  latestFinished: cachedFinished?.data || null,  // Latest completed match (Box 3)
+  slot1:          cachedSlots?.data?.slot1   || null,
+  slot2:          cachedSlots?.data?.slot2   || null,
+  latestFinished: cachedFinished?.data       || null,
 
   // Legacy compat
   currentMatch: cachedSlots?.data?.slot1 || null,
-  matches: cachedSlots?.data ? [cachedSlots.data.slot1, cachedSlots.data.slot2].filter(Boolean) : [],
+  matches: cachedSlots?.data
+    ? [cachedSlots.data.slot1, cachedSlots.data.slot2].filter(Boolean)
+    : [],
 
-  fetchStatus: cachedSlots ? 'CACHED' : 'IDLE',
-  fetchError: null,
-  lastFetched: cachedSlots?.savedAt || null,
-  isStale: false,
-  searchQuery: '',
+  fetchStatus:  cachedSlots ? 'CACHED' : 'IDLE',
+  fetchError:   null,
+  lastFetched:  cachedSlots?.savedAt || null,
+  isStale:      false,
+  searchQuery:  '',
   isSearchOpen: false,
-  theme: localStorage.getItem(LS_THEME) || 'DEFAULT',
+  theme:        localStorage.getItem(LS_THEME) || 'DEFAULT',
 };
 
-// ─── Reducer ───────────────────────────────────────────────────────────────────
+// ─── Reducer ────────────────────────────────────────────────────────────────
 const reducer = (state, action) => {
   switch (action.type) {
+
     case 'FETCH_START':
       return {
         ...state,
@@ -49,12 +51,10 @@ const reducer = (state, action) => {
 
     case 'FETCH_SUCCESS': {
       const raw = action.payload;
-      // New API: { slot1, slot2, matches: [...] }
-      // Old API: { matches: [...] } or single match object
       let slot1, slot2;
 
       if (raw.slot1 !== undefined || raw.slot2 !== undefined) {
-        // New format
+        // New API format: { slot1, slot2, ... }
         slot1 = raw.slot1 ? stripMeta(raw.slot1) : null;
         slot2 = raw.slot2 ? stripMeta(raw.slot2) : null;
       } else if (Array.isArray(raw.matches)) {
@@ -70,7 +70,6 @@ const reducer = (state, action) => {
         slot2 = null;
       }
 
-      // Persist to localStorage
       if (slot1 || slot2) saveLS(LS_SLOTS, { slot1, slot2 });
 
       const matches = [slot1, slot2].filter(Boolean);
@@ -82,7 +81,6 @@ const reducer = (state, action) => {
         isStale:      !!raw._stale,
         slot1,
         slot2,
-        // Legacy compat
         currentMatch: slot1,
         matches,
       };
@@ -92,8 +90,8 @@ const reducer = (state, action) => {
       return {
         ...state,
         fetchStatus: (state.slot1 || state.slot2) ? 'REFRESHING' : 'WARMING_UP',
-        fetchError: null,
-        matches: [],
+        fetchError:  null,
+        matches:     [],
       };
 
     case 'FETCH_ERROR':
@@ -105,36 +103,66 @@ const reducer = (state, action) => {
       return { ...state, latestFinished: m };
     }
 
+    // ── Bug 9 fix ─────────────────────────────────────────────────────────
+    // UPDATE_MATCH / UPDATE_MATCH_DATA previously only updated slot1, leaving
+    // slot2 (the 7:30 PM match) frozen on whatever was in Redux state.
+    // Fix: update BOTH slots if the payload has a slot field, or fall back to
+    // updating slot1 only (legacy callers that don't pass a slot).
     case 'UPDATE_MATCH':
-    case 'UPDATE_MATCH_DATA':
+    case 'UPDATE_MATCH_DATA': {
       if (!action.payload || action.payload._empty) return state;
+      const patch = action.payload;
+
+      // If the patch carries an explicit slot field, update only that slot.
+      // If not (legacy dispatch), update slot1 only — same as before.
+      let newSlot1 = state.slot1;
+      let newSlot2 = state.slot2;
+
+      if (patch.slot === 'slot2') {
+        newSlot2 = state.slot2 ? { ...state.slot2, ...patch } : null;
+      } else if (patch.slot === 'slot1' || !patch.slot) {
+        newSlot1 = state.slot1 ? { ...state.slot1, ...patch } : null;
+      }
+
+      const newMatches = [newSlot1, newSlot2].filter(Boolean);
       return {
         ...state,
-        currentMatch: { ...state.currentMatch, ...action.payload },
-        slot1: state.slot1 ? { ...state.slot1, ...action.payload } : null,
-        fetchStatus: 'SUCCESS',
-        lastFetched: new Date().toISOString(),
+        currentMatch: newSlot1,
+        slot1:        newSlot1,
+        slot2:        newSlot2,
+        matches:      newMatches,
+        fetchStatus:  'SUCCESS',
+        lastFetched:  new Date().toISOString(),
+      };
+    }
+
+    case 'SET_SEARCH_QUERY':
+      return { ...state, searchQuery: action.payload };
+
+    case 'TOGGLE_SEARCH':
+      return {
+        ...state,
+        isSearchOpen: action.payload !== undefined ? action.payload : !state.isSearchOpen,
       };
 
-    case 'SET_SEARCH_QUERY': return { ...state, searchQuery: action.payload };
-    case 'TOGGLE_SEARCH': return { ...state, isSearchOpen: action.payload !== undefined ? action.payload : !state.isSearchOpen };
     case 'SET_THEME':
       localStorage.setItem(LS_THEME, action.payload);
       return { ...state, theme: action.payload };
 
-    default: return state;
+    default:
+      return state;
   }
 };
 
 const stripMeta = ({ _stale, _id, __v, createdAt, updatedAt, ...m } = {}) => m;
 
-// ─── Context ───────────────────────────────────────────────────────────────────
+// ─── Context ─────────────────────────────────────────────────────────────────
 const MatchContext = createContext();
 
 export const MatchProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // ── Poll live scores (slot1 + slot2) ──────────────────────────────────────
+  // ── Poll live scores (slot1 + slot2) every 20s ────────────────────────
   useEffect(() => {
     let cancelled = false;
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -155,7 +183,10 @@ export const MatchProvider = ({ children }) => {
           dispatch({ type: 'FETCH_EMPTY' });
           return;
         }
-        if (data.error) { dispatch({ type: 'FETCH_ERROR', payload: data.error }); return; }
+        if (data.error) {
+          dispatch({ type: 'FETCH_ERROR', payload: data.error });
+          return;
+        }
 
         dispatch({ type: 'FETCH_SUCCESS', payload: data });
       } catch (err) {
@@ -173,7 +204,7 @@ export const MatchProvider = ({ children }) => {
     return () => { cancelled = true; clearInterval(t); };
   }, []);
 
-  // ── Fetch latest finished match (Box 3) ───────────────────────────────────
+  // ── Fetch latest finished match every 5 min ───────────────────────────
   useEffect(() => {
     let cancelled = false;
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -190,20 +221,24 @@ export const MatchProvider = ({ children }) => {
     };
 
     fetchFinished();
-    // Refresh every 5 minutes (Box 3 doesn't need real-time updates)
     const t = setInterval(fetchFinished, 5 * 60 * 1000);
     return () => { cancelled = true; clearInterval(t); };
   }, []);
 
-  // ── Theme CSS vars ─────────────────────────────────────────────────────────
+  // ── Theme CSS vars ────────────────────────────────────────────────────
   useEffect(() => {
     const root = document.documentElement;
     const themes = {
-      CSK: { neon: '#F7B111', accent: '#004BA0' }, MI: { neon: '#004BA0', accent: '#F7B111' },
-      RCB: { neon: '#CC0000', accent: '#1B2133' }, KKR: { neon: '#914BE3', accent: '#F7B111' },
-      RR: { neon: '#EA1A85', accent: '#0057E2' },  SRH: { neon: '#FF822A', accent: '#000000' },
-      DC: { neon: '#005CA5', accent: '#EF1B23' },  PBKS: { neon: '#ED1B24', accent: '#D7C15C' },
-      GT: { neon: '#B59453', accent: '#1B2133' },  LSG: { neon: '#0ea5e9', accent: '#F26522' },
+      CSK:  { neon: '#F7B111', accent: '#004BA0' },
+      MI:   { neon: '#004BA0', accent: '#F7B111' },
+      RCB:  { neon: '#CC0000', accent: '#1B2133' },
+      KKR:  { neon: '#914BE3', accent: '#F7B111' },
+      RR:   { neon: '#EA1A85', accent: '#0057E2' },
+      SRH:  { neon: '#FF822A', accent: '#000000' },
+      DC:   { neon: '#005CA5', accent: '#EF1B23' },
+      PBKS: { neon: '#ED1B24', accent: '#D7C15C' },
+      GT:   { neon: '#B59453', accent: '#1B2133' },
+      LSG:  { neon: '#0ea5e9', accent: '#F26522' },
     };
     const t = themes[state.theme] || { neon: '#0ea5e9', accent: '#f43f5e' };
     root.style.setProperty('--ipl-neon', t.neon);
