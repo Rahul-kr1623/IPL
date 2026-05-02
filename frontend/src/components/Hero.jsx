@@ -330,19 +330,35 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
   const statusCfg = getStatusConfig(match?.status);
 
-  const leftTeam = currentInnings === 1 ? t2 : t1;
-  const rightTeam = currentInnings === 1 ? t1 : t2;
-  const leftLogo = getLogo(leftTeam);
+  // ── BATTING SIDE LOGIC ───────────────────────────────────────────────────
+  // team1 ALWAYS bats first (scraper guarantees this).
+  // currentInnings=1 → team1 is currently batting (rightTeam).
+  // currentInnings=2 → team2 is currently batting (rightTeam), team1 batted first (leftTeam).
+  //
+  // Defensive guard: if innings=2 but no target exists yet AND team1Score looks like
+  // a live score (i.e. same as match.score), ESPN mis-labelled the innings — treat as 1.
+  const effectiveInnings = (() => {
+    if (currentInnings === 2 && !match?.target && !match?.team1Score) return 1;
+    return currentInnings;
+  })();
+
+  // batting team = team currently scoring; fielding team = the other one
+  const battingTeam  = effectiveInnings === 1 ? t1 : t2;
+  const fieldingTeam = effectiveInnings === 1 ? t2 : t1;
+
+  // Display convention: right side = batting (bright), left side = fielding (dimmed)
+  const leftTeam  = fieldingTeam;
+  const rightTeam = battingTeam;
+  const leftLogo  = getLogo(leftTeam);
   const rightLogo = getLogo(rightTeam);
 
-  const leftScoreDisplay = currentInnings === 1
-    ? null
-    : (match?.team1Score
-      ? `${match?.team1Score}/${match?.team1Wickets || ''} (${match.team1Overs || '20.0'})`.replace(/\/$/, '')
-      : null);
+  // Left team's completed innings score (only available in 2nd innings)
+  const leftScoreDisplay = effectiveInnings === 2 && match?.team1Score
+    ? `${match.team1Score}${match.team1Wickets != null ? '/' + match.team1Wickets : ''} (${match.team1Overs || '20.0'})`.replace(/\/+$/, '')
+    : null;
 
-  const leftProb = currentInnings === 1 ? (match?.winProbT2 ?? 50) : (match?.winProbT1 ?? 50);
-  const rightProb = currentInnings === 1 ? (match?.winProbT1 ?? 50) : (match?.winProbT2 ?? 50);
+  const leftProb  = effectiveInnings === 1 ? (match?.winProbT2 ?? 50) : (match?.winProbT1 ?? 50);
+  const rightProb = effectiveInnings === 1 ? (match?.winProbT1 ?? 50) : (match?.winProbT2 ?? 50);
   let finalLeftProb = leftProb, finalRightProb = rightProb;
   if (isFinished && match?.result) {
     const w = (match.result || '').toUpperCase();
@@ -350,8 +366,19 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
     if (rightTeam && w.includes(rightTeam.toUpperCase())) { finalRightProb = 100; finalLeftProb = 0; }
   }
 
-  const batters = [...(match?.batsmen || [])].sort((a, b) => (b.onStrike ? 1 : 0) - (a.onStrike ? 1 : 0));
-  const bowler = match?.bowlers?.[0] || null;
+  // Resolve striker and non-striker.
+  // ESPN occasionally sets onStrike=true; if it doesn't, treat index-0 as striker
+  // (scraper returns batsmen in batting order: striker first, non-striker second).
+  const rawBatters = match?.batsmen || [];
+  const hasExplicitStriker = rawBatters.some(b => b.onStrike === true);
+  const batters = hasExplicitStriker
+    ? [...rawBatters].sort((a, b) => (b.onStrike ? 1 : 0) - (a.onStrike ? 1 : 0))
+    : rawBatters.map((b, i) => ({ ...b, onStrike: i === 0 }));  // treat first as striker
+
+  // Current bowler = last entry in bowlers (most recently bowling / currently bowling)
+  const bowler = match?.bowlers?.length
+    ? match.bowlers[match.bowlers.length - 1]
+    : null;
 
   // Play has started = at least 1 ball bowled (overs > 0) or batsmen data present
   const oversFloat = parseFloat(match?.overs || '0');
@@ -359,9 +386,8 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
 
   // Left side label: "1st Innings" when right team is batting 1st, else completed score label
   // Right side label: only show "Currently Batting" once play has started
-  const leftBadgeText = currentInnings === 2
-    ? '1st Innings'    // left team (t1) batted first
-    : null;            // left team hasn't batted yet — no badge
+  // Left badge: show "1st Innings" when left team (fielding team) already batted
+  const leftBadgeText = effectiveInnings === 2 ? '1st Innings' : null;
 
   const rightBadgeText = isFinished
     ? 'Match Over'
@@ -382,16 +408,24 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
 
   return (
     <div className="relative">
-      {/* Match meta bar */}
-      {(match?.matchNumber || match?.venue || match?.toss) && (
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mb-4 text-[9px] text-gray-500">
+      {/* Match meta bar — match number, venue */}
+      {(match?.matchNumber || match?.venue) && (
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mb-3 text-[9px] text-gray-500">
           {match.matchNumber && <span className="font-black uppercase tracking-widest text-gray-400">{match.matchNumber}</span>}
           {match.venue && (
             <span className="flex items-center gap-1">
               <MapPin className="w-2.5 h-2.5 flex-shrink-0" />{match.venue}
             </span>
           )}
-          {match.toss && <span className="italic">🪙 {match.toss}</span>}
+        </div>
+      )}
+
+      {/* Toss chip — prominent, always visible when toss data exists */}
+      {match?.toss && (
+        <div className="flex justify-center mb-3">
+          <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[10px] font-black text-yellow-300 tracking-wide">
+            🪙 {match.toss}
+          </span>
         </div>
       )}
 
@@ -501,9 +535,11 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase ${rightBadgeCls}`}>
             {rightBadgeText}
           </span>
-          {/* Show "2nd Innings" label when right team is chasing */}
-          {currentInnings === 2 && isLive && playStarted && (
-            <p className="text-[8px] text-gray-600 mt-1 uppercase tracking-widest">2nd Innings</p>
+          {/* Show innings label */}
+          {isLive && playStarted && (
+            <p className="text-[8px] text-gray-600 mt-1 uppercase tracking-widest">
+              {effectiveInnings === 1 ? '1st Innings' : '2nd Innings'}
+            </p>
           )}
         </div>
       </div>
@@ -523,53 +559,81 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
       </div>
 
       {/* Batter / Bowler HUD */}
+      {/* Batter / Bowler HUD */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ transform: 'translateZ(40px)' }}>
+
+        {/* Striker */}
         <div className="glass bg-white/5 p-5 rounded-[1.5rem] border border-white/10 flex items-center justify-between">
-          <div>
-            <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1 flex items-center gap-1">
-              {batters[0]?.onStrike !== false
-                ? <><span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse inline-block" />Striker</>
-                : 'Batter'}
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-ipl-neon animate-pulse inline-block flex-shrink-0" />
+              Striker
             </p>
-            <h4 className="font-black text-sm text-white">
-              {batters[0]?.name || <span className="text-gray-600 italic text-xs">Awaiting…</span>}
+            <h4 className="font-black text-sm text-white truncate">
+              {batters[0]?.name
+                ? <>{batters[0].name} <span className="text-ipl-neon">*</span></>
+                : <span className="text-gray-600 italic text-xs">Live data arriving…</span>}
             </h4>
+            {batters[0] && (
+              <p className="text-[9px] text-gray-500 mt-0.5">
+                {batters[0].fours ?? 0}×4 · {batters[0].sixes ?? 0}×6
+              </p>
+            )}
           </div>
           {batters[0]
-            ? <div className="text-right">
-              <span className="text-lg font-black text-ipl-neon">{batters[0].runs}{batters[0].onStrike ? '*' : ''}</span>
-              <p className="text-[9px] text-gray-500">{batters[0].balls} (B)</p>
-            </div>
+            ? <div className="text-right ml-3 flex-shrink-0">
+                <span className="text-xl font-black text-ipl-neon">{batters[0].runs}*</span>
+                <p className="text-[9px] text-gray-500">{batters[0].balls}B · SR {batters[0].sr}</p>
+              </div>
             : <span className="text-gray-700 text-sm">—</span>}
         </div>
 
+        {/* Non-Striker */}
         <div className="glass bg-white/5 p-5 rounded-[1.5rem] border border-white/10 flex items-center justify-between">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Non-Striker</p>
-            <h4 className="font-black text-sm text-white">
-              {batters[1]?.name || <span className="text-gray-600 italic text-xs">Awaiting…</span>}
+            <h4 className="font-black text-sm text-white truncate">
+              {batters[1]?.name
+                ? batters[1].name
+                : <span className="text-gray-600 italic text-xs">Live data arriving…</span>}
             </h4>
+            {batters[1] && (
+              <p className="text-[9px] text-gray-500 mt-0.5">
+                {batters[1].fours ?? 0}×4 · {batters[1].sixes ?? 0}×6
+              </p>
+            )}
           </div>
           {batters[1]
-            ? <div className="text-right">
-              <span className="text-lg font-black text-white">{batters[1].runs}</span>
-              <p className="text-[9px] text-gray-500">{batters[1].balls} (B)</p>
-            </div>
+            ? <div className="text-right ml-3 flex-shrink-0">
+                <span className="text-xl font-black text-white">{batters[1].runs}</span>
+                <p className="text-[9px] text-gray-500">{batters[1].balls}B · SR {batters[1].sr}</p>
+              </div>
             : <span className="text-gray-700 text-sm">—</span>}
         </div>
 
+        {/* Current Bowler */}
         <div className="glass bg-white/5 p-5 rounded-[1.5rem] border border-white/10 flex items-center justify-between">
-          <div>
-            <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Bowler</p>
-            <h4 className="font-black text-sm text-white">
-              {bowler?.name || <span className="text-gray-600 italic text-xs">Awaiting…</span>}
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-ipl-accent animate-pulse inline-block flex-shrink-0" />
+              Bowling
+            </p>
+            <h4 className="font-black text-sm text-white truncate">
+              {bowler?.name
+                ? bowler.name
+                : <span className="text-gray-600 italic text-xs">Live data arriving…</span>}
             </h4>
+            {bowler && (
+              <p className="text-[9px] text-gray-500 mt-0.5">
+                Eco: {bowler.economy ?? '—'} · {bowler.maidens ?? 0}M
+              </p>
+            )}
           </div>
           {bowler
-            ? <div className="text-right">
-              <span className="text-lg font-black text-white">{bowler.wickets}-{bowler.runs}</span>
-              <p className="text-[9px] text-gray-500">{bowler.overs} Ov</p>
-            </div>
+            ? <div className="text-right ml-3 flex-shrink-0">
+                <span className="text-xl font-black text-ipl-accent">{bowler.wickets}/{bowler.runs}</span>
+                <p className="text-[9px] text-gray-500">{bowler.overs} Ov</p>
+              </div>
             : <span className="text-gray-700 text-sm">—</span>}
         </div>
       </div>
