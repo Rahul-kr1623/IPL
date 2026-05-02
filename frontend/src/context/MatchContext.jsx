@@ -23,6 +23,7 @@ const initialState = {
   slot1:          cachedSlots?.data?.slot1   || null,
   slot2:          cachedSlots?.data?.slot2   || null,
   latestFinished: cachedFinished?.data       || null,
+  finishedQueue:  cachedFinished?.data ? [cachedFinished.data] : [],  // FIFO queue — max 1 shown
 
   // Legacy compat
   currentMatch: cachedSlots?.data?.slot1 || null,
@@ -99,8 +100,21 @@ const reducer = (state, action) => {
 
     case 'SET_LATEST_FINISHED': {
       const m = action.payload;
-      if (m) saveLS(LS_FINISHED, m);
-      return { ...state, latestFinished: m };
+      if (!m) return state;
+      // Check if this is genuinely a new match (different teams or different date)
+      const prev = state.latestFinished;
+      const isNew = !prev ||
+        (prev.team1 !== m.team1 || prev.team2 !== m.team2) ||
+        (prev.matchId && m.matchId && prev.matchId !== m.matchId);
+      if (!isNew) return state; // same match pushed again — ignore
+      saveLS(LS_FINISHED, m);
+      // Queue behaviour: new result replaces the old one (max 1 in the queue).
+      // When a second match finishes, push it in and discard the previous.
+      return {
+        ...state,
+        latestFinished: m,
+        finishedQueue:  [m],  // always exactly 1 — previous is evicted
+      };
     }
 
     // ── Bug 9 fix ─────────────────────────────────────────────────────────
