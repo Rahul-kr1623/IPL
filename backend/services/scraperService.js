@@ -542,30 +542,71 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
       score = ps1.runs; wickets = ps1.wickets; overs = ps1.overs || situationOvers || '0.0';
       console.log(`  [ESPN] score-string fallback (only comp1 has score)`);
     } else if (ps0 && ps1) {
-      // Both have scores — now use overs heuristic ONLY when one innings is
-      // clearly complete (≥ 19.5) and the other is clearly not (< 19.0).
-      // When both are ≥ 19.5 (match over), we CANNOT tell from overs alone.
+      // Both competitors have a score string.
+      // Priority order to identify who batted first:
+      //   1. Overs heuristic  — one innings clearly complete (≥ 19.5), other not
+      //   2. Run total signal  — higher score is almost certainly the COMPLETED innings
+      //      (a live chase rarely overtakes a completed first-innings total before finishing)
+      //   3. situationOvers   — if we know the current over from situation, the team
+      //      currently NOT at that over is the one that already completed theirs
+      //   4. homeAway         — weakest signal, last resort
+
       const comp0Finished = comp0Overs >= 19.5;
       const comp1Finished = comp1Overs >= 19.5;
 
+      // Signal 1: overs clearly show one innings done
       if (comp0Finished && !comp1Finished) {
-        // comp0 done, comp1 still chasing → comp0 batted first
         assignByFirstBatter(ct0);
-        console.log(`  [ESPN] score-string fallback (comp0 complete, comp1 chasing)`);
+        console.log(`  [ESPN] score-string fallback (comp0 complete overs, comp1 chasing)`);
       } else if (comp1Finished && !comp0Finished) {
-        // comp1 done, comp0 still chasing → comp1 batted first
         assignByFirstBatter(ct1);
-        console.log(`  [ESPN] score-string fallback (comp1 complete, comp0 chasing)`);
+        console.log(`  [ESPN] score-string fallback (comp1 complete overs, comp0 chasing)`);
       } else {
-        // Both in progress OR both finished — overs heuristic is unreliable here.
-        // Fall back to: whichever competitor ESPN marked as "home" usually fields second
-        // (weak signal, but better than the broken "more overs = batted first" rule).
-        // comp.homeAway: '0' = home, '1' = away in ESPN API
-        const comp0IsHome = comp0?.homeAway === '0';
-        // Home team typically bats second in T20 (wins toss, fields) — so AWAY = team1
-        const firstBatterFallback = comp0IsHome ? ct1 : ct0;
-        assignByFirstBatter(firstBatterFallback);
-        console.log(`  [ESPN] score-string fallback (both innings uncertain — homeAway heuristic, batFirst=${firstBatterFallback})`);
+        // Signal 2: run-total heuristic
+        // The team with MORE runs has almost certainly finished their innings — they
+        // batted first. The live chase score is always lower (chase is in progress).
+        // Exception: match finished with a chase win — both overs are 20.0 — but in
+        // that case the overs signal above already handled it.
+        // We add a margin of 5 runs to avoid misfire when scores are very close.
+        const r0 = parseInt(ps0.runs || 0);
+        const r1 = parseInt(ps1.runs || 0);
+        const runDiff = Math.abs(r0 - r1);
+
+        if (runDiff >= 5 && r0 > r1) {
+          // comp0 has more runs → comp0 batted first (completed innings)
+          assignByFirstBatter(ct0);
+          console.log(`  [ESPN] score-string fallback (run-total: comp0 ${r0} > comp1 ${r1}, comp0 batted first)`);
+        } else if (runDiff >= 5 && r1 > r0) {
+          // comp1 has more runs → comp1 batted first
+          assignByFirstBatter(ct1);
+          console.log(`  [ESPN] score-string fallback (run-total: comp1 ${r1} > comp0 ${r0}, comp1 batted first)`);
+        } else {
+          // Signal 3: use situationOvers — if we know the live innings over,
+          // the team currently at that over is the chasing team → they bat second
+          // i.e. the OTHER team batted first.
+          if (situationOvers && parseFloat(situationOvers) > 0) {
+            // We don't know which comp is currently batting from situationOvers alone,
+            // but situationStriker tells us the striker's name — match against athletes
+            const strikerName = situationStriker || '';
+            const comp0HasStriker = strikerName && (comp0?.athletes || [])
+              .some(a => (a.athlete?.displayName || a.displayName || '').includes(strikerName.split(' ').pop()));
+            if (comp0HasStriker) {
+              // comp0 athlete is the striker → comp0 is currently batting (chasing)
+              // → comp1 batted first
+              assignByFirstBatter(ct1);
+              console.log(`  [ESPN] score-string fallback (situation striker in comp0 → comp1 batted first)`);
+            } else {
+              assignByFirstBatter(ct0);
+              console.log(`  [ESPN] score-string fallback (situation striker not in comp0 → comp0 batted first)`);
+            }
+          } else {
+            // Signal 4: homeAway — last resort only
+            const comp0IsHome = comp0?.homeAway === '0';
+            const firstBatterFallback = comp0IsHome ? ct1 : ct0;
+            assignByFirstBatter(firstBatterFallback);
+            console.log(`  [ESPN] score-string fallback (last-resort homeAway, batFirst=${firstBatterFallback})`);
+          }
+        }
       }
     } else {
       // No score strings at all
@@ -1524,7 +1565,31 @@ export const scrapeAllSlots = async () => {
     if (allMeta.length === 0) {
       console.log('  [Slots] No live IPL matches found from ESPN');
     } else {
-      const scores = await Promise.allSettled(allMeta.map(m => espnGetScore(m)));
+      // For pre-match entries (>5 min until start), build a placeholder instead
+      // of running the full scraper (which would return empty/null for unstarted matches).
+      const scores = await Promise.allSettled(allMeta.map(m => {
+        const startMs = m.startTime ? new Date(m.startTime).getTime() : 0;
+        const minsUntil = startMs ? (startMs - Date.now()) / 60000 : -1;
+        if (minsUntil > 5) {
+          // Pre-match placeholder — no scoring data yet
+          const timeLabel = minsUntil < 60
+            ? Math.round(minsUntil) + ' min'
+            : (Math.round(minsUntil / 6) / 10) + 'h';
+          return Promise.resolve({
+            team1: { name: m.compA }, team2: { name: m.compB },
+            score: '0', wickets: '0', overs: '0.0',
+            status: 'UPCOMING',
+            statusText: `Starts in ${timeLabel}`,
+            startTime: m.startTime,
+            currentInnings: 1,
+            team1Score: null, target: null,
+            batsmen: [], bowlers: [], recent: ['·','·','·','·','·','·'],
+            commentary: [], espnId: m.espnId,
+            source: 'pre-match', lastUpdated: new Date(),
+          });
+        }
+        return espnGetScore(m);
+      }));
       scores.forEach((s, i) => {
         if (s.status !== 'fulfilled' || !s.value) return;
         const data = { ...s.value, startTime: allMeta[i].startTime, lastUpdated: new Date() };

@@ -19,7 +19,7 @@ const Navbar = () => {
   const [mobileMenu, setMobileMenu] = useState(false);
 
   const { state, dispatch } = useMatchContext();
-  const { currentMatch: match, fetchStatus, isStale } = state;
+  // state destructured below in capsule vars section
 
   useEffect(() => {
     const fn = () => setIsScrolled(window.scrollY > 50);
@@ -27,29 +27,40 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  const isFetching = ['LOADING', 'WARMING_UP', 'IDLE'].includes(fetchStatus) && !match;
+  const { currentMatch: match, slot1, slot2, fetchStatus, isStale } = state;
+
+  const isFetching  = ['LOADING', 'WARMING_UP', 'IDLE'].includes(fetchStatus) && !slot1 && !slot2;
   const isRefreshing = fetchStatus === 'REFRESHING';
-  const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
-  const isLive = match?.status === 'LIVE';
-  const isOffline = fetchStatus === 'ERROR';
+  const isOffline   = fetchStatus === 'ERROR';
 
-  // currentInnings: 1 = team1 is batting (1st innings), 2 = team2 is batting (2nd innings)
-  const battingTeam =
-    match?.currentInnings === 2
-      ? match?.team2
-      : match?.team1;
+  // Pick the best match to show: prefer the LIVE one, then any non-null slot
+  const activeMatch = (slot1?.status === 'LIVE' ? slot1 : null)
+    || (slot2?.status === 'LIVE' ? slot2 : null)
+    || slot1 || slot2 || match || null;
 
-  const otherTeam =
-    match?.currentInnings === 2
-      ? match?.team1
-      : match?.team2;
-  // otherScore = the completed innings score of the non-batting team (only in 2nd innings)
-  const otherScore =
-    match?.currentInnings === 2 &&
-      match?.team1Score !== null &&
-      match?.team1Score !== undefined
-      ? `${match.team1Score}/${match.team1Wickets ?? 0}`
-      : null;
+  const isLive     = activeMatch?.status === 'LIVE';
+  const isFinished = activeMatch?.status === 'FINISHED' || activeMatch?.status === 'RECENTLY FINISHED';
+  const isUpcoming = activeMatch?.status === 'UPCOMING';
+
+  // Build a compact score string for any match state
+  const buildScore = (m) => {
+    if (!m) return null;
+    const batting  = m.currentInnings === 2 ? m.team2 : m.team1;
+    const fielding = m.currentInnings === 2 ? m.team1 : m.team2;
+    const completedScore = m.currentInnings === 2 && m.team1Score
+      ? ` (${m.team1Score}/${m.team1Wickets ?? 0})`
+      : '';
+    if (m.status === 'UPCOMING') return `${m.team1?.name} vs ${m.team2?.name}`;
+    if (m.status === 'FINISHED' || m.status === 'RECENTLY FINISHED')
+      return `${m.team1?.name} vs ${m.team2?.name}`;
+    return `${batting?.name} ${m.score ?? 0}/${m.wickets ?? 0} (${m.overs || '0.0'}) v ${fielding?.name}${completedScore}`;
+  };
+
+  const capsuleScore = buildScore(activeMatch);
+
+  // Also build a mini label for a second match if both slots are populated
+  const secondMatch = (activeMatch === slot1 ? slot2 : slot1);
+  const hasSecond   = !!(secondMatch && secondMatch !== activeMatch);
 
   return (
     <motion.nav
@@ -104,53 +115,68 @@ const Navbar = () => {
         <div className="flex items-center justify-end gap-4 xl:gap-6">
 
           {/* Live Score Capsule */}
-          <div className={`hidden xl:flex items-center px-4 py-1.5 rounded-full border transition-all gap-3 group min-w-[260px] justify-between
-            ${isOffline && match ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-ipl-neon/30 bg-ipl-neon/5 hover:bg-ipl-neon/10'}`}>
+          <div className={`hidden xl:flex items-center px-3 py-1.5 rounded-full border transition-all gap-2 group min-w-[240px] max-w-[380px]
+            ${isOffline ? 'border-yellow-500/30 bg-yellow-500/5'
+              : isLive   ? 'border-red-500/40 bg-red-500/5 hover:bg-red-500/10'
+              : isUpcoming ? 'border-amber-500/30 bg-amber-500/5'
+              : 'border-ipl-neon/30 bg-ipl-neon/5 hover:bg-ipl-neon/10'}`}>
 
-            <div className="flex items-center gap-2">
+            {/* Status badge */}
+            <div className="flex items-center gap-1.5 shrink-0">
               {isOffline
                 ? <WifiOff className="w-3 h-3 text-yellow-500" />
-                : <Activity className={`w-3 h-3 text-ipl-neon ${isRefreshing ? 'animate-spin' : 'animate-pulse'}`} />
+                : isLive
+                  ? <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                    </span>
+                  : <Activity className={`w-3 h-3 text-ipl-neon ${isRefreshing ? 'animate-spin' : ''}`} />
               }
-              <span className={`text-[10px] font-bold uppercase tracking-widest
-                ${isOffline ? 'text-yellow-500' : 'text-ipl-neon'}`}>
-                {isFetching ? 'LOADING'
-                  : isOffline && match ? 'CACHED'
-                    : isFinished ? 'RESULT'
-                      : isLive ? 'LIVE'
-                        : 'RECENT'}
+              <span className={`text-[9px] font-black uppercase tracking-widest shrink-0
+                ${isOffline ? 'text-yellow-500'
+                  : isLive   ? 'text-red-400'
+                  : isUpcoming ? 'text-amber-400'
+                  : isFinished ? 'text-green-400'
+                  : 'text-ipl-neon'}`}>
+                {isFetching   ? 'LOADING'
+                  : isOffline  ? 'CACHED'
+                  : isLive     ? 'LIVE'
+                  : isUpcoming ? 'UPCOMING'
+                  : isFinished ? 'RESULT'
+                  : activeMatch ? 'RECENT'
+                  : 'RECENT'}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-mono border-l border-white/10 pl-3">
-              {!match && isFetching && (
-                <span className="text-gray-500 italic text-[10px] animate-pulse">Fetching score…</span>
+            {/* Score text */}
+            <div className="flex items-center gap-1.5 text-[10px] font-mono border-l border-white/10 pl-2 min-w-0 overflow-hidden">
+              {isFetching && !activeMatch && (
+                <span className="text-gray-500 italic animate-pulse truncate">Fetching…</span>
               )}
-              {!match && !isFetching && fetchStatus !== 'ERROR' && (
-                <span className="text-gray-500 italic text-[10px]">No match today</span>
+              {!activeMatch && !isFetching && fetchStatus !== 'ERROR' && (
+                <span className="text-gray-500 italic truncate">No match today</span>
               )}
-              {!match && fetchStatus === 'ERROR' && (
-                <span className="text-yellow-600 italic text-[10px]">Offline</span>
+              {fetchStatus === 'ERROR' && !activeMatch && (
+                <span className="text-yellow-600 italic truncate">Offline</span>
               )}
-              {match && (
-                <>
-                  <span className="font-black text-white group-hover:text-ipl-neon transition-colors">
-                    {battingTeam?.name || 'TBD'} {match?.score ?? 0}/{match?.wickets ?? 0}
-                  </span>
-
-                  <span className="text-gray-500 text-[10px]">
-                    ({match?.overs || '0.0'})
-                  </span>
-
-                  <span className="text-gray-600 italic text-[10px]">v</span>
-
-                  <span className="font-bold text-gray-400">
-                    {otherTeam?.name || 'TBD'}
-                    {otherScore ? ` ${otherScore}` : ''}
-                  </span>
-                </>
+              {activeMatch && (
+                <span className="font-black text-white group-hover:text-ipl-neon transition-colors truncate">
+                  {capsuleScore}
+                </span>
               )}
             </div>
+
+            {/* 2nd match mini badge */}
+            {hasSecond && (
+              <div className="shrink-0 border-l border-white/10 pl-2">
+                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full
+                  ${secondMatch?.status === 'LIVE' ? 'bg-red-500/20 text-red-400'
+                  : secondMatch?.status === 'UPCOMING' ? 'bg-amber-500/20 text-amber-400'
+                  : 'bg-white/10 text-gray-500'}`}>
+                  {secondMatch?.team1?.name} v {secondMatch?.team2?.name}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Controls */}
@@ -204,13 +230,10 @@ const Navbar = () => {
               <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">
                 {isFetching && !match ? 'Loading…' : 'Current Match'}
               </p>
-              {match
-                ? <div className="flex justify-between items-end">
-                  <span className="text-2xl font-bold">{battingTeam?.name} {match.score}/{match.wickets} <span className="text-base font-normal text-ipl-neon">({match.overs} ov)</span></span>
-                  <span className="text-gray-400 font-mono text-sm">{otherTeam?.name}{otherScore ? ` ${otherScore}` : ''}</span>
-                </div>
+              {activeMatch
+                ? <div className="text-sm font-bold text-white truncate">{capsuleScore}</div>
                 : <p className="text-gray-500 text-sm italic">
-                  {isFetching ? 'Fetching live data…' : 'No match in progress'}
+                  {isFetching ? 'Fetching live data…' : 'No match today'}
                 </p>
               }
             </div>

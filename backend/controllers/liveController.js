@@ -65,11 +65,33 @@ export const getLiveScore = async (req, res) => {
 // ─── GET /api/v1/latest-finished ─────────────────────────────────────────────
 export const getLatestFinished = async (req, res) => {
   try {
+    // Tier 1: JSON file written by scheduler on every FINISHED match (most up to date)
     const jsonResult = getLatestFinishedFromJson();
     if (jsonResult) return res.json({ match: jsonResult, source: 'json' });
 
+    // Tier 2: MongoDB LiveMatch marked as FINISHED/RECENTLY FINISHED
     const mongoResult = await getLatestFinishedMatch();
     if (mongoResult) return res.json({ match: mongoResult.toObject(), source: 'liveMatch' });
+
+    // Tier 3: hardcoded COMPLETED_MATCHES array — always returns something
+    // so Box 3 is never empty even on a fresh deploy with no JSON/MongoDB data.
+    const last = COMPLETED_MATCHES[COMPLETED_MATCHES.length - 1];
+    if (last) {
+      // Convert matchDataEngine shape → seasonStore/frontend shape
+      const fallback = {
+        team1: last.teamA, team2: last.teamB,
+        team1Score: `${last.scoreA}/${last.wA} (${last.ovA})`,
+        team2Score: `${last.scoreB}/${last.wB} (${last.ovB})`,
+        winner: last.winner,
+        result: last.result,
+        matchNumber: `Match ${last.id}`,
+        date: last.date,
+        winProbT1: last.winner === last.teamA ? 100 : 0,
+        winProbT2: last.winner === last.teamB ? 100 : 0,
+        status: 'FINISHED',
+      };
+      return res.json({ match: fallback, source: 'hardcoded' });
+    }
 
     return res.json({ match: null, source: 'none' });
   } catch (err) {

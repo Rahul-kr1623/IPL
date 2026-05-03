@@ -327,6 +327,7 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
   const currentInnings = match?.currentInnings ?? 2;
 
   const isLive = match?.status === 'LIVE';
+  const isUpcoming = match?.status === 'UPCOMING';
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
   const statusCfg = getStatusConfig(match?.status);
 
@@ -395,12 +396,13 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
 
   const rightBadgeText = isFinished
     ? 'Match Over'
-    : match?.status === 'INNINGS BREAK' ? 'Innings Break'
-      : match?.status === 'RAIN DELAY' ? 'Rain Delay'
-        : match?.status === 'SUPER OVER' ? 'Super Over!'
-          : (isLive && playStarted) ? 'Currently Batting'
-            : isLive ? 'Toss Awaited'
-              : (match?.status || '');
+    : isUpcoming ? (match?.statusText || 'Upcoming')
+      : match?.status === 'INNINGS BREAK' ? 'Innings Break'
+        : match?.status === 'RAIN DELAY' ? 'Rain Delay'
+          : match?.status === 'SUPER OVER' ? 'Super Over!'
+            : (isLive && playStarted) ? 'Currently Batting'
+              : isLive ? 'Toss Awaited'
+                : (match?.status || '');
 
   const rightBadgeCls = isFinished
     ? 'bg-green-500/20 text-green-400'
