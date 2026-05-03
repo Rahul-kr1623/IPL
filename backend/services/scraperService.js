@@ -624,6 +624,24 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
   if (!team1Name) team1Name = ct0;
   if (!team2Name) team2Name = team1Name === ct0 ? ct1 : ct0;
 
+  // ── Detect "match not yet started" and convert to UPCOMING ────────────
+  // ESPN sometimes returns status=LIVE for a match that hasn't started yet
+  // (e.g. scheduled for later today). We detect this by: no innings data,
+  // score=0, no target, no first-innings runs. Mark as UPCOMING so the
+  // frontend shows a pre-match card instead of a 0/0 live card.
+  const isDatalessLive = status === 'LIVE'
+    && (score === '0' || score === null)
+    && (wickets === '0' || wickets === null)
+    && !target
+    && !firstInningsRuns
+    && !batsmen.length
+    && !bowlers.length;
+
+  if (isDatalessLive) {
+    status = 'UPCOMING';
+    console.log(`  [ESPN] Detected dataless LIVE — converting to UPCOMING for ${team1Name} vs ${team2Name}`);
+  }
+
   console.log(`  ✅ [ESPN] team1(bat1st)=${team1Name} score:${firstInningsRuns || 'N/A'}/${firstInningsWkts} | team2(batting)=${team2Name} score:${score}/${wickets} (${overs}) target:${target || 'N/A'} status:${status}`);
 
   // ── BATSMEN — multi-strategy extraction ───────────────────────────────────
@@ -1221,6 +1239,73 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     currentInnings: currentInningsNum,
     source: 'espn',
   };
+};
+
+// ─── Scrape latest completed match from ESPN ─────────────────────────────────
+// Used by liveController as a live fallback for Box 3 when JSON + MongoDB are empty.
+// ESPN scoreboard lists recently completed matches alongside live ones.
+export const scrapeLatestCompletedMatch = async () => {
+  try {
+    const sb = await fetchJSON(
+      `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+      {}, 'ESPN scoreboard (completed)'
+    );
+    if (!sb?.events?.length) return null;
+
+    // Find the most recently completed IPL match
+    const completed = sb.events
+      .filter(ev => {
+        const stName = ev.status?.type?.name || '';
+        const stDesc = (ev.status?.type?.description || '').toLowerCase();
+        return stName === 'STATUS_FINAL'
+          || stDesc.includes('final')
+          || stDesc.includes('complete')
+          || stDesc.includes('finished');
+      })
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    if (!completed.length) return null;
+
+    const ev   = completed[0];
+    const comp = ev.competitions?.[0];
+    const c0   = comp?.competitors?.[0];
+    const c1   = comp?.competitors?.[1];
+    const t0   = toTeam(c0?.team?.displayName || c0?.team?.abbreviation || '');
+    const t1   = toTeam(c1?.team?.displayName || c1?.team?.abbreviation || '');
+    if (!t0 || !t1) return null;
+
+    // Score strings: "174/7 (20)" or just "174/7"
+    const fmt = (c) => {
+      const sc = c?.score || '0';
+      const ov = c?.linescores?.[0]?.value
+        || c?.statistics?.find(s => s.name === 'overs')?.displayValue
+        || '';
+      return ov ? `${sc} (${ov})` : sc;
+    };
+
+    // Determine winner from note/headline
+    const note     = comp?.notes?.[0]?.headline || ev.name || '';
+    const winTeam  = toTeam(note.split(' won')?.[0]?.split(' ')?.pop() || '') || null;
+
+    return {
+      team1:      t0,
+      team2:      t1,
+      team1Score: fmt(c0),
+      team2Score: fmt(c1),
+      winner:     winTeam,
+      result:     note,
+      matchNumber: `Match ${comp?.series?.slug?.match(/\d+$/)?.[0] || ev.id}`,
+      date:       ev.date ? new Date(ev.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }).toUpperCase() : '',
+      venue:      comp?.venue?.fullName || '',
+      status:     'FINISHED',
+      winProbT1:  winTeam === t0 ? 100 : 0,
+      winProbT2:  winTeam === t1 ? 100 : 0,
+      source:     'espn-scoreboard',
+    };
+  } catch (e) {
+    console.log('[scrapeLatestCompletedMatch]', e.message);
+    return null;
+  }
 };
 
 const getFixturesData = async () => {

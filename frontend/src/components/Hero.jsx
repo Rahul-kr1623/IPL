@@ -489,26 +489,43 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           )}
         </div>
 
-        {/* CENTRE — big score */}
+        {/* CENTRE — big score or upcoming countdown */}
         <div className="text-center">
-          {match?.target && currentInnings === 2 && !isFinished && (
-            <p className="text-[10px] font-mono text-gray-500 mb-1 uppercase tracking-widest">
-              Target <span className="text-white">{match.target}</span>
-              {match?.rrr && <span className="ml-3 text-red-400">RRR {match.rrr}</span>}
-            </p>
+          {isUpcoming ? (
+            <>
+              <motion.div
+                animate={{ scale: [1, 1.04, 1] }}
+                transition={{ repeat: Infinity, duration: 2.5 }}
+                className="text-3xl md:text-4xl font-black text-amber-400 tracking-tight mb-3"
+              >
+                {match?.statusText || 'Starting Soon'}
+              </motion.div>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">
+                Toss · Playing XI · Preview
+              </p>
+            </>
+          ) : (
+            <>
+              {match?.target && currentInnings === 2 && !isFinished && (
+                <p className="text-[10px] font-mono text-gray-500 mb-1 uppercase tracking-widest">
+                  Target <span className="text-white">{match.target}</span>
+                  {match?.rrr && <span className="ml-3 text-red-400">RRR {match.rrr}</span>}
+                </p>
+              )}
+              <div className="flex items-center justify-center gap-3">
+                <motion.span key={match?.score}
+                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                  className="text-8xl md:text-[9rem] font-black tracking-tighter text-white">
+                  {match?.score}
+                </motion.span>
+                <span className="text-5xl text-ipl-neon opacity-30 italic">/</span>
+                <span className="text-5xl text-white/40 font-black">{match?.wickets}</span>
+              </div>
+              <p className="font-mono text-ipl-neon text-base tracking-[0.5em] uppercase mt-1 font-black">
+                {match?.overs} OVERS
+              </p>
+            </>
           )}
-          <div className="flex items-center justify-center gap-3">
-            <motion.span key={match?.score}
-              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-              className="text-8xl md:text-[9rem] font-black tracking-tighter text-white">
-              {match?.score}
-            </motion.span>
-            <span className="text-5xl text-ipl-neon opacity-30 italic">/</span>
-            <span className="text-5xl text-white/40 font-black">{match?.wickets}</span>
-          </div>
-          <p className="font-mono text-ipl-neon text-base tracking-[0.5em] uppercase mt-1 font-black">
-            {match?.overs} OVERS
-          </p>
           {match?.crr && !isFinished && (
             <p className="text-[10px] font-mono text-gray-500 mt-1">CRR: {match.crr}</p>
           )}
@@ -564,9 +581,8 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
         </button>
       </div>
 
-      {/* Batter / Bowler HUD */}
-      {/* Batter / Bowler HUD */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ transform: 'translateZ(40px)' }}>
+      {/* Batter / Bowler HUD — hidden for UPCOMING */}
+      {!isUpcoming && <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ transform: 'translateZ(40px)' }}>
 
         {/* Striker */}
         <div className="glass bg-white/5 p-5 rounded-[1.5rem] border border-white/10 flex items-center justify-between">
@@ -642,7 +658,7 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
               </div>
             : <span className="text-gray-700 text-sm">—</span>}
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

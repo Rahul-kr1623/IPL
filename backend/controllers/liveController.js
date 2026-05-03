@@ -18,6 +18,7 @@ import {
 } from '../utils/matchDataEngine.js';
 import { getLatestFinishedFromJson, getAllCompletedFromJson } from '../utils/seasonStore.js';
 import { getMatchIntel } from '../services/geminiService.js';
+import { scrapeLatestCompletedMatch } from '../services/scraperService.js';
 
 // ─── GET /api/v1/live-score ───────────────────────────────────────────────────
 export const getLiveScore = async (req, res) => {
@@ -73,19 +74,23 @@ export const getLatestFinished = async (req, res) => {
     const mongoResult = await getLatestFinishedMatch();
     if (mongoResult) return res.json({ match: mongoResult.toObject(), source: 'liveMatch' });
 
-    // Tier 3: hardcoded COMPLETED_MATCHES array — always returns something
-    // so Box 3 is never empty even on a fresh deploy with no JSON/MongoDB data.
+    // Tier 3: live scrape from ESPN scoreboard (gets yesterday's actual result)
+    try {
+      const scraped = await scrapeLatestCompletedMatch();
+      if (scraped) return res.json({ match: scraped, source: 'espn-scraped' });
+    } catch (e) {
+      console.log('[getLatestFinished] ESPN scrape failed:', e.message);
+    }
+
+    // Tier 4: hardcoded COMPLETED_MATCHES array — absolute last resort
     const last = COMPLETED_MATCHES[COMPLETED_MATCHES.length - 1];
     if (last) {
-      // Convert matchDataEngine shape → seasonStore/frontend shape
       const fallback = {
         team1: last.teamA, team2: last.teamB,
         team1Score: `${last.scoreA}/${last.wA} (${last.ovA})`,
         team2Score: `${last.scoreB}/${last.wB} (${last.ovB})`,
-        winner: last.winner,
-        result: last.result,
-        matchNumber: `Match ${last.id}`,
-        date: last.date,
+        winner: last.winner, result: last.result,
+        matchNumber: `Match ${last.id}`, date: last.date,
         winProbT1: last.winner === last.teamA ? 100 : 0,
         winProbT2: last.winner === last.teamB ? 100 : 0,
         status: 'FINISHED',
