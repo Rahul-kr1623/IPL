@@ -260,6 +260,21 @@ const processSlot = async (slotKey, data) => {
     }
   }
 
+  // Skip saving dataless UPCOMING docs — no point writing 0/0 to DB every 40s.
+  // We save once when a match first appears, then skip until real data arrives.
+  const isDataless = data.status === 'UPCOMING'
+    && (String(data.score) === '0' || !data.score)
+    && !data.target
+    && !data.team1Score;
+
+  if (isDataless) {
+    // Only save if this is the first time we're seeing this match in this slot
+    if (s.lastKey && s.lastScoreStr === '0/0@0.0' && s.sameScoreCount > 1) {
+      console.log(`  [${slotKey}] ⏭ Skipping UPCOMING 0/0 save (already saved)`);
+      return;
+    }
+  }
+
   await saveMatch({ ...data, slot: slotKey });
 };
 

@@ -18,7 +18,11 @@ import {
 } from '../utils/matchDataEngine.js';
 import { getLatestFinishedFromJson, getAllCompletedFromJson } from '../utils/seasonStore.js';
 import { getMatchIntel } from '../services/geminiService.js';
-import { scrapeLatestCompletedMatch } from '../services/scraperService.js';
+import { scrapeLatestCompletedMatch, scrapeAllSlots } from '../services/scraperService.js';
+
+// Simple in-memory cache of last known good slot data (survives MongoDB empty state)
+const slotFallbackCache = { slot1: null, slot2: null, fetchedAt: 0 };
+const SLOT_CACHE_MS = 50_000; // 50 seconds — slightly longer than the 40s poll
 
 // ─── GET /api/v1/live-score ───────────────────────────────────────────────────
 export const getLiveScore = async (req, res) => {
@@ -39,11 +43,26 @@ export const getLiveScore = async (req, res) => {
       _stale: (now - new Date(d.lastUpdated).getTime()) > 10 * 60 * 1000,
     });
 
+    // ── Filter out "dataless" docs: score=0, no target, no first-innings score ──
+    // These are stale pre-match documents saved before the isDatalessLive fix.
+    // They show as LIVE with 0/0 which misleads the frontend.
+    const isDataless = (d) =>
+      (d.score === '0' || d.score === 0 || !d.score) &&
+      (!d.target || d.target === 'N/A') &&
+      (!d.team1Score || d.team1Score === 'N/A') &&
+      d.status !== 'UPCOMING';   // keep genuine UPCOMING docs (from new fix)
+
+    const validDocs = docs.filter(d => !isDataless(d));
+    // If all docs are dataless, still return them as UPCOMING (best effort)
+    const docsToProcess = validDocs.length > 0 ? validDocs : docs.map(d => ({
+      ...d, status: 'UPCOMING',
+    }));
+
     const bySlot = { slot1: null, slot2: null };
-    for (const d of docs) {
+    for (const d of docsToProcess) {
       const slotKey = d.slot === 'slot2' ? 'slot2' : 'slot1';
       if (!bySlot[slotKey] ||
-        new Date(d.lastUpdated) > new Date(bySlot[slotKey].lastUpdated)) {
+        new Date(d.lastUpdated) > new Date(bySlot[slotKey]?.lastUpdated || 0)) {
         bySlot[slotKey] = d;
       }
     }
@@ -53,9 +72,35 @@ export const getLiveScore = async (req, res) => {
 
     if (slot1 && slot2 && slot1.matchId === slot2.matchId) slot1 = null;
 
+    // ── Fallback: if any slot is empty, try live scraper then cache ──────
+    // This handles the case where MongoDB has no valid document for a slot
+    // (e.g. stale 0/0 docs were filtered out, or fresh deploy with empty DB).
+    if (!slot1 || !slot2) {
+      const cacheAge = Date.now() - slotFallbackCache.fetchedAt;
+      if (cacheAge > SLOT_CACHE_MS) {
+        // Cache stale — hit the scraper directly
+        try {
+          const fresh = await scrapeAllSlots();
+          if (fresh.slot1) slotFallbackCache.slot1 = fresh.slot1;
+          if (fresh.slot2) slotFallbackCache.slot2 = fresh.slot2;
+          slotFallbackCache.fetchedAt = Date.now();
+          console.log(`[getLiveScore] Direct scrape fallback: slot1=${fresh.slot1?.team1?.name || 'empty'} slot2=${fresh.slot2?.team1?.name || 'empty'}`);
+        } catch (e) {
+          console.log('[getLiveScore] Direct scrape fallback failed:', e.message);
+        }
+      }
+      if (!slot1 && slotFallbackCache.slot1) slot1 = slotFallbackCache.slot1;
+      if (!slot2 && slotFallbackCache.slot2) slot2 = slotFallbackCache.slot2;
+    } else {
+      // Good data — update cache
+      slotFallbackCache.slot1 = slot1;
+      slotFallbackCache.slot2 = slot2;
+      slotFallbackCache.fetchedAt = Date.now();
+    }
+
     return res.json({
       slot1, slot2,
-      matches: docs.map(mapDoc),
+      matches: [slot1, slot2].filter(Boolean),
       _stale: slot1?._stale || slot2?._stale || false,
     });
   } catch (err) {
@@ -77,7 +122,11 @@ export const getLatestFinished = async (req, res) => {
     // Tier 3: live scrape from ESPN scoreboard (gets yesterday's actual result)
     try {
       const scraped = await scrapeLatestCompletedMatch();
-      if (scraped) return res.json({ match: scraped, source: 'espn-scraped' });
+      if (scraped) {
+        // Attach source so MatchContext priority logic can distinguish real vs hardcoded
+        const result = { ...scraped, source: 'espn-scraped', _source: 'espn-scraped' };
+        return res.json({ match: result, source: 'espn-scraped' });
+      }
     } catch (e) {
       console.log('[getLatestFinished] ESPN scrape failed:', e.message);
     }

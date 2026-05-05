@@ -16,7 +16,12 @@ const loadLS = (key) => {
 };
 
 const cachedSlots    = loadLS(LS_SLOTS);
-const cachedFinished = loadLS(LS_FINISHED);
+const cachedFinishedRaw = loadLS(LS_FINISHED);
+// Clear stale hardcoded cache so fresh ESPN data isn't blocked
+const cachedFinished = (cachedFinishedRaw?.data?._source === 'hardcoded' ||
+                        cachedFinishedRaw?.data?.source  === 'hardcoded')
+  ? null
+  : cachedFinishedRaw;
 
 // ─── Initial state ──────────────────────────────────────────────────────────
 const initialState = {
@@ -101,19 +106,32 @@ const reducer = (state, action) => {
     case 'SET_LATEST_FINISHED': {
       const m = action.payload;
       if (!m) return state;
-      // Check if this is genuinely a new match (different teams or different date)
+
       const prev = state.latestFinished;
-      const isNew = !prev ||
-        (prev.team1 !== m.team1 || prev.team2 !== m.team2) ||
-        (prev.matchId && m.matchId && prev.matchId !== m.matchId);
-      if (!isNew) return state; // same match pushed again — ignore
-      saveLS(LS_FINISHED, m);
-      // Queue behaviour: new result replaces the old one (max 1 in the queue).
-      // When a second match finishes, push it in and discard the previous.
+
+      // Source priority: espn-scraped > json > liveMatch > hardcoded
+      // Always accept a better-sourced result, even if teams look the same.
+      // Only block if the incoming data is 'hardcoded' AND we already have
+      // real data (to avoid overwriting a fresh ESPN result with stale static data).
+      const incomingSource = m._source || m.source || 'unknown';
+      const prevSource     = prev?._source || prev?.source || 'unknown';
+      const hardcodedSources = ['hardcoded', 'unknown'];
+      const realSources      = ['espn-scraped', 'json', 'liveMatch'];
+
+      if (
+        prev &&
+        hardcodedSources.includes(incomingSource) &&
+        realSources.includes(prevSource)
+      ) {
+        return state; // don't overwrite real data with hardcoded fallback
+      }
+
+      // Always save and update
+      saveLS(LS_FINISHED, { ...m, _source: incomingSource });
       return {
         ...state,
-        latestFinished: m,
-        finishedQueue:  [m],  // always exactly 1 — previous is evicted
+        latestFinished: { ...m, _source: incomingSource },
+        finishedQueue:  [m],
       };
     }
 
@@ -235,7 +253,8 @@ export const MatchProvider = ({ children }) => {
     };
 
     fetchFinished();
-    const t = setInterval(fetchFinished, 5 * 60 * 1000);
+    // Poll every 2 minutes instead of 5 — ensures Box 3 updates quickly
+    const t = setInterval(fetchFinished, 2 * 60 * 1000);
     return () => { cancelled = true; clearInterval(t); };
   }, []);
 
