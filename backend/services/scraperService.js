@@ -258,24 +258,35 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     return raw ? normalizeOvers(String(raw)) : null;
   })();
 
-  // Pre-read on-strike batter, non-striker, bowler from situation
-  const situationStriker = situation.onStrike?.athlete?.displayName
-    || situation.batter?.athlete?.displayName
-    || situation.pitcher?.battingAthlete?.displayName
-    || null;
-  const situationNonStriker = situation.nonStrike?.athlete?.displayName
-    || situation.nonStriker?.athlete?.displayName
-    || null;
-  const situationBowler = situation.pitcher?.athlete?.displayName
-    || situation.bowler?.athlete?.displayName
-    || null;
-  const situationBatterRuns   = parseInt(situation.onStrike?.runs ?? situation.batter?.runs ?? situation.onStrike?.score ?? 0) || 0;
-  const situationBatterBalls  = parseInt(situation.onStrike?.balls ?? situation.batter?.balls ?? 0) || 0;
-  const situationNsRuns       = parseInt(situation.nonStrike?.runs ?? situation.nonStriker?.runs ?? 0) || 0;
-  const situationNsBalls      = parseInt(situation.nonStrike?.balls ?? situation.nonStriker?.balls ?? 0) || 0;
-  const situationBowlerWkts   = parseInt(situation.pitcher?.wickets ?? 0) || 0;
-  const situationBowlerRuns   = parseInt(situation.pitcher?.runs ?? 0) || 0;
-  const situationBowlerOvers  = normalizeOvers(String(situation.pitcher?.overs ?? situation.pitcher?.over ?? '0'));
+  // ESPN cricket situation field names vary by region/endpoint:
+  //   batter / onBatter / onStrike / striker  → current striker
+  //   nonStriker / offBatter / nonStrike      → non-striker
+  //   pitcher / bowler / currentBowler        → current bowler
+  const _sn = (o) => o?.athlete?.displayName || o?.displayName || null;
+  const _sr = (o) => parseInt(o?.runs ?? o?.score ?? 0) || 0;
+  const _sb = (o) => parseInt(o?.balls ?? o?.facedBalls ?? 0) || 0;
+
+  const situationBatterSrc = situation.batter || situation.onBatter || situation.onStrike || situation.striker || {};
+  const situationNsSrc     = situation.nonStriker || situation.offBatter || situation.nonStrike || {};
+  const situationBowlSrc   = situation.pitcher || situation.bowler || situation.currentBowler || {};
+
+  const situationStriker    = _sn(situationBatterSrc) || null;
+  const situationNonStriker = _sn(situationNsSrc)     || null;
+  const situationBowler     = _sn(situationBowlSrc)   || null;
+
+  const situationBatterRuns  = _sr(situationBatterSrc);
+  const situationBatterBalls = _sb(situationBatterSrc);
+  const situationBatterFours = parseInt(situationBatterSrc.fours ?? situationBatterSrc['4s'] ?? 0) || 0;
+  const situationBatterSixes = parseInt(situationBatterSrc.sixes ?? situationBatterSrc['6s'] ?? 0) || 0;
+  const situationNsRuns      = _sr(situationNsSrc);
+  const situationNsBalls     = _sb(situationNsSrc);
+  const situationBowlerWkts  = parseInt(situationBowlSrc.wickets ?? 0) || 0;
+  const situationBowlerRuns  = parseInt(situationBowlSrc.runs ?? situationBowlSrc.conceded ?? 0) || 0;
+  const situationBowlerOvers = normalizeOvers(String(situationBowlSrc.overs ?? situationBowlSrc.over ?? '0'));
+
+  if (situationStriker || situationBowler) {
+    console.log(`  [ESPN] situation players: striker=${situationStriker||'none'} ns=${situationNonStriker||'none'} bowler=${situationBowler||'none'}`);
+  }
 
   // ── STATUS ─────────────────────────────────────────────────────────────────
   const stType = header.status?.type || {};
@@ -654,7 +665,8 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
       name:     situationStriker,
       runs:     situationBatterRuns,
       balls:    situationBatterBalls,
-      fours:    0, sixes: 0,
+      fours:    situationBatterFours,
+      sixes:    situationBatterSixes,
       sr:       situationBatterBalls > 0
         ? parseFloat((situationBatterRuns / situationBatterBalls * 100).toFixed(1))
         : 0,
@@ -834,17 +846,33 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         const bowlingTeamName = currentInningsNum === 1 ? team2Name : team1Name;
         const sbBatComp = (sbComp.competitors || []).find(c => toTeam(c.team?.displayName || c.team?.abbreviation || '') === battingTeamName);
         const sbBowlComp = (sbComp.competitors || []).find(c => toTeam(c.team?.displayName || c.team?.abbreviation || '') === bowlingTeamName);
-        // Try linescores for batter names
-        const ls = sbComp.linescores || sbComp.situation || {};
-        if (ls.onStrike?.athlete?.displayName) {
-          batsmen.push({ name: ls.onStrike.athlete.displayName, runs: parseInt(ls.onStrike.runs ?? 0), balls: parseInt(ls.onStrike.balls ?? 0), fours: 0, sixes: 0, sr: '0.0', onStrike: true });
+        // Try situation from the scoreboard competition object
+        // ESPN cricket puts situation on the competition, not competitor
+        const sbSit = sbComp.situation || {};
+        const sbBatSrc   = sbSit.batter || sbSit.onBatter || sbSit.onStrike || sbSit.striker || {};
+        const sbNsSrc    = sbSit.nonStriker || sbSit.offBatter || sbSit.nonStrike || {};
+        const sbBowlSrc  = sbSit.pitcher || sbSit.bowler || sbSit.currentBowler || {};
+        const sbStriker  = _sn(sbBatSrc);
+        const sbNs       = _sn(sbNsSrc);
+        const sbBowlName = _sn(sbBowlSrc);
+
+        if (sbStriker) {
+          batsmen.push({ name: sbStriker, runs: _sr(sbBatSrc), balls: _sb(sbBatSrc), fours: parseInt(sbBatSrc.fours??0), sixes: parseInt(sbBatSrc.sixes??0), sr: _sb(sbBatSrc)>0 ? parseFloat((_sr(sbBatSrc)/_sb(sbBatSrc)*100).toFixed(1)) : 0, onStrike: true });
+          console.log(`  [Batsmen] S6 sbSit.batter: ${sbStriker}`);
         }
-        if (ls.nonStrike?.athlete?.displayName) {
-          batsmen.push({ name: ls.nonStrike.athlete.displayName, runs: parseInt(ls.nonStrike.runs ?? 0), balls: parseInt(ls.nonStrike.balls ?? 0), fours: 0, sixes: 0, sr: '0.0', onStrike: false });
+        if (sbNs) {
+          batsmen.push({ name: sbNs, runs: _sr(sbNsSrc), balls: _sb(sbNsSrc), fours: 0, sixes: 0, sr: _sb(sbNsSrc)>0 ? parseFloat((_sr(sbNsSrc)/_sb(sbNsSrc)*100).toFixed(1)) : 0, onStrike: false });
         }
-        // Bowler from situation
-        if (bowlers.length === 0 && ls.pitcher?.athlete?.displayName) {
-          bowlers.push({ name: ls.pitcher.athlete.displayName, overs: '0', maidens: 0, runs: parseInt(ls.pitcher.runs ?? 0), wickets: parseInt(ls.pitcher.wickets ?? 0), economy: '0.0' });
+        if (bowlers.length === 0 && sbBowlName) {
+          bowlers.push({ name: sbBowlName, overs: normalizeOvers(String(sbBowlSrc.overs??'0')), maidens: 0, runs: _sr(sbBowlSrc), wickets: parseInt(sbBowlSrc.wickets??0), economy: '0.0' });
+          console.log(`  [Bowlers] S6 sbSit.pitcher: ${sbBowlName}`);
+        }
+        // Fallback: linescores (older ESPN format)
+        if (batsmen.length === 0) {
+          const ls = sbComp.linescores || {};
+          if (_sn(ls.onStrike)) batsmen.push({ name: _sn(ls.onStrike), runs: _sr(ls.onStrike), balls: _sb(ls.onStrike), fours: 0, sixes: 0, sr: '0.0', onStrike: true });
+          if (_sn(ls.nonStrike)) batsmen.push({ name: _sn(ls.nonStrike), runs: _sr(ls.nonStrike), balls: _sb(ls.nonStrike), fours: 0, sixes: 0, sr: '0.0', onStrike: false });
+          if (bowlers.length===0 && _sn(ls.pitcher)) bowlers.push({ name: _sn(ls.pitcher), overs: '0', maidens: 0, runs: _sr(ls.pitcher), wickets: parseInt(ls.pitcher?.wickets??0), economy: '0.0' });
         }
         // Try competitor athletes as final fallback
         if (batsmen.length === 0 && sbBatComp?.athletes?.length) {
@@ -1242,30 +1270,109 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
 };
 
 // ─── Scrape latest completed match from ESPN ─────────────────────────────────
-// Used by liveController as a live fallback for Box 3 when JSON + MongoDB are empty.
-// ESPN scoreboard lists recently completed matches alongside live ones.
+// ESPN scoreboard only has TODAY's events. To get yesterday's completed match
+// we try multiple ESPN endpoints in priority order:
+//   1. /scoreboard  — has today's matches including any that just finished today
+//   2. /events?completed=true — dedicated completed events feed
+//   3. Last entry of COMPLETED_MATCHES hardcoded array — absolute fallback
 export const scrapeLatestCompletedMatch = async () => {
+  const isCompleted = (ev) => {
+    const n = ev.status?.type?.name || '';
+    const d = (ev.status?.type?.description || ev.status?.type?.detail || '').toLowerCase();
+    const c = ev.status?.type?.completed === true;
+    return c || n === 'STATUS_FINAL' || d.includes('final') || d.includes('result') || d.includes('won');
+  };
+
+  const parseEvent = (ev) => {
+    const comp = ev.competitions?.[0] || ev;
+    // Try both orderings: home/away vs competitors array
+    const comps = comp.competitors || [];
+    const c0 = comps[0];
+    const c1 = comps[1];
+    if (!c0 || !c1) return null;
+    const t0 = toTeam(c0.team?.displayName || c0.team?.abbreviation || c0.name || '');
+    const t1 = toTeam(c1.team?.displayName || c1.team?.abbreviation || c1.name || '');
+    if (!t0 || !t1) return null;
+
+    const fmt = (c) => {
+      const sc = c?.score || '0';
+      const ov = c?.linescores?.[0]?.value
+        || (c?.statistics || []).find(s => s.name === 'overs')?.displayValue
+        || '';
+      return ov ? `${sc} (${ov})` : sc;
+    };
+
+    const note    = (comp.notes || []).find(n => n.headline)?.headline
+      || (comp.notes || [])[0]?.headline
+      || ev.name || ev.shortName || '';
+    const winComp = comps.find(c => c.winner === true);
+    const winTeam = winComp
+      ? toTeam(winComp.team?.displayName || winComp.team?.abbreviation || '')
+      : (toTeam(note.split(' won')?.[0]?.trim()?.split(' ')?.pop() || '') || null);
+
+    const dateStr = ev.date || comp.date || '';
+    const dateLabel = dateStr
+      ? new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
+      : '';
+
+    return {
+      team1: t0, team2: t1,
+      team1Score: fmt(c0), team2Score: fmt(c1),
+      winner: winTeam, result: note,
+      matchNumber: `Match ${comp.id || ev.id || ''}`,
+      date: dateLabel, venue: comp.venue?.fullName || '',
+      status: 'FINISHED',
+      winProbT1: winTeam === t0 ? 100 : 0,
+      winProbT2: winTeam === t1 ? 100 : 0,
+      source: 'espn-scraped', _source: 'espn-scraped',
+    };
+  };
+
+  // Try scoreboard first (has today's completed + live matches)
+  try {
+    const sb = await fetchJSON(
+      `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+      {}, 'ESPN scoreboard (completed check)'
+    );
+    const events = sb?.events || [];
+    const done = events.filter(isCompleted).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    if (done.length) {
+      const parsed = parseEvent(done[0]);
+      if (parsed) { console.log(`[scrapeCompleted] scoreboard: ${parsed.team1} vs ${parsed.team2} — ${parsed.result}`); return parsed; }
+    }
+  } catch (e) { console.log('[scrapeCompleted] scoreboard failed:', e.message); }
+
+  // Try ESPN events endpoint with a date range (last 7 days)
+  try {
+    const today = new Date();
+    const weekAgo = new Date(today - 7 * 86400000);
+    const fmt2 = d => d.toISOString().slice(0, 10).replace(/-/g, '');
+    const url = `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard?dates=${fmt2(weekAgo)}-${fmt2(today)}`;
+    const data = await fetchJSON(url, {}, 'ESPN events (date range)');
+    const events = data?.events || [];
+    const done = events.filter(isCompleted).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    if (done.length) {
+      const parsed = parseEvent(done[0]);
+      if (parsed) { console.log(`[scrapeCompleted] date-range: ${parsed.team1} vs ${parsed.team2} — ${parsed.result}`); return parsed; }
+    }
+  } catch (e) { console.log('[scrapeCompleted] date-range failed:', e.message); }
+
+  console.log('[scrapeCompleted] all ESPN sources failed — returning null');
+  return null;
+};
+
+// (unused stub kept for import compatibility)
+const _scrapeLatestCompletedMatchOLD = async () => {
   try {
     const sb = await fetchJSON(
       `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
       {}, 'ESPN scoreboard (completed)'
     );
     if (!sb?.events?.length) return null;
-
-    // Find the most recently completed IPL match
     const completed = sb.events
-      .filter(ev => {
-        const stName = ev.status?.type?.name || '';
-        const stDesc = (ev.status?.type?.description || '').toLowerCase();
-        return stName === 'STATUS_FINAL'
-          || stDesc.includes('final')
-          || stDesc.includes('complete')
-          || stDesc.includes('finished');
-      })
+      .filter(ev => { const stName = ev.status?.type?.name || ''; const stDesc = (ev.status?.type?.description || '').toLowerCase(); return stName === 'STATUS_FINAL' || stDesc.includes('final') || stDesc.includes('complete') || stDesc.includes('finished'); })
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
     if (!completed.length) return null;
-
     const ev   = completed[0];
     const comp = ev.competitions?.[0];
     const c0   = comp?.competitors?.[0];
@@ -1273,17 +1380,7 @@ export const scrapeLatestCompletedMatch = async () => {
     const t0   = toTeam(c0?.team?.displayName || c0?.team?.abbreviation || '');
     const t1   = toTeam(c1?.team?.displayName || c1?.team?.abbreviation || '');
     if (!t0 || !t1) return null;
-
-    // Score strings: "174/7 (20)" or just "174/7"
-    const fmt = (c) => {
-      const sc = c?.score || '0';
-      const ov = c?.linescores?.[0]?.value
-        || c?.statistics?.find(s => s.name === 'overs')?.displayValue
-        || '';
-      return ov ? `${sc} (${ov})` : sc;
-    };
-
-    // Determine winner from note/headline
+    const fmt = (c) => { const sc = c?.score || '0'; const ov = c?.linescores?.[0]?.value || c?.statistics?.find(s => s.name === 'overs')?.displayValue || ''; return ov ? `${sc} (${ov})` : sc; };
     const note     = comp?.notes?.[0]?.headline || ev.name || '';
     const winTeam  = toTeam(note.split(' won')?.[0]?.split(' ')?.pop() || '') || null;
 
@@ -2222,6 +2319,14 @@ export const debugEspnDump = async (req, res) => {
       hasTeamStats: !!gpkg.teamStats,
       hasMomentum: !!gpkg.momentum,
       hasPartnership: !!gpkg.partnership,
+      // Situation dump — critical for debugging striker/bowler data
+      situation: summary.header?.competitions?.[0]?.situation || 'NOT PRESENT',
+      situationKeys: Object.keys(summary.header?.competitions?.[0]?.situation || {}),
+      headerStatus: summary.header?.competitions?.[0]?.status?.type,
+      headerNotes: (summary.header?.competitions?.[0]?.notes || []).slice(0, 5),
+      headerCompetitors: (summary.header?.competitions?.[0]?.competitors || []).map(c => ({
+        team: c.team?.abbreviation, score: c.score, winner: c.winner,
+      })),
     });
 
   } catch (e) {

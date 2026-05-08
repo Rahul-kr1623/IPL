@@ -351,19 +351,26 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
   const battingTeam  = effectiveInnings === 1 ? t1 : t2;
   const fieldingTeam = effectiveInnings === 1 ? t2 : t1;
 
-  // Display convention: right side = batting (bright), left side = fielding (dimmed)
-  const leftTeam  = fieldingTeam;
-  const rightTeam = battingTeam;
-  const leftLogo  = getLogo(leftTeam);
-  const rightLogo = getLogo(rightTeam);
+  // ── FIXED POSITIONS: team1 always LEFT, team2 always RIGHT ────────────
+  // The batting badge moves dynamically to whoever is batting.
+  // This avoids the confusion of teams swapping sides between innings.
+  const leftTeam  = t1;   // team1 — always left
+  const rightTeam = t2;   // team2 — always right
+  const leftLogo  = getLogo(t1);
+  const rightLogo = getLogo(t2);
 
-  // Left team's completed innings score (only available in 2nd innings)
+  // Which side is batting?
+  const leftIsBatting  = effectiveInnings === 1;  // team1 bats first
+  const rightIsBatting = effectiveInnings === 2;  // team2 chases
+
+  // Completed innings score: team1's completed score shows under LEFT in 2nd innings
   const leftScoreDisplay = effectiveInnings === 2 && match?.team1Score
     ? `${match.team1Score}${match.team1Wickets != null ? '/' + match.team1Wickets : ''} (${match.team1Overs || '20.0'})`.replace(/\/+$/, '')
     : null;
 
-  const leftProb  = effectiveInnings === 1 ? (match?.winProbT2 ?? 50) : (match?.winProbT1 ?? 50);
-  const rightProb = effectiveInnings === 1 ? (match?.winProbT1 ?? 50) : (match?.winProbT2 ?? 50);
+  // Win probability — always team1 on left, team2 on right
+  const leftProb  = match?.winProbT1 ?? 50;
+  const rightProb = match?.winProbT2 ?? 50;
   let finalLeftProb = leftProb, finalRightProb = rightProb;
   if (isFinished && match?.result) {
     const w = (match.result || '').toUpperCase();
@@ -391,10 +398,9 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
 
   // Left side label: "1st Innings" when right team is batting 1st, else completed score label
   // Right side label: only show "Currently Batting" once play has started
-  // Left badge: show "1st Innings" when left team (fielding team) already batted
-  const leftBadgeText = effectiveInnings === 2 ? '1st Innings' : null;
-
-  const rightBadgeText = isFinished
+  // Badge logic — badges appear under the relevant team
+  // "Currently Batting" goes under the team that is actually batting
+  const battingBadgeText = isFinished
     ? 'Match Over'
     : isUpcoming ? (match?.statusText || 'Upcoming')
       : match?.status === 'INNINGS BREAK' ? 'Innings Break'
@@ -404,13 +410,22 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
               : isLive ? 'Toss Awaited'
                 : (match?.status || '');
 
-  const rightBadgeCls = isFinished
+  const battingBadgeCls = isFinished
     ? 'bg-green-500/20 text-green-400'
     : match?.status === 'INNINGS BREAK' ? 'bg-yellow-500/20 text-yellow-400'
       : match?.status === 'RAIN DELAY' ? 'bg-blue-500/20 text-blue-400'
         : match?.status === 'SUPER OVER' ? 'bg-purple-500/20 text-purple-400'
           : (isLive && playStarted) ? 'bg-ipl-neon/20 text-ipl-neon'
             : 'bg-white/10 text-gray-400';
+
+  // leftBadge = batting badge if team1 is batting, else "1st Innings" if team1 has batted
+  const leftBadgeText  = leftIsBatting ? battingBadgeText
+    : (effectiveInnings === 2 ? '1st Innings' : null);
+  const leftBadgeCls   = leftIsBatting ? battingBadgeCls : 'bg-white/10 text-gray-500';
+
+  // rightBadge = batting badge if team2 is batting
+  const rightBadgeText = rightIsBatting ? battingBadgeText : null;
+  const rightBadgeCls  = rightIsBatting ? battingBadgeCls : '';
 
   return (
     <div className="relative">
@@ -468,24 +483,37 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
       <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-8"
         style={{ transform: 'translateZ(100px)' }}>
 
-        {/* LEFT — not currently batting (dimmed) */}
-        <div className="text-center opacity-40 hover:opacity-70 transition-opacity">
-          {leftLogo
-            ? <img src={leftLogo} alt={leftTeam} className="w-28 md:w-36 mx-auto drop-shadow-2xl" />
-            : <div className="w-32 h-20 mx-auto flex items-center justify-center">
-              <span className="text-3xl font-black text-gray-400">{leftTeam}</span>
-            </div>}
-          <h2 className="text-lg font-bold mt-3 tracking-widest text-gray-400 uppercase">{leftTeam}</h2>
+        {/* LEFT — team1 (always left, dimmed when fielding) */}
+        <div className={`text-center transition-opacity ${leftIsBatting ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}>
+          <div className="relative inline-block">
+            {leftLogo
+              ? <img src={leftLogo} alt={leftTeam}
+                  className={`w-28 md:w-36 mx-auto drop-shadow-2xl ${leftIsBatting && isLive && playStarted ? 'animate-pulse' : ''}`} />
+              : <div className="w-32 h-20 mx-auto flex items-center justify-center">
+                  <span className={`text-3xl font-black ${leftIsBatting ? 'text-white' : 'text-gray-400'}`}>{leftTeam}</span>
+                </div>}
+            {leftIsBatting && isLive && playStarted && (
+              <Activity className="absolute -top-2 -right-2 w-5 h-5 text-ipl-neon animate-bounce" />
+            )}
+          </div>
+          <h2 className={`text-lg font-bold mt-3 tracking-widest uppercase ${leftIsBatting ? 'text-white italic text-xl font-black' : 'text-gray-400'}`}>
+            {leftTeam}
+          </h2>
           {leftScoreDisplay
             ? <p className="text-sm font-mono mt-1 text-gray-500">{leftScoreDisplay}</p>
-            : <p className="text-xs text-gray-600 mt-1">
-              {currentInnings === 1 ? 'Yet to bat' : null}
-            </p>
+            : !leftIsBatting
+              ? <p className="text-xs text-gray-600 mt-1">Yet to bat</p>
+              : null
           }
           {leftBadgeText && (
-            <span className="text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase bg-white/10 text-gray-500 mt-1 inline-block">
+            <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase mt-1 inline-block ${leftBadgeCls}`}>
               {leftBadgeText}
             </span>
+          )}
+          {isLive && playStarted && (
+            <p className="text-[8px] text-gray-600 mt-1 uppercase tracking-widest">
+              {leftIsBatting ? (effectiveInnings === 1 ? '1st Innings' : '2nd Innings') : ''}
+            </p>
           )}
         </div>
 
@@ -543,25 +571,33 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
           )}
         </div>
 
-        {/* RIGHT — currently batting */}
-        <div className="text-center">
-          <div className="relative">
+        {/* RIGHT — team2 (always right, dimmed when fielding) */}
+        <div className={`text-center transition-opacity ${rightIsBatting ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}>
+          <div className="relative inline-block">
             {rightLogo
               ? <img src={rightLogo} alt={rightTeam}
-                className={`w-28 md:w-40 mx-auto drop-shadow-2xl ${(isLive && playStarted) ? 'animate-pulse' : ''}`} />
+                  className={`w-28 md:w-40 mx-auto drop-shadow-2xl ${rightIsBatting && isLive && playStarted ? 'animate-pulse' : ''}`} />
               : <div className="w-32 h-20 mx-auto flex items-center justify-center">
-                <span className="text-3xl font-black text-white">{rightTeam}</span>
-              </div>}
-            {(isLive && playStarted) && <Activity className="absolute -top-2 -right-2 w-5 h-5 text-ipl-neon animate-bounce" />}
+                  <span className={`text-3xl font-black ${rightIsBatting ? 'text-white' : 'text-gray-400'}`}>{rightTeam}</span>
+                </div>}
+            {rightIsBatting && isLive && playStarted && (
+              <Activity className="absolute -top-2 -right-2 w-5 h-5 text-ipl-neon animate-bounce" />
+            )}
           </div>
-          <h2 className="text-xl font-black mt-3 tracking-tighter text-white uppercase italic">{rightTeam}</h2>
-          <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase ${rightBadgeCls}`}>
-            {rightBadgeText}
-          </span>
-          {/* Show innings label */}
-          {isLive && playStarted && (
+          <h2 className={`mt-3 tracking-tighter uppercase ${rightIsBatting ? 'text-xl font-black text-white italic' : 'text-lg font-bold text-gray-400'}`}>
+            {rightTeam}
+          </h2>
+          {rightBadgeText && (
+            <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase ${rightBadgeCls}`}>
+              {rightBadgeText}
+            </span>
+          )}
+          {!rightIsBatting && effectiveInnings === 1 && (
+            <p className="text-xs text-gray-600 mt-1">Yet to bat</p>
+          )}
+          {isLive && playStarted && rightIsBatting && (
             <p className="text-[8px] text-gray-600 mt-1 uppercase tracking-widest">
-              {effectiveInnings === 1 ? '1st Innings' : '2nd Innings'}
+              {effectiveInnings === 2 ? '2nd Innings' : '1st Innings'}
             </p>
           )}
         </div>
@@ -569,7 +605,7 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
 
       {/* Win probability */}
       <div className="mb-8 px-2" style={{ transform: 'translateZ(60px)' }}>
-        <WinProbMeter leftTeam={leftTeam} leftProb={finalLeftProb} rightTeam={rightTeam} rightProb={finalRightProb} />
+        <WinProbMeter leftTeam={leftTeam} leftProb={leftProb} rightTeam={rightTeam} rightProb={rightProb} />
       </div>
 
       {/* Scorecard button */}

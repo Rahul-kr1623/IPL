@@ -17,11 +17,21 @@ const loadLS = (key) => {
 
 const cachedSlots    = loadLS(LS_SLOTS);
 const cachedFinishedRaw = loadLS(LS_FINISHED);
-// Clear stale hardcoded cache so fresh ESPN data isn't blocked
-const cachedFinished = (cachedFinishedRaw?.data?._source === 'hardcoded' ||
-                        cachedFinishedRaw?.data?.source  === 'hardcoded')
-  ? null
-  : cachedFinishedRaw;
+// Clear stale cache when:
+//   1. Source is 'hardcoded' (static fallback — not real data)
+//   2. Cache is older than 12 hours (ESPN result may have changed)
+//   3. No source tag at all (very old cache before source tracking)
+const cachedFinishedAge = cachedFinishedRaw?.savedAt
+  ? Date.now() - new Date(cachedFinishedRaw.savedAt).getTime()
+  : Infinity;
+const cachedFinishedIsStale =
+  !cachedFinishedRaw ||
+  cachedFinishedRaw?.data?._source === 'hardcoded' ||
+  cachedFinishedRaw?.data?.source  === 'hardcoded' ||
+  (!cachedFinishedRaw?.data?._source && !cachedFinishedRaw?.data?.source) ||
+  cachedFinishedAge > 12 * 60 * 60 * 1000;  // older than 12h
+
+const cachedFinished = cachedFinishedIsStale ? null : cachedFinishedRaw;
 
 // ─── Initial state ──────────────────────────────────────────────────────────
 const initialState = {
@@ -107,31 +117,25 @@ const reducer = (state, action) => {
       const m = action.payload;
       if (!m) return state;
 
-      const prev = state.latestFinished;
-
-      // Source priority: espn-scraped > json > liveMatch > hardcoded
-      // Always accept a better-sourced result, even if teams look the same.
-      // Only block if the incoming data is 'hardcoded' AND we already have
-      // real data (to avoid overwriting a fresh ESPN result with stale static data).
       const incomingSource = m._source || m.source || 'unknown';
-      const prevSource     = prev?._source || prev?.source || 'unknown';
-      const hardcodedSources = ['hardcoded', 'unknown'];
-      const realSources      = ['espn-scraped', 'json', 'liveMatch'];
 
-      if (
-        prev &&
-        hardcodedSources.includes(incomingSource) &&
-        realSources.includes(prevSource)
-      ) {
-        return state; // don't overwrite real data with hardcoded fallback
+      // Only block hardcoded data if we already have real ESPN/JSON data
+      // saved THIS session (not from localStorage — that's cleared on stale).
+      const prev = state.latestFinished;
+      const prevSource = prev?._source || prev?.source || '';
+      const prevIsReal = ['espn-scraped', 'json', 'liveMatch'].includes(prevSource);
+      const incomingIsHardcoded = incomingSource === 'hardcoded';
+
+      if (prevIsReal && incomingIsHardcoded) {
+        return state; // don't downgrade real→hardcoded
       }
 
-      // Always save and update
-      saveLS(LS_FINISHED, { ...m, _source: incomingSource });
+      const merged = { ...m, _source: incomingSource };
+      saveLS(LS_FINISHED, merged);
       return {
         ...state,
-        latestFinished: { ...m, _source: incomingSource },
-        finishedQueue:  [m],
+        latestFinished: merged,
+        finishedQueue:  [merged],
       };
     }
 
