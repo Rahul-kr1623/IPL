@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
-const LS_SLOTS    = 'ipl_live_slots_v2';
+const LS_SLOTS = 'ipl_live_slots_v2';
 const LS_FINISHED = 'ipl_last_finished';
-const LS_THEME    = 'ipl_theme';
+const LS_THEME = 'ipl_theme';
 
 const saveLS = (key, data) => {
   try { localStorage.setItem(key, JSON.stringify({ data, savedAt: new Date().toISOString() })); } catch { }
@@ -15,30 +15,40 @@ const loadLS = (key) => {
   } catch { return null; }
 };
 
-const cachedSlots    = loadLS(LS_SLOTS);
+const cachedSlots = loadLS(LS_SLOTS);
 const cachedFinishedRaw = loadLS(LS_FINISHED);
-// Clear stale cache when:
-//   1. Source is 'hardcoded' (static fallback — not real data)
-//   2. Cache is older than 12 hours (ESPN result may have changed)
-//   3. No source tag at all (very old cache before source tracking)
+// Determine if the cached finished match is stale and should be cleared:
+//   1. No cache at all
+//   2. Source is 'hardcoded' or missing (not from a live API)
+//   3. Older than 12 hours
+//   4. It's the known stale hardcoded match (PBKS vs LSG, Apr 19) —
+//      explicitly nuke it regardless of source tag
 const cachedFinishedAge = cachedFinishedRaw?.savedAt
   ? Date.now() - new Date(cachedFinishedRaw.savedAt).getTime()
   : Infinity;
+const _cd = cachedFinishedRaw?.data;
+const _isKnownStale =
+  (_cd?.team1 === 'PBKS' && _cd?.team2 === 'LSG' && _cd?.date?.includes('APR 2026')) ||
+  (_cd?.team1 === 'LSG' && _cd?.team2 === 'PBKS' && _cd?.date?.includes('APR 2026'));
 const cachedFinishedIsStale =
   !cachedFinishedRaw ||
-  cachedFinishedRaw?.data?._source === 'hardcoded' ||
-  cachedFinishedRaw?.data?.source  === 'hardcoded' ||
-  (!cachedFinishedRaw?.data?._source && !cachedFinishedRaw?.data?.source) ||
-  cachedFinishedAge > 12 * 60 * 60 * 1000;  // older than 12h
+  _isKnownStale ||
+  _cd?._source === 'hardcoded' ||
+  _cd?.source === 'hardcoded' ||
+  (!_cd?._source && !_cd?.source) ||
+  cachedFinishedAge > 12 * 60 * 60 * 1000;
 
+if (cachedFinishedIsStale) {
+  try { localStorage.removeItem(LS_FINISHED); } catch { }
+}
 const cachedFinished = cachedFinishedIsStale ? null : cachedFinishedRaw;
 
 // ─── Initial state ──────────────────────────────────────────────────────────
 const initialState = {
-  slot1:          cachedSlots?.data?.slot1   || null,
-  slot2:          cachedSlots?.data?.slot2   || null,
-  latestFinished: cachedFinished?.data       || null,
-  finishedQueue:  cachedFinished?.data ? [cachedFinished.data] : [],  // FIFO queue — max 1 shown
+  slot1: cachedSlots?.data?.slot1 || null,
+  slot2: cachedSlots?.data?.slot2 || null,
+  latestFinished: cachedFinished?.data || null,
+  finishedQueue: cachedFinished?.data ? [cachedFinished.data] : [],  // FIFO queue — max 1 shown
 
   // Legacy compat
   currentMatch: cachedSlots?.data?.slot1 || null,
@@ -46,13 +56,13 @@ const initialState = {
     ? [cachedSlots.data.slot1, cachedSlots.data.slot2].filter(Boolean)
     : [],
 
-  fetchStatus:  cachedSlots ? 'CACHED' : 'IDLE',
-  fetchError:   null,
-  lastFetched:  cachedSlots?.savedAt || null,
-  isStale:      false,
-  searchQuery:  '',
+  fetchStatus: cachedSlots ? 'CACHED' : 'IDLE',
+  fetchError: null,
+  lastFetched: cachedSlots?.savedAt || null,
+  isStale: false,
+  searchQuery: '',
   isSearchOpen: false,
-  theme:        localStorage.getItem(LS_THEME) || 'DEFAULT',
+  theme: localStorage.getItem(LS_THEME) || 'DEFAULT',
 };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
@@ -91,10 +101,10 @@ const reducer = (state, action) => {
       const matches = [slot1, slot2].filter(Boolean);
       return {
         ...state,
-        fetchStatus:  'SUCCESS',
-        fetchError:   null,
-        lastFetched:  new Date().toISOString(),
-        isStale:      !!raw._stale,
+        fetchStatus: 'SUCCESS',
+        fetchError: null,
+        lastFetched: new Date().toISOString(),
+        isStale: !!raw._stale,
         slot1,
         slot2,
         currentMatch: slot1,
@@ -106,8 +116,8 @@ const reducer = (state, action) => {
       return {
         ...state,
         fetchStatus: (state.slot1 || state.slot2) ? 'REFRESHING' : 'WARMING_UP',
-        fetchError:  null,
-        matches:     [],
+        fetchError: null,
+        matches: [],
       };
 
     case 'FETCH_ERROR':
@@ -135,7 +145,7 @@ const reducer = (state, action) => {
       return {
         ...state,
         latestFinished: merged,
-        finishedQueue:  [merged],
+        finishedQueue: [merged],
       };
     }
 
@@ -164,11 +174,11 @@ const reducer = (state, action) => {
       return {
         ...state,
         currentMatch: newSlot1,
-        slot1:        newSlot1,
-        slot2:        newSlot2,
-        matches:      newMatches,
-        fetchStatus:  'SUCCESS',
-        lastFetched:  new Date().toISOString(),
+        slot1: newSlot1,
+        slot2: newSlot2,
+        matches: newMatches,
+        fetchStatus: 'SUCCESS',
+        lastFetched: new Date().toISOString(),
       };
     }
 
@@ -266,16 +276,16 @@ export const MatchProvider = ({ children }) => {
   useEffect(() => {
     const root = document.documentElement;
     const themes = {
-      CSK:  { neon: '#F7B111', accent: '#004BA0' },
-      MI:   { neon: '#004BA0', accent: '#F7B111' },
-      RCB:  { neon: '#CC0000', accent: '#1B2133' },
-      KKR:  { neon: '#914BE3', accent: '#F7B111' },
-      RR:   { neon: '#EA1A85', accent: '#0057E2' },
-      SRH:  { neon: '#FF822A', accent: '#000000' },
-      DC:   { neon: '#005CA5', accent: '#EF1B23' },
+      CSK: { neon: '#F7B111', accent: '#004BA0' },
+      MI: { neon: '#004BA0', accent: '#F7B111' },
+      RCB: { neon: '#CC0000', accent: '#1B2133' },
+      KKR: { neon: '#914BE3', accent: '#F7B111' },
+      RR: { neon: '#EA1A85', accent: '#0057E2' },
+      SRH: { neon: '#FF822A', accent: '#000000' },
+      DC: { neon: '#005CA5', accent: '#EF1B23' },
       PBKS: { neon: '#ED1B24', accent: '#D7C15C' },
-      GT:   { neon: '#B59453', accent: '#1B2133' },
-      LSG:  { neon: '#0ea5e9', accent: '#F26522' },
+      GT: { neon: '#B59453', accent: '#1B2133' },
+      LSG: { neon: '#0ea5e9', accent: '#F26522' },
     };
     const t = themes[state.theme] || { neon: '#0ea5e9', accent: '#f43f5e' };
     root.style.setProperty('--ipl-neon', t.neon);

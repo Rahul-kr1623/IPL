@@ -119,11 +119,10 @@ export const getLatestFinished = async (req, res) => {
     const mongoResult = await getLatestFinishedMatch();
     if (mongoResult) return res.json({ match: mongoResult.toObject(), source: 'liveMatch' });
 
-    // Tier 3: live scrape from ESPN scoreboard (gets yesterday's actual result)
+    // Tier 3: Live ESPN scrape — tries scoreboard + date-range
     try {
       const scraped = await scrapeLatestCompletedMatch();
       if (scraped) {
-        // Attach source so MatchContext priority logic can distinguish real vs hardcoded
         const result = { ...scraped, source: 'espn-scraped', _source: 'espn-scraped' };
         return res.json({ match: result, source: 'espn-scraped' });
       }
@@ -131,22 +130,9 @@ export const getLatestFinished = async (req, res) => {
       console.log('[getLatestFinished] ESPN scrape failed:', e.message);
     }
 
-    // Tier 4: hardcoded COMPLETED_MATCHES array — absolute last resort
-    const last = COMPLETED_MATCHES[COMPLETED_MATCHES.length - 1];
-    if (last) {
-      const fallback = {
-        team1: last.teamA, team2: last.teamB,
-        team1Score: `${last.scoreA}/${last.wA} (${last.ovA})`,
-        team2Score: `${last.scoreB}/${last.wB} (${last.ovB})`,
-        winner: last.winner, result: last.result,
-        matchNumber: `Match ${last.id}`, date: last.date,
-        winProbT1: last.winner === last.teamA ? 100 : 0,
-        winProbT2: last.winner === last.teamB ? 100 : 0,
-        status: 'FINISHED',
-      };
-      return res.json({ match: fallback, source: 'hardcoded' });
-    }
-
+    // Tier 4: Return null — DO NOT fall back to hardcoded stale data.
+    // The frontend will hide Box 3 when match is null.
+    // This is better than showing a weeks-old result forever.
     return res.json({ match: null, source: 'none' });
   } catch (err) {
     res.status(500).json({ error: err.message, match: null });

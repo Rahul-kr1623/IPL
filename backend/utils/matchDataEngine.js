@@ -99,7 +99,19 @@ export const COMPLETED_MATCHES = [
   { id:28, teamA:'PBKS', teamB:'LSG',  winner:'LSG',
     scoreA:174,wA:7, ovA:'20',  scoreB:175,wB:6, ovB:'19.2',
     result:'LSG won by 4 wickets', date:'19 APR 2026' },
-  // ── ADD NEW MATCHES HERE after each result ──
+  // ── MATCHES 29+ (Apr 20 onwards) ──────────────────────────────────────────
+  // TODO Rahul: Fill in real scores below. The structure is ready.
+  // Format: { id, teamA, teamB, winner, scoreA, wA, ovA, scoreB, wB, ovB, result, date }
+  // ovA/ovB = overs as string e.g. '20' or '19.2'
+  // winner = null for no-result/abandoned
+  //
+  // Example (replace with real data):
+  // { id:29, teamA:'MI',  teamB:'SRH', winner:'MI',
+  //   scoreA:192,wA:5, ovA:'20', scoreB:185,wB:8, ovB:'20',
+  //   result:'MI won by 7 runs', date:'20 APR 2026' },
+  //
+  // Once you fill these in, the points table and Box 3 (Latest Result)
+  // will automatically show the correct data.
 ];
 
 // ─── SEASON JSON LOADER (Bug 6 fix) ──────────────────────────────────────────
