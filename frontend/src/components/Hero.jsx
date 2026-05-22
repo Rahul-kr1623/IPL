@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Volume2, VolumeX, X, Pause,
   Activity, RefreshCw, WifiOff, Clock, Trophy, BarChart2, MapPin,
