@@ -12,11 +12,11 @@ const COLORS = {
 };
 
 const LOGOS = {
-  CSK: '/src/assets/logos/csk_logo.png', MI: '/src/assets/logos/mi_logo.png',
-  RCB: '/src/assets/logos/rcb_logo.png', KKR: '/src/assets/logos/kkr_logo.png',
-  RR: '/src/assets/logos/rr_logo.png', PBKS: '/src/assets/logos/pbks_logo.png',
-  DC: '/src/assets/logos/dc_logo.png', GT: '/src/assets/logos/gt_logo.png',
-  LSG: '/src/assets/logos/lsg_logo.png', SRH: '/src/assets/logos/srh_logo.png',
+  CSK: '/logos/csk_logo.png', MI: '/logos/mi_logo.png',
+  RCB: '/logos/rcb_logo.png', KKR: '/logos/kkr_logo.png',
+  RR: '/logos/rr_logo.png', PBKS: '/logos/pbks_logo.png',
+  DC: '/logos/dc_logo.png', GT: '/logos/gt_logo.png',
+  LSG: '/logos/lsg_logo.png', SRH: '/logos/srh_logo.png',
 };
 
 const VENUES = {

@@ -197,7 +197,7 @@ const Squad = () => {
          <div className="absolute top-0 right-0 w-64 h-64 blur-3xl rounded-full opacity-20 pointer-events-none transition-opacity group-hover:opacity-40" style={{ backgroundColor: meta.color }}></div>
          
          <img 
-            src={`/src/assets/logos/${id}_logo.png`} 
+            src={`/logos/${id}_logo.png`} 
             alt={meta.name} 
             className="w-32 h-32 object-contain drop-shadow-[0_0_30px_rgba(255,255,255,0.2)] z-10"
             onError={(e) => { e.target.src = 'https://cricketvectors.akamaized.net/teams/IPL/BCCI.png' }}

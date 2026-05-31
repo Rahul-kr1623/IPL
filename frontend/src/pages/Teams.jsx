@@ -63,7 +63,7 @@ const Teams = () => {
                <div className="p-6">
                   <div className="flex justify-between items-start mb-6 relative z-10">
                     <img 
-                      src={`/src/assets/logos/${team.id}_logo.png`} 
+                      src={`/logos/${team.id}_logo.png`} 
                       alt={team.short} 
                       className="w-16 h-16 object-contain drop-shadow-2xl bg-white/10 rounded-full p-2"
                       onError={(e) => { e.target.src = 'https://cricketvectors.akamaized.net/teams/IPL/BCCI.png' }}

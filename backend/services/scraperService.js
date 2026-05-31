@@ -636,17 +636,16 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
   if (!team2Name) team2Name = team1Name === ct0 ? ct1 : ct0;
 
   // ── Detect "match not yet started" and convert to UPCOMING ────────────
-  // ESPN sometimes returns status=LIVE for a match that hasn't started yet
-  // (e.g. scheduled for later today). We detect this by: no innings data,
-  // score=0, no target, no first-innings runs. Mark as UPCOMING so the
-  // frontend shows a pre-match card instead of a 0/0 live card.
+  // ESPN sometimes returns status=LIVE for a match that hasn't started yet.
+  // NOTE: batsmen/bowlers arrays are declared AFTER this block, so we use
+  // situationStriker/situationBowler (already extracted above) to check for live player data.
   const isDatalessLive = status === 'LIVE'
     && (score === '0' || score === null)
     && (wickets === '0' || wickets === null)
     && !target
     && !firstInningsRuns
-    && !batsmen.length
-    && !bowlers.length;
+    && !situationStriker
+    && !situationBowler;
 
   if (isDatalessLive) {
     status = 'UPCOMING';
@@ -655,8 +654,10 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
 
   console.log(`  ✅ [ESPN] team1(bat1st)=${team1Name} score:${firstInningsRuns || 'N/A'}/${firstInningsWkts} | team2(batting)=${team2Name} score:${score}/${wickets} (${overs}) target:${target || 'N/A'} status:${status}`);
 
-  // ── BATSMEN — multi-strategy extraction ───────────────────────────────────
+  // ── BATSMEN + BOWLERS — declared here so all strategies share same array ──
+  // CRITICAL: These MUST be declared before Strategy 0 (situation players).
   const batsmen = [];
+  const bowlers = [];
 
   // Strategy 0: situation (header.situation) — highest priority, real-time
   // ESPN populates this even when gpkg.innings is empty (score-string fallback path).
@@ -828,8 +829,8 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     if (batsmen.length) console.log(`  [Batsmen] from plays participants: ${batsmen.length}`);
   }
 
-  // ── BOWLERS — must be declared before Strategy 6 ──────────────────────────
-  const bowlers = [];
+  // ── BOWLERS — additional strategies (Strategy 1-5) ──────────────────────
+  // (bowlers[] already declared above; Strategy 0 may have already populated it)
 
   // Strategy 6: ESPN scoreboard competitor linescores — last resort when gpkg is empty
   if (batsmen.length === 0) {
@@ -959,20 +960,54 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
 
 
   // ── RECENT BALLS ──────────────────────────────────────────────────────────
-  // Use description as primary field (ESPN) — text is often blank
+  // ESPN plays have two useful fields:
+  //   scoringType.abbreviation  → "1", "4", "6", "W", "WD", "NB", "LB", "B" etc.
+  //   description / text        → prose fallback
+  // We try scoringType first (most reliable), then parse the prose.
   const plays = gpkg.plays || gpkg.scoringPlays || [];
-  const recent = ['·', '·', '·', '·', '·', '·'];
-  plays.slice(-6).forEach((p, i) => {
+
+  const classifyPlay = (p) => {
+    // Priority 1: scoringType.abbreviation (ESPN cricket specific)
+    const abbr = (p.scoringType?.abbreviation || p.type?.abbreviation || '').toUpperCase().trim();
+    if (abbr) {
+      if (abbr === 'W' || abbr.includes('WKT') || abbr.includes('OUT')) return 'W';
+      if (abbr === '6' || abbr.includes('SIX')) return '6';
+      if (abbr === '4' || abbr.includes('FOUR') || abbr.includes('BND')) return '4';
+      if (abbr === 'WD' || abbr.includes('WIDE')) return 'WD';
+      if (abbr === 'NB' || abbr.includes('NO')) return 'NB';
+      if (abbr === 'LB' || abbr === 'BYE' || abbr === 'B') return abbr;
+      if (/^\d$/.test(abbr)) return abbr; // "0","1","2","3"
+    }
+    // Priority 2: scoreValue / runs field on the play object
+    const sv = p.scoreValue ?? p.runs ?? p.value;
+    if (typeof sv === 'number') {
+      // scoringType not set = dot or run
+      if (sv === 0) return '·';
+      if (sv >= 1 && sv <= 7) return String(sv);
+    }
+    // Priority 3: prose description
     const d = (p.description?.trim() || p.text?.trim() || p.shortDescription?.trim() || '').toLowerCase();
-    let b = '·';
-    if (d.includes('wicket') || d.includes(' out')) b = 'W';
-    else if (d.includes('six')) b = '6';
-    else if (d.includes('four') || d.includes('boundary')) b = '4';
-    else if (d.includes('wide')) b = 'WD';
-    else if (d.includes('no ball')) b = 'NB';
-    else { const m = d.match(/\b(\d)\s*run/); b = m ? m[1] : '·'; }
-    recent[i] = b;
-  });
+    if (!d) return '·';
+    if (d.includes('wicket') || d.includes(' out') || d.includes('lbw') || d.includes('caught') || d.includes('bowled') || d.includes('run out')) return 'W';
+    if (d.includes(' six') || d.includes('six!') || d.startsWith('six')) return '6';
+    if (d.includes('four') || d.includes('boundary') || d.includes('fours')) return '4';
+    if (d.includes('wide')) return 'WD';
+    if (d.includes('no ball') || d.includes('no-ball')) return 'NB';
+    if (d.includes('leg bye') || d.includes('leg-bye')) return 'LB';
+    if (d.includes(' bye')) return 'B';
+    const m = d.match(/\b([0-7])\s*(?:run|runs)\b/);
+    if (m) return m[1] === '0' ? '·' : m[1];
+    return '·';
+  };
+
+  const recent = ['·', '·', '·', '·', '·', '·'];
+  // Take the LAST 6 legal deliveries (skip wides for ball count but show them in display)
+  const lastPlays = plays.slice(-12); // buffer extra to find 6 deliverables
+  let filled = 0;
+  for (let i = lastPlays.length - 1; i >= 0 && filled < 6; i--) {
+    recent[5 - filled] = classifyPlay(lastPlays[i]);
+    filled++;
+  }
 
   // ── COMMENTARY ────────────────────────────────────────────────────────────
   // ESPN plays use `description` as the primary text field; `text` is often "" or missing.

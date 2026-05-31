@@ -76,7 +76,7 @@ const Navbar = () => {
         {/* Brand */}
         <div className="flex items-center gap-3 cursor-pointer z-50">
           <motion.div whileHover={{ scale: 1.1, rotate: 5 }}>
-            <img src="/src/assets/logos/ipl_logo.png" alt="IPL" className="w-10 h-10 object-contain" />
+            <img src="/logos/ipl_logo.png" alt="IPL" className="w-10 h-10 object-contain" />
           </motion.div>
           <span className="text-xl font-black tracking-tighter">
             IPL<span className="text-ipl-neon italic">2026</span>
