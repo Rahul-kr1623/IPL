@@ -12,7 +12,6 @@ html {
   color: white;
 }
 
-/* Tera glassmorphism wala tadka */
 @theme {
   --color-ipl-dark: var(--ipl-dark);
   --color-ipl-neon: var(--ipl-neon);

@@ -1,0 +1,259 @@
+{
+  "2008": {
+    "season": 2008, "winner": "RR",
+    "teams": [
+      { "rank":1,"team":"RR","played":16,"won":11,"lost":5,"tied":0,"nr":0,"pts":22,"nrr":"+0.543","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"CSK","played":16,"won":10,"lost":6,"tied":0,"nr":0,"pts":20,"nrr":"+0.295","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"PBKS","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"-0.100","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"DC","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.183","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"RCB","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.010","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"KKR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.068","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"MI","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.161","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"SRH","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.359","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2009": {
+    "season": 2009, "winner": "DC",
+    "teams": [
+      { "rank":1,"team":"DC","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.618","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"RCB","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.362","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"CSK","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.115","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"MI","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.028","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"RR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"+0.081","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"PBKS","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.401","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"KKR","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.580","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"SRH","played":14,"won":3,"lost":11,"tied":0,"nr":0,"pts":6,"nrr":"-0.534","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2010": {
+    "season": 2010, "winner": "CSK",
+    "teams": [
+      { "rank":1,"team":"CSK","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.886","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"MI","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.225","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"DC","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.053","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"RR","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.017","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"RCB","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.131","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"KKR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.181","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"PBKS","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.488","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"SRH","played":14,"won":3,"lost":11,"tied":0,"nr":0,"pts":6,"nrr":"-0.412","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2011": {
+    "season": 2011, "winner": "CSK",
+    "teams": [
+      { "rank":1,"team":"RCB","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":19,"nrr":"+0.568","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":2,"team":"CSK","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":19,"nrr":"+0.239","qualified":true,"finalPosition":"Winner" },
+      { "rank":3,"team":"MI","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.118","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"DC","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":17,"nrr":"+0.088","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":5,"team":"PBKS","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.022","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"RR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":13,"nrr":"-0.151","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"KKR","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.384","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"SRH","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.423","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2012": {
+    "season": 2012, "winner": "KKR",
+    "teams": [
+      { "rank":1,"team":"CSK","played":16,"won":10,"lost":6,"tied":0,"nr":0,"pts":20,"nrr":"+0.544","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":2,"team":"KKR","played":16,"won":10,"lost":5,"tied":0,"nr":1,"pts":21,"nrr":"+0.461","qualified":true,"finalPosition":"Winner" },
+      { "rank":3,"team":"MI","played":16,"won":9,"lost":6,"tied":1,"nr":0,"pts":19,"nrr":"+0.265","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"RCB","played":16,"won":9,"lost":7,"tied":0,"nr":0,"pts":18,"nrr":"+0.066","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"PBKS","played":16,"won":8,"lost":8,"tied":0,"nr":0,"pts":16,"nrr":"-0.041","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"DC","played":16,"won":7,"lost":9,"tied":0,"nr":0,"pts":14,"nrr":"-0.153","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"RR","played":16,"won":5,"lost":11,"tied":0,"nr":0,"pts":10,"nrr":"-0.499","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"SRH","played":16,"won":4,"lost":12,"tied":0,"nr":0,"pts":8,"nrr":"-0.619","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2013": {
+    "season": 2013, "winner": "MI",
+    "teams": [
+      { "rank":1,"team":"CSK","played":16,"won":11,"lost":5,"tied":0,"nr":0,"pts":22,"nrr":"+0.772","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":2,"team":"MI","played":16,"won":10,"lost":6,"tied":0,"nr":0,"pts":20,"nrr":"+0.281","qualified":true,"finalPosition":"Winner" },
+      { "rank":3,"team":"RR","played":16,"won":9,"lost":7,"tied":0,"nr":0,"pts":18,"nrr":"+0.207","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"SRH","played":16,"won":9,"lost":7,"tied":0,"nr":0,"pts":18,"nrr":"+0.053","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"RCB","played":16,"won":8,"lost":8,"tied":0,"nr":0,"pts":16,"nrr":"-0.019","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"KKR","played":16,"won":7,"lost":9,"tied":0,"nr":0,"pts":14,"nrr":"-0.185","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"DC","played":16,"won":5,"lost":11,"tied":0,"nr":0,"pts":10,"nrr":"-0.546","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"PBKS","played":16,"won":4,"lost":12,"tied":0,"nr":0,"pts":8,"nrr":"-0.553","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2014": {
+    "season": 2014, "winner": "KKR",
+    "teams": [
+      { "rank":1,"team":"KKR","played":14,"won":10,"lost":4,"tied":0,"nr":0,"pts":20,"nrr":"+0.642","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"PBKS","played":14,"won":7,"lost":6,"tied":1,"nr":0,"pts":15,"nrr":"+0.185","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"CSK","played":14,"won":7,"lost":6,"tied":1,"nr":0,"pts":15,"nrr":"+0.175","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"MI","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.025","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"RCB","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.184","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"DC","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.214","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"RR","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.356","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"SRH","played":14,"won":3,"lost":11,"tied":0,"nr":0,"pts":6,"nrr":"-0.287","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2015": {
+    "season": 2015, "winner": "MI",
+    "teams": [
+      { "rank":1,"team":"CSK","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.661","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":2,"team":"MI","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.485","qualified":true,"finalPosition":"Winner" },
+      { "rank":3,"team":"RCB","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.195","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"RR","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"-0.055","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"SRH","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.227","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"DC","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.228","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"KKR","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.366","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"PBKS","played":14,"won":3,"lost":11,"tied":0,"nr":0,"pts":6,"nrr":"-0.877","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2016": {
+    "season": 2016, "winner": "SRH",
+    "teams": [
+      { "rank":1,"team":"SRH","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.571","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"RCB","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.317","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"KKR","played":14,"won":8,"lost":5,"tied":0,"nr":1,"pts":17,"nrr":"+0.200","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"GL","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.074","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"MI","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.011","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"DC","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.095","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"PBKS","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.399","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"RPS","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.371","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2017": {
+    "season": 2017, "winner": "MI",
+    "teams": [
+      { "rank":1,"team":"MI","played":14,"won":10,"lost":4,"tied":0,"nr":0,"pts":20,"nrr":"+0.784","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"RPS","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.292","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"SRH","played":14,"won":8,"lost":5,"tied":0,"nr":1,"pts":17,"nrr":"+0.523","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"KKR","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.641","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"DC","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.512","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"GL","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.681","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"RCB","played":14,"won":3,"lost":10,"tied":0,"nr":1,"pts":7,"nrr":"-0.438","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"PBKS","played":14,"won":3,"lost":10,"tied":0,"nr":1,"pts":7,"nrr":"-0.481","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2018": {
+    "season": 2018, "winner": "CSK",
+    "teams": [
+      { "rank":1,"team":"SRH","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.584","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":2,"team":"CSK","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.253","qualified":true,"finalPosition":"Winner" },
+      { "rank":3,"team":"KKR","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.008","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"RR","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.185","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"MI","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"+0.317","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"DC","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.503","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"PBKS","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.530","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"RCB","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.441","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2019": {
+    "season": 2019, "winner": "MI",
+    "teams": [
+      { "rank":1,"team":"MI","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.421","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"CSK","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.103","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"DC","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.044","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"SRH","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.577","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"KKR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.070","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"PBKS","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.251","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"RR","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.570","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"RCB","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.399","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2020": {
+    "season": 2020, "winner": "MI",
+    "teams": [
+      { "rank":1,"team":"MI","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+1.107","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"DC","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.481","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"SRH","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.600","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"RCB","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.170","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"KKR","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.200","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"RR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.567","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"CSK","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.455","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"PBKS","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.562","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2021": {
+    "season": 2021, "winner": "CSK",
+    "teams": [
+      { "rank":1,"team":"DC","played":14,"won":10,"lost":4,"tied":0,"nr":0,"pts":20,"nrr":"+0.481","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":2,"team":"CSK","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.455","qualified":true,"finalPosition":"Winner" },
+      { "rank":3,"team":"RCB","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.172","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"KKR","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.587","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":5,"team":"MI","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.102","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"RR","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.345","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"SRH","placed":14,"won":3,"lost":11,"tied":0,"nr":0,"pts":6,"nrr":"-0.545","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"PBKS","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.330","qualified":false,"finalPosition":"8th" }
+    ]
+  },
+  "2022": {
+    "season": 2022, "winner": "GT",
+    "teams": [
+      { "rank":1,"team":"GT","played":14,"won":10,"lost":4,"tied":0,"nr":0,"pts":20,"nrr":"+0.316","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"RR","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.298","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"LSG","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.251","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"RCB","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"-0.253","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"DC","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.204","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"PBKS","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.304","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"SRH","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"+0.009","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"CSK","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.203","qualified":false,"finalPosition":"9th" },
+      { "rank":9,"team":"KKR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.146","qualified":false,"finalPosition":"8th" },
+      { "rank":10,"team":"MI","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.506","qualified":false,"finalPosition":"10th" }
+    ]
+  },
+  "2023": {
+    "season": 2023, "winner": "CSK",
+    "teams": [
+      { "rank":1,"team":"GT","played":14,"won":10,"lost":4,"tied":0,"nr":0,"pts":20,"nrr":"+0.427","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":2,"team":"CSK","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":17,"nrr":"+0.652","qualified":true,"finalPosition":"Winner" },
+      { "rank":3,"team":"LSG","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.284","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"MI","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.214","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"RCB","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":15,"nrr":"-0.044","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"SRH","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":15,"nrr":"-0.404","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"RR","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.040","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"KKR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.363","qualified":false,"finalPosition":"8th" },
+      { "rank":9,"team":"DC","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.348","qualified":false,"finalPosition":"9th" },
+      { "rank":10,"team":"PBKS","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.499","qualified":false,"finalPosition":"10th" }
+    ]
+  },
+  "2024": {
+    "season": 2024, "winner": "KKR",
+    "teams": [
+      { "rank":1,"team":"KKR","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":19,"nrr":"+1.428","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"SRH","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":17,"nrr":"+0.413","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"RR","played":14,"won":8,"lost":5,"tied":0,"nr":1,"pts":17,"nrr":"+0.273","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"RCB","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.459","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"CSK","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.428","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"DC","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.377","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"LSG","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.667","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"GT","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-1.063","qualified":false,"finalPosition":"8th" },
+      { "rank":9,"team":"PBKS","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.353","qualified":false,"finalPosition":"9th" },
+      { "rank":10,"team":"MI","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.318","qualified":false,"finalPosition":"10th" }
+    ]
+  },
+  "2025": {
+    "season": 2025, "winner": "RCB",
+    "teams": [
+      { "rank":1,"team":"RCB","played":14,"won":10,"lost":4,"tied":0,"nr":0,"pts":20,"nrr":"+0.811","qualified":true,"finalPosition":"Winner" },
+      { "rank":2,"team":"PBKS","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.382","qualified":true,"finalPosition":"Runner-Up" },
+      { "rank":3,"team":"CSK","played":14,"won":9,"lost":5,"tied":0,"nr":0,"pts":18,"nrr":"+0.241","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":4,"team":"MI","played":14,"won":8,"lost":6,"tied":0,"nr":0,"pts":16,"nrr":"+0.115","qualified":true,"finalPosition":"Semifinal" },
+      { "rank":5,"team":"SRH","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.094","qualified":false,"finalPosition":"5th" },
+      { "rank":6,"team":"DC","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.122","qualified":false,"finalPosition":"6th" },
+      { "rank":7,"team":"KKR","played":14,"won":6,"lost":8,"tied":0,"nr":0,"pts":12,"nrr":"-0.214","qualified":false,"finalPosition":"7th" },
+      { "rank":8,"team":"GT","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.381","qualified":false,"finalPosition":"8th" },
+      { "rank":9,"team":"RR","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.493","qualified":false,"finalPosition":"9th" },
+      { "rank":10,"team":"LSG","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.432","qualified":false,"finalPosition":"10th" }
+    ]
+  },
+  "2026": {
+    "season": 2026, "winner": null,
+    "teams": [
+      { "rank":1,"team":"KKR","played":14,"won":9,"lost":3,"tied":0,"nr":2,"pts":20,"nrr":"+1.428","qualified":true,"finalPosition":"TBD" },
+      { "rank":2,"team":"SRH","played":14,"won":8,"lost":5,"tied":0,"nr":1,"pts":17,"nrr":"+0.413","qualified":true,"finalPosition":"TBD" },
+      { "rank":3,"team":"RR","played":14,"won":8,"lost":5,"tied":0,"nr":1,"pts":17,"nrr":"+0.273","qualified":true,"finalPosition":"TBD" },
+      { "rank":4,"team":"RCB","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.459","qualified":true,"finalPosition":"TBD" },
+      { "rank":5,"team":"CSK","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"+0.428","qualified":false,"finalPosition":"TBD" },
+      { "rank":6,"team":"DC","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.377","qualified":false,"finalPosition":"TBD" },
+      { "rank":7,"team":"LSG","played":14,"won":7,"lost":7,"tied":0,"nr":0,"pts":14,"nrr":"-0.667","qualified":false,"finalPosition":"TBD" },
+      { "rank":8,"team":"GT","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-1.063","qualified":false,"finalPosition":"TBD" },
+      { "rank":9,"team":"PBKS","played":14,"won":5,"lost":9,"tied":0,"nr":0,"pts":10,"nrr":"-0.353","qualified":false,"finalPosition":"TBD" },
+      { "rank":10,"team":"MI","played":14,"won":4,"lost":10,"tied":0,"nr":0,"pts":8,"nrr":"-0.318","qualified":false,"finalPosition":"TBD" }
+    ]
+  }
+}

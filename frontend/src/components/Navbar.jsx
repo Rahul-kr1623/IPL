@@ -6,11 +6,13 @@ import { useMatchContext } from '../context/MatchContext';
 import CommandPalette from './CommandPalette';
 
 const navLinks = [
-  { name: 'Live Now', href: '/', live: true },
-  { name: 'Fixtures', href: '/fixtures' },
-  { name: 'Teams', href: '/teams' },
-  { name: 'Players Hub', href: '/players' },
-  { name: 'Stats', href: '/stats' },
+  { name: 'Live Now',    href: '/',         live: true },
+  { name: 'Fixtures',   href: '/fixtures' },
+  { name: 'Teams',      href: '/teams' },
+  { name: 'Players',    href: '/players' },
+  { name: 'Stats',      href: '/stats' },
+  { name: 'Points',     href: '/points' },
+  { name: 'Stadiums',   href: '/stadiums' },
 ];
 
 const Navbar = () => {

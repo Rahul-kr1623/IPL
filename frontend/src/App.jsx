@@ -11,6 +11,7 @@ import Stats from './pages/Stats';
 import Players from './pages/Players';
 import PlayerDetail from './pages/PlayerDetail';
 import PointsTable from './pages/PointsTable';
+import Stadiums from './pages/Stadiums';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -21,20 +22,21 @@ function App() {
       <PulseEngagement />
       <main className="flex-1 pt-24 overflow-x-hidden relative w-full">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/fixtures" element={<Fixtures />} />
-          <Route path="/teams" element={<Teams />} />
-          <Route path="/teams/:id" element={<Squad />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/points" element={<PointsTable />} />
-          <Route path="/players" element={<Players />} />
+          <Route path="/"           element={<Home />} />
+          <Route path="/fixtures"   element={<Fixtures />} />
+          <Route path="/teams"      element={<Teams />} />
+          <Route path="/teams/:id"  element={<Squad />} />
+          <Route path="/stats"      element={<Stats />} />
+          <Route path="/points"     element={<PointsTable />} />
+          <Route path="/players"    element={<Players />} />
           <Route path="/player/:id" element={<PlayerDetail />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="/stadiums"   element={<Stadiums />} />
+          <Route path="*"           element={<NotFound />} />
         </Routes>
       </main>
       <Footer />
     </div>
-  )
+  );
 }
 
 export default App;

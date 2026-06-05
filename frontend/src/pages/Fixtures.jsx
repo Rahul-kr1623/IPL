@@ -4,6 +4,9 @@ import { createPortal } from 'react-dom';
 import { Calendar, MapPin, Clock, Trophy, X, Activity, Search, Zap, Radio } from 'lucide-react';
 import { useMatchContext } from '../context/MatchContext';
 import { useCompletedMatches } from '../hooks/useCompletedMatches';
+import SeasonDropdown from '../components/SeasonDropdown.jsx';
+import { CURRENT_SEASON } from '../data/seasons/index.js';
+import fixturesHistory from '../data/seasons/fixtures_history.json';
 
 const COLORS = {
   CSK: "#FDB913", RCB: "#CC0000", MI: "#004BA0", KKR: "#3A225D",
@@ -746,18 +749,113 @@ const FixtureCard = ({ match, effectiveStatus, liveMatchData, index }) => {
   );
 };
 
+
+// ─── Historical Match Card ─────────────────────────────────────────────────────
+const HistoricalMatchCard = ({ match: m }) => {
+  const c1 = COLORS[m.teamA] || '#fff';
+  const c2 = COLORS[m.teamB] || '#fff';
+  const isFinal = m.type && m.type !== 'League Match';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className={`glass border rounded-2xl overflow-hidden bg-white/5 group
+        ${isFinal ? 'border-yellow-400/30' : 'border-white/10'}`}
+    >
+      {isFinal && <div className="h-0.5 w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400" />}
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full
+            ${isFinal ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/20' : 'bg-white/5 text-gray-500'}`}>
+            {m.matchNumber}
+          </span>
+          <span className="text-[9px] text-gray-600 font-mono">{m.date}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <img src={`/logos/${m.teamA?.toLowerCase()}_logo.png`} alt={m.teamA}
+              className="w-9 h-9 object-contain flex-shrink-0"
+              onError={e => { e.target.style.display = 'none'; }} />
+            <div className="min-w-0">
+              <p className="font-black text-sm" style={{ color: c1 }}>{m.teamA}</p>
+              {m.scoreA && <p className="text-[10px] font-mono text-gray-300">{m.scoreA}</p>}
+            </div>
+          </div>
+          <div className="text-center flex-shrink-0">
+            <div className="text-xs font-black italic text-white/20">vs</div>
+            {m.winner && (
+              <div className="text-[8px] font-black px-2 py-0.5 rounded-full mt-1"
+                style={{ backgroundColor: `${COLORS[m.winner] || '#fff'}20`, color: COLORS[m.winner] || '#fff' }}>
+                {m.winner} ✓
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 min-w-0 flex-row-reverse">
+            <img src={`/logos/${m.teamB?.toLowerCase()}_logo.png`} alt={m.teamB}
+              className="w-9 h-9 object-contain flex-shrink-0"
+              onError={e => { e.target.style.display = 'none'; }} />
+            <div className="min-w-0 text-right">
+              <p className="font-black text-sm" style={{ color: c2 }}>{m.teamB}</p>
+              {m.scoreB && <p className="text-[10px] font-mono text-gray-300">{m.scoreB}</p>}
+            </div>
+          </div>
+        </div>
+        {m.result && (
+          <p className="text-[10px] text-gray-500 mt-3 border-t border-white/5 pt-2 font-bold">{m.result}</p>
+        )}
+        {m.playerOfMatch && (
+          <p className="text-[9px] text-ipl-neon font-bold mt-1">⭐ {m.playerOfMatch}</p>
+        )}
+        {m.venue && (
+          <p className="text-[9px] text-gray-600 font-mono mt-0.5">📍 {m.venue}</p>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
 // ─── FIXTURES PAGE ────────────────────────────────────────────────────────────
 const Fixtures = () => {
+  const [season, setSeason] = useState(CURRENT_SEASON);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [teamFilter, setTeamFilter] = useState('all');
 
   const { state } = useMatchContext();
   const liveMatch = state.currentMatch;
+  const isCurrentSeason = season === CURRENT_SEASON;
 
   const { completedIds, getResult } = useCompletedMatches();
 
   const allTeams = ['all', 'CSK', 'MI', 'RCB', 'KKR', 'RR', 'PBKS', 'DC', 'GT', 'LSG', 'SRH'];
+
+  // ── Historical season matches (non-2026) ──────────────────────────────────
+  const historicalMatches = useMemo(() => {
+    if (isCurrentSeason) return null;
+    const hist = fixturesHistory[String(season)];
+    if (!hist) return [];
+    return (hist.matches || []).map(m => ({
+      ...m,
+      teamA: m.team1,
+      teamB: m.team2,
+      baseStatus: 'completed',
+      effectiveStatus: 'completed',
+      day: '',
+      time: '',
+    }));
+  }, [season, isCurrentSeason]);
+
+  const filteredHistorical = useMemo(() => {
+    if (!historicalMatches) return null;
+    return historicalMatches.filter(m => {
+      const s = search.toLowerCase();
+      const teamOk = teamFilter === 'all' || m.teamA === teamFilter || m.teamB === teamFilter;
+      const typeOk = filter === 'all' || filter === 'completed';
+      const searchOk = !s || m.teamA?.toLowerCase().includes(s) || m.teamB?.toLowerCase().includes(s) ||
+                       m.city?.toLowerCase().includes(s) || m.matchNumber?.toLowerCase().includes(s);
+      return teamOk && typeOk && searchOk;
+    });
+  }, [historicalMatches, filter, search, teamFilter]);
   const filterOpts = [
     { id: 'all', label: 'All Matches' },
     { id: 'live', label: 'Live' },
@@ -818,6 +916,82 @@ const Fixtures = () => {
   const completedCount = enrichedSchedule.filter(m => m.effectiveStatus === 'completed').length;
   const upcomingCount = enrichedSchedule.filter(m => m.effectiveStatus === 'upcoming').length;
 
+  // ── Historical season render ────────────────────────────────────────────────
+  if (!isCurrentSeason) {
+    const hist = fixturesHistory[String(season)];
+    const displayMatches = filteredHistorical || [];
+    const finals   = displayMatches.filter(m => m.type === 'Final' || m.type === 'Qualifier' || m.type === 'Eliminator');
+    const league   = displayMatches.filter(m => !m.type || m.type === 'League Match');
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 space-y-8 relative z-10">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div className="border-l-4 border-ipl-neon pl-6">
+            <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white">
+              IPL <span className="text-ipl-neon">{season}</span>
+            </h2>
+            <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">
+              {hist?.totalMatches} Matches · Winner: <span className="text-ipl-neon">{hist?.winner || '—'}</span>
+            </p>
+          </div>
+          <SeasonDropdown
+            selected={season}
+            onChange={(yr) => { setSeason(yr); setFilter('all'); setTeamFilter('all'); setSearch(''); }}
+            showAllTime={false}
+            label="Season"
+          />
+        </div>
+
+        {/* Team + search filters */}
+        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1 bg-white/5 p-1 rounded-2xl">
+            {allTeams.map(t => (
+              <button key={t} onClick={() => setTeamFilter(t)}
+                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all
+                  ${teamFilter === t ? 'text-black font-black' : 'text-gray-500 hover:text-white'}`}
+                style={teamFilter === t && t !== 'all' ? { backgroundColor: COLORS[t] + 'dd' }
+                  : teamFilter === t ? { backgroundColor: '#0ea5e9' } : {}}>
+                {t === 'all' ? 'All Teams' : t}
+              </button>
+            ))}
+          </div>
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search team or city…"
+              className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[11px] text-white placeholder-gray-600 outline-none focus:border-ipl-neon/40 transition-colors" />
+          </div>
+        </div>
+
+        {/* Finals / knockouts first */}
+        {finals.length > 0 && (
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-ipl-neon mb-4 border-b border-ipl-neon/20 pb-2">Knockout Matches</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {finals.map(m => <HistoricalMatchCard key={m.id} match={m} />)}
+            </div>
+          </div>
+        )}
+
+        {/* League matches */}
+        {league.length > 0 && (
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-4 border-b border-white/5 pb-2">League Stage ({league.length} matches)</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {league.map(m => <HistoricalMatchCard key={m.id} match={m} />)}
+            </div>
+          </div>
+        )}
+
+        {displayMatches.length === 0 && (
+          <div className="text-center py-20 text-gray-500 font-bold uppercase tracking-widest text-sm">
+            No matches found for this filter
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 space-y-8 relative z-10">
       {/* Header */}
@@ -827,10 +1001,17 @@ const Fixtures = () => {
             Match <span className="text-ipl-neon">Schedule</span>
           </h2>
           <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">
-            IPL 2026 • Road to the Trophy
+            {season === CURRENT_SEASON ? 'IPL 2026 · Road to the Trophy' : `IPL ${season} · Season Archive`}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <SeasonDropdown
+            selected={season}
+            onChange={(yr) => { setSeason(yr); setFilter('all'); setTeamFilter('all'); setSearch(''); }}
+            showAllTime={false}
+            label="Season"
+          />
+          <div className="flex gap-3">
           <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-center">
             <p className="text-[8px] text-gray-500 uppercase">Total</p>
             <p className="text-lg font-black text-white">70</p>
@@ -848,6 +1029,7 @@ const Fixtures = () => {
           <div className="px-4 py-2 bg-ipl-neon/10 border border-ipl-neon/20 rounded-xl text-center">
             <p className="text-[8px] text-ipl-neon uppercase">Left</p>
             <p className="text-lg font-black text-ipl-neon">{upcomingCount}</p>
+          </div>
           </div>
         </div>
       </div>

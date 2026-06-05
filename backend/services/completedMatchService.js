@@ -42,18 +42,20 @@ const CompletedMatch = mongoose.models.CompletedMatch
 
 /**
  * Save a completed match scorecard to MongoDB.
- * Idempotent — skips if the same espnId already exists.
- * @param {object} matchData - Live match data from scraper/scheduler
+ * Idempotent — skips silently if the same espnId already exists.
+ *
+ * @param {object} matchData - Live match data object from scraper/scheduler
+ * @returns {Promise<object|null>} Saved or existing MongoDB document, or null on skip
  */
 export const saveCompletedMatch = async (matchData) => {
   const espnId = matchData.espnId || matchData.source || null;
 
   if (!espnId) {
-    console.log('[completedMatchService] No espnId — skipping MongoDB save');
+    console.log('[completedMatchService] No espnId on matchData — skipping MongoDB save');
     return null;
   }
 
-  // Check for duplicate
+  // Idempotency check — don't double-save the same match
   const existing = await CompletedMatch.findOne({ espnId }).lean();
   if (existing) {
     console.log(`[completedMatchService] Match ${espnId} already in MongoDB — skipping`);
@@ -62,19 +64,25 @@ export const saveCompletedMatch = async (matchData) => {
 
   const dateStr = new Date().toISOString().split('T')[0];
 
-  // Build score strings
+  // ── Build score strings ────────────────────────────────────────────────────
+  // team1 batted first — score came from firstInningsRuns in scraper
   const t1Score = matchData.team1Score
-    ? `${matchData.team1Score}${matchData.team1Wickets ? '/' + matchData.team1Wickets : ''} (${matchData.team1Overs || '20.0'})`.replace(/\/+\s*\(/, ' (')
+    ? `${matchData.team1Score}${matchData.team1Wickets ? '/' + matchData.team1Wickets : ''} (${matchData.team1Overs || '20.0'})`
+        .replace(/\/+\s*\(/, ' (')   // normalise "192/10 (20)" → "192 (20)" when all out
     : null;
+
+  // team2 batted second — score is the live score at end of match
   const t2Score = `${matchData.score}/${matchData.wickets} (${matchData.overs})`;
 
-  // Extract winner from result string
+  // ── Extract winner from result string ──────────────────────────────────────
+  // e.g. "CSK won by 5 wickets" → "CSK"
   let winner = null;
   if (matchData.result) {
     const w = matchData.result.match(/^([A-Z]{2,4})\s+won/i);
     if (w) winner = w[1].toUpperCase();
   }
 
+  // ── Build and save document ────────────────────────────────────────────────
   const doc = new CompletedMatch({
     espnId,
     matchId:     espnId,
@@ -104,16 +112,44 @@ export const saveCompletedMatch = async (matchData) => {
 
 /**
  * Get the most recently completed match from MongoDB.
+ * Used by liveController to serve the "last result" card on the frontend.
+ *
+ * @returns {Promise<object|null>}
  */
 export const getLatestCompletedMatch = async () => {
   return CompletedMatch.findOne().sort({ completedAt: -1 }).lean();
 };
 
 /**
- * Get all completed matches for a season from MongoDB.
+ * Get all completed matches for the current season from MongoDB,
+ * sorted chronologically (oldest first).
+ *
+ * @returns {Promise<object[]>}
  */
 export const getAllCompletedMatches = async () => {
   return CompletedMatch.find().sort({ completedAt: 1 }).lean();
+};
+
+/**
+ * Get a single completed match by its ESPN match ID.
+ *
+ * @param {string} espnId
+ * @returns {Promise<object|null>}
+ */
+export const getCompletedMatchById = async (espnId) => {
+  return CompletedMatch.findOne({ espnId }).lean();
+};
+
+/**
+ * Delete all completed match records — use only for dev/reset purposes.
+ * Called by debugController when the user hits /api/v1/debug/reset.
+ *
+ * @returns {Promise<object>} Mongoose deleteMany result
+ */
+export const clearAllCompletedMatches = async () => {
+  const result = await CompletedMatch.deleteMany({});
+  console.log(`[completedMatchService] 🗑️  Cleared ${result.deletedCount} completed match records`);
+  return result;
 };
 
 export default CompletedMatch;
