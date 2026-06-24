@@ -19,7 +19,7 @@
  */
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Trophy, MapPin, Clock, WifiOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMatchContext } from '../context/MatchContext';
@@ -61,15 +61,20 @@ const TeamChip = ({ code, score, isWinner, dimmed }) => {
 // ─── Ball dot ─────────────────────────────────────────────────────────────────
 const BallDot = ({ b }) => {
   const cls =
-    b === 'W' ? 'bg-red-500 text-white' :
-      b === '6' ? 'bg-yellow-400 text-black' :
-        b === '4' ? 'bg-amber-400 text-black' :
+    b === 'W' ? 'bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.5)]' :
+      b === '6' ? 'bg-yellow-400 text-black shadow-[0_0_12px_rgba(250,204,21,0.5)]' :
+        b === '4' ? 'bg-amber-400 text-black shadow-[0_0_8px_rgba(251,191,36,0.5)]' :
           b === 'WD' || b === 'NB' ? 'bg-purple-500 text-white' :
-            'bg-white/10 text-gray-500';
+            'bg-white/10 text-gray-400';
   return (
-    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border border-white/10 ${cls}`}>
+    <motion.span 
+      key={b + Math.random()} 
+      initial={{ scale: 0.5, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border border-white/10 ${cls}`}
+    >
       {b === '·' ? '' : b}
-    </span>
+    </motion.span>
   );
 };
 
@@ -244,9 +249,10 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
                 <div className="flex items-baseline justify-center gap-1">
                   <motion.span
                     key={match.score}
-                    initial={{ scale: 1.12, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-5xl font-black text-white tracking-tighter leading-none"
+                    initial={{ y: -15, opacity: 0, scale: 0.9 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="text-5xl font-black text-white tracking-tighter leading-none inline-block"
                   >
                     {match.score}
                   </motion.span>
@@ -307,8 +313,21 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
             {!isFinished && match.recent?.some(b => b && b !== '·') && (
               <div className="mb-3">
                 <p className="text-[8px] text-gray-600 uppercase tracking-widest font-black mb-1.5">Last 6 balls</p>
-                <div className="flex gap-1.5">
-                  {match.recent.map((b, i) => <BallDot key={i} b={b || '·'} />)}
+                <div className="flex gap-1.5 overflow-hidden py-1">
+                  <AnimatePresence mode="popLayout">
+                    {match.recent.map((b, i) => (
+                      <motion.div
+                        key={`${match.overs}-${i}`}
+                        layout
+                        initial={{ opacity: 0, x: 20, scale: 0.8 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      >
+                        <BallDot b={b || '·'} />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               </div>
             )}

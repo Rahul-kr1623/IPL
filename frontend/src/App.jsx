@@ -12,6 +12,7 @@ import Players from './pages/Players';
 import PlayerDetail from './pages/PlayerDetail';
 import PointsTable from './pages/PointsTable';
 import Stadiums from './pages/Stadiums';
+import CricketGame from './pages/CricketGame';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
           <Route path="/players"    element={<Players />} />
           <Route path="/player/:id" element={<PlayerDetail />} />
           <Route path="/stadiums"   element={<Stadiums />} />
+          <Route path="/play"       element={<CricketGame />} />
           <Route path="*"           element={<NotFound />} />
         </Routes>
       </main>

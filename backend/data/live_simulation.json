@@ -1,0 +1,151 @@
+{
+  "description": "Simulation data for a live match scenario. Add as many states as you like. The simulator will step through them one by one.",
+  "states": [
+    {
+      "slot1": {
+        "status": "LIVE",
+        "matchNumber": "Match 45",
+        "venue": "M. Chinnaswamy Stadium, Bengaluru",
+        "team1": { "name": "CSK" },
+        "team2": { "name": "RCB" },
+        "team1Score": "218",
+        "team1Wickets": "5",
+        "team1Overs": "20.0",
+        "currentInnings": 2,
+        "score": "200",
+        "wickets": "6",
+        "overs": "18.2",
+        "target": 219,
+        "crr": "10.91",
+        "rrr": "11.40",
+        "recent": ["1", "W", "1", "4", "2", "6"],
+        "batsmen": [
+          { "name": "V. Kohli", "runs": 85, "balls": 46, "fours": 6, "sixes": 4, "onStrike": true },
+          { "name": "D. Karthik", "runs": 12, "balls": 5, "fours": 1, "sixes": 1, "onStrike": false }
+        ],
+        "bowlers": [
+          { "name": "M. Pathirana", "overs": "3.2", "runs": 28, "wickets": 2 }
+        ],
+        "toss": "CSK won the toss and elected to bat"
+      },
+      "slot2": null
+    },
+    {
+      "slot1": {
+        "status": "LIVE",
+        "matchNumber": "Match 45",
+        "venue": "M. Chinnaswamy Stadium, Bengaluru",
+        "team1": { "name": "CSK" },
+        "team2": { "name": "RCB" },
+        "team1Score": "218",
+        "team1Wickets": "5",
+        "team1Overs": "20.0",
+        "currentInnings": 2,
+        "score": "201",
+        "wickets": "6",
+        "overs": "18.3",
+        "target": 219,
+        "crr": "10.86",
+        "rrr": "12.00",
+        "recent": ["W", "1", "4", "2", "6", "1"],
+        "batsmen": [
+          { "name": "V. Kohli", "runs": 86, "balls": 47, "fours": 6, "sixes": 4, "onStrike": false },
+          { "name": "D. Karthik", "runs": 12, "balls": 5, "fours": 1, "sixes": 1, "onStrike": true }
+        ],
+        "bowlers": [
+          { "name": "M. Pathirana", "overs": "3.3", "runs": 29, "wickets": 2 }
+        ],
+        "toss": "CSK won the toss and elected to bat"
+      },
+      "slot2": null
+    },
+    {
+      "slot1": {
+        "status": "LIVE",
+        "matchNumber": "Match 45",
+        "venue": "M. Chinnaswamy Stadium, Bengaluru",
+        "team1": { "name": "CSK" },
+        "team2": { "name": "RCB" },
+        "team1Score": "218",
+        "team1Wickets": "5",
+        "team1Overs": "20.0",
+        "currentInnings": 2,
+        "score": "207",
+        "wickets": "6",
+        "overs": "18.4",
+        "target": 219,
+        "crr": "11.09",
+        "rrr": "9.00",
+        "recent": ["1", "4", "2", "6", "1", "6"],
+        "batsmen": [
+          { "name": "V. Kohli", "runs": 86, "balls": 47, "fours": 6, "sixes": 4, "onStrike": false },
+          { "name": "D. Karthik", "runs": 18, "balls": 6, "fours": 1, "sixes": 2, "onStrike": true }
+        ],
+        "bowlers": [
+          { "name": "M. Pathirana", "overs": "3.4", "runs": 35, "wickets": 2 }
+        ],
+        "toss": "CSK won the toss and elected to bat"
+      },
+      "slot2": null
+    },
+    {
+      "slot1": {
+        "status": "LIVE",
+        "matchNumber": "Match 45",
+        "venue": "M. Chinnaswamy Stadium, Bengaluru",
+        "team1": { "name": "CSK" },
+        "team2": { "name": "RCB" },
+        "team1Score": "218",
+        "team1Wickets": "5",
+        "team1Overs": "20.0",
+        "currentInnings": 2,
+        "score": "211",
+        "wickets": "6",
+        "overs": "18.5",
+        "target": 219,
+        "crr": "11.20",
+        "rrr": "6.85",
+        "recent": ["4", "2", "6", "1", "6", "4"],
+        "batsmen": [
+          { "name": "V. Kohli", "runs": 86, "balls": 47, "fours": 6, "sixes": 4, "onStrike": false },
+          { "name": "D. Karthik", "runs": 22, "balls": 7, "fours": 2, "sixes": 2, "onStrike": true }
+        ],
+        "bowlers": [
+          { "name": "M. Pathirana", "overs": "3.5", "runs": 39, "wickets": 2 }
+        ],
+        "toss": "CSK won the toss and elected to bat"
+      },
+      "slot2": null
+    },
+    {
+      "slot1": {
+        "status": "FINISHED",
+        "matchNumber": "Match 45",
+        "venue": "M. Chinnaswamy Stadium, Bengaluru",
+        "team1": { "name": "CSK" },
+        "team2": { "name": "RCB" },
+        "team1Score": "218",
+        "team1Wickets": "5",
+        "team1Overs": "20.0",
+        "currentInnings": 2,
+        "score": "219",
+        "wickets": "6",
+        "overs": "19.0",
+        "target": 219,
+        "crr": "11.52",
+        "rrr": "0.00",
+        "recent": ["2", "6", "1", "6", "4", "6"],
+        "batsmen": [
+          { "name": "V. Kohli", "runs": 86, "balls": 47, "fours": 6, "sixes": 4, "onStrike": false },
+          { "name": "D. Karthik", "runs": 28, "balls": 8, "fours": 2, "sixes": 3, "onStrike": true }
+        ],
+        "bowlers": [
+          { "name": "M. Pathirana", "overs": "4.0", "runs": 45, "wickets": 2 }
+        ],
+        "toss": "CSK won the toss and elected to bat",
+        "result": "RCB won by 4 wickets"
+      },
+      "slot2": null
+    }
+  ]
+}

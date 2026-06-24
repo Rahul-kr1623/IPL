@@ -246,7 +246,7 @@ export const MatchProvider = ({ children }) => {
     };
 
     poll();
-    const t = setInterval(poll, 20000);
+    const t = setInterval(poll, 5000); // Fast polling for snappy UI
     return () => { cancelled = true; clearInterval(t); };
   }, []);
 

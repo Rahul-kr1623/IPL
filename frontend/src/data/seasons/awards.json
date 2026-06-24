@@ -1,21 +1,420 @@
 {
-  "2008": { "season":2008, "orangeCap":{"player":"Shaun Marsh","team":"PBKS","runs":616}, "purpleCap":{"player":"Sohail Tanvir","team":"RR","wickets":22}, "mvp":{"player":"Shane Warne","team":"RR"}, "emergingPlayer":{"player":"Rohit Sharma","team":"DC"}, "fairPlay":"RR" },
-  "2009": { "season":2009, "orangeCap":{"player":"Matthew Hayden","team":"CSK","runs":572}, "purpleCap":{"player":"RP Singh","team":"DC","wickets":23}, "mvp":{"player":"Adam Gilchrist","team":"DC"}, "emergingPlayer":{"player":"Pradeep Sangwan","team":"DC"}, "fairPlay":"DC" },
-  "2010": { "season":2010, "orangeCap":{"player":"Sachin Tendulkar","team":"MI","runs":618}, "purpleCap":{"player":"Pragyan Ojha","team":"DC","wickets":21}, "mvp":{"player":"Sachin Tendulkar","team":"MI"}, "emergingPlayer":{"player":"Saurabh Tiwary","team":"MI"}, "fairPlay":"RR" },
-  "2011": { "season":2011, "orangeCap":{"player":"Chris Gayle","team":"RCB","runs":608}, "purpleCap":{"player":"Lasith Malinga","team":"MI","wickets":28}, "mvp":{"player":"Chris Gayle","team":"RCB"}, "emergingPlayer":{"player":"Iqbal Abdulla","team":"KKR"}, "fairPlay":"KKR" },
-  "2012": { "season":2012, "orangeCap":{"player":"Chris Gayle","team":"RCB","runs":733}, "purpleCap":{"player":"Morne Morkel","team":"DC","wickets":25}, "mvp":{"player":"Chris Gayle","team":"RCB"}, "emergingPlayer":{"player":"Sunil Narine","team":"KKR"}, "fairPlay":"CSK" },
-  "2013": { "season":2013, "orangeCap":{"player":"Michael Hussey","team":"CSK","runs":733}, "purpleCap":{"player":"Dwayne Bravo","team":"CSK","wickets":32}, "mvp":{"player":"Dwayne Bravo","team":"CSK"}, "emergingPlayer":{"player":"Sandeep Sharma","team":"PBKS"}, "fairPlay":"RR" },
-  "2014": { "season":2014, "orangeCap":{"player":"Robin Uthappa","team":"KKR","runs":660}, "purpleCap":{"player":"Mohit Sharma","team":"CSK","wickets":23}, "mvp":{"player":"Robin Uthappa","team":"KKR"}, "emergingPlayer":{"player":"Axar Patel","team":"PBKS"}, "fairPlay":"KKR" },
-  "2015": { "season":2015, "orangeCap":{"player":"David Warner","team":"SRH","runs":562}, "purpleCap":{"player":"Dwayne Bravo","team":"CSK","wickets":26}, "mvp":{"player":"AB de Villiers","team":"RCB"}, "emergingPlayer":{"player":"Shreyas Iyer","team":"DC"}, "fairPlay":"MI" },
-  "2016": { "season":2016, "orangeCap":{"player":"Virat Kohli","team":"RCB","runs":973}, "purpleCap":{"player":"Bhuvneshwar Kumar","team":"SRH","wickets":23}, "mvp":{"player":"Virat Kohli","team":"RCB"}, "emergingPlayer":{"player":"Mustafizur Rahman","team":"SRH"}, "fairPlay":"KKR" },
-  "2017": { "season":2017, "orangeCap":{"player":"David Warner","team":"SRH","runs":641}, "purpleCap":{"player":"Bhuvneshwar Kumar","team":"SRH","wickets":26}, "mvp":{"player":"David Warner","team":"SRH"}, "emergingPlayer":{"player":"Basil Thampi","team":"GL"}, "fairPlay":"MI" },
-  "2018": { "season":2018, "orangeCap":{"player":"Kane Williamson","team":"SRH","runs":735}, "purpleCap":{"player":"Andrew Tye","team":"PBKS","wickets":24}, "mvp":{"player":"Sunil Narine","team":"KKR"}, "emergingPlayer":{"player":"Rasikh Salam","team":"MI"}, "fairPlay":"RR" },
-  "2019": { "season":2019, "orangeCap":{"player":"David Warner","team":"SRH","runs":692}, "purpleCap":{"player":"Imran Tahir","team":"CSK","wickets":26}, "mvp":{"player":"Andre Russell","team":"KKR"}, "emergingPlayer":{"player":"Shubman Gill","team":"KKR"}, "fairPlay":"CSK" },
-  "2020": { "season":2020, "orangeCap":{"player":"KL Rahul","team":"PBKS","runs":670}, "purpleCap":{"player":"Kagiso Rabada","team":"DC","wickets":30}, "mvp":{"player":"Jofra Archer","team":"RR"}, "emergingPlayer":{"player":"Ravi Bishnoi","team":"PBKS"}, "fairPlay":"MI" },
-  "2021": { "season":2021, "orangeCap":{"player":"Ruturaj Gaikwad","team":"CSK","runs":635}, "purpleCap":{"player":"Harshal Patel","team":"RCB","wickets":32}, "mvp":{"player":"Harshal Patel","team":"RCB"}, "emergingPlayer":{"player":"Ruturaj Gaikwad","team":"CSK"}, "fairPlay":"CSK" },
-  "2022": { "season":2022, "orangeCap":{"player":"Jos Buttler","team":"RR","runs":863}, "purpleCap":{"player":"Yuzvendra Chahal","team":"RR","wickets":27}, "mvp":{"player":"Jos Buttler","team":"RR"}, "emergingPlayer":{"player":"Umran Malik","team":"SRH"}, "fairPlay":"GT" },
-  "2023": { "season":2023, "orangeCap":{"player":"Shubman Gill","team":"GT","runs":890}, "purpleCap":{"player":"Mohammed Shami","team":"GT","wickets":28}, "mvp":{"player":"Shubman Gill","team":"GT"}, "emergingPlayer":{"player":"Yashasvi Jaiswal","team":"RR"}, "fairPlay":"LSG" },
-  "2024": { "season":2024, "orangeCap":{"player":"Virat Kohli","team":"RCB","runs":741}, "purpleCap":{"player":"Harshal Patel","team":"PBKS","wickets":24}, "mvp":{"player":"Sunil Narine","team":"KKR"}, "emergingPlayer":{"player":"Mayank Yadav","team":"LSG"}, "fairPlay":"RCB" },
-  "2025": { "season":2025, "orangeCap":{"player":"Virat Kohli","team":"RCB","runs":812}, "purpleCap":{"player":"Josh Hazlewood","team":"RCB","wickets":25}, "mvp":{"player":"Virat Kohli","team":"RCB"}, "emergingPlayer":{"player":"Vaibhav Suryavanshi","team":"RR"}, "fairPlay":"RCB" },
-  "2026": { "season":2026, "orangeCap":null, "purpleCap":null, "mvp":null, "emergingPlayer":null, "fairPlay":null }
+  "2008": {
+    "season": 2008,
+    "orangeCap": {
+      "player": "Shaun Marsh",
+      "team": "PBKS",
+      "runs": 616
+    },
+    "purpleCap": {
+      "player": "Sohail Tanvir",
+      "team": "RR",
+      "wickets": 22
+    },
+    "mvp": {
+      "player": "Shane Warne",
+      "team": "RR"
+    },
+    "emergingPlayer": {
+      "player": "Rohit Sharma",
+      "team": "DC"
+    },
+    "fairPlay": "RR"
+  },
+  "2009": {
+    "season": 2009,
+    "orangeCap": {
+      "player": "Matthew Hayden",
+      "team": "CSK",
+      "runs": 572
+    },
+    "purpleCap": {
+      "player": "RP Singh",
+      "team": "DC",
+      "wickets": 23
+    },
+    "mvp": {
+      "player": "Adam Gilchrist",
+      "team": "DC"
+    },
+    "emergingPlayer": {
+      "player": "Pradeep Sangwan",
+      "team": "DC"
+    },
+    "fairPlay": "DC"
+  },
+  "2010": {
+    "season": 2010,
+    "orangeCap": {
+      "player": "Sachin Tendulkar",
+      "team": "MI",
+      "runs": 618
+    },
+    "purpleCap": {
+      "player": "Pragyan Ojha",
+      "team": "DC",
+      "wickets": 21
+    },
+    "mvp": {
+      "player": "Sachin Tendulkar",
+      "team": "MI"
+    },
+    "emergingPlayer": {
+      "player": "Saurabh Tiwary",
+      "team": "MI"
+    },
+    "fairPlay": "RR"
+  },
+  "2011": {
+    "season": 2011,
+    "orangeCap": {
+      "player": "Chris Gayle",
+      "team": "RCB",
+      "runs": 608
+    },
+    "purpleCap": {
+      "player": "Lasith Malinga",
+      "team": "MI",
+      "wickets": 28
+    },
+    "mvp": {
+      "player": "Chris Gayle",
+      "team": "RCB"
+    },
+    "emergingPlayer": {
+      "player": "Iqbal Abdulla",
+      "team": "KKR"
+    },
+    "fairPlay": "KKR"
+  },
+  "2012": {
+    "season": 2012,
+    "orangeCap": {
+      "player": "Chris Gayle",
+      "team": "RCB",
+      "runs": 733
+    },
+    "purpleCap": {
+      "player": "Morne Morkel",
+      "team": "DC",
+      "wickets": 25
+    },
+    "mvp": {
+      "player": "Chris Gayle",
+      "team": "RCB"
+    },
+    "emergingPlayer": {
+      "player": "Sunil Narine",
+      "team": "KKR"
+    },
+    "fairPlay": "CSK"
+  },
+  "2013": {
+    "season": 2013,
+    "orangeCap": {
+      "player": "Michael Hussey",
+      "team": "CSK",
+      "runs": 733
+    },
+    "purpleCap": {
+      "player": "Dwayne Bravo",
+      "team": "CSK",
+      "wickets": 32
+    },
+    "mvp": {
+      "player": "Dwayne Bravo",
+      "team": "CSK"
+    },
+    "emergingPlayer": {
+      "player": "Sandeep Sharma",
+      "team": "PBKS"
+    },
+    "fairPlay": "RR"
+  },
+  "2014": {
+    "season": 2014,
+    "orangeCap": {
+      "player": "Robin Uthappa",
+      "team": "KKR",
+      "runs": 660
+    },
+    "purpleCap": {
+      "player": "Mohit Sharma",
+      "team": "CSK",
+      "wickets": 23
+    },
+    "mvp": {
+      "player": "Robin Uthappa",
+      "team": "KKR"
+    },
+    "emergingPlayer": {
+      "player": "Axar Patel",
+      "team": "PBKS"
+    },
+    "fairPlay": "KKR"
+  },
+  "2015": {
+    "season": 2015,
+    "orangeCap": {
+      "player": "David Warner",
+      "team": "SRH",
+      "runs": 562
+    },
+    "purpleCap": {
+      "player": "Dwayne Bravo",
+      "team": "CSK",
+      "wickets": 26
+    },
+    "mvp": {
+      "player": "AB de Villiers",
+      "team": "RCB"
+    },
+    "emergingPlayer": {
+      "player": "Shreyas Iyer",
+      "team": "DC"
+    },
+    "fairPlay": "MI"
+  },
+  "2016": {
+    "season": 2016,
+    "orangeCap": {
+      "player": "Virat Kohli",
+      "team": "RCB",
+      "runs": 973
+    },
+    "purpleCap": {
+      "player": "Bhuvneshwar Kumar",
+      "team": "SRH",
+      "wickets": 23
+    },
+    "mvp": {
+      "player": "Virat Kohli",
+      "team": "RCB"
+    },
+    "emergingPlayer": {
+      "player": "Mustafizur Rahman",
+      "team": "SRH"
+    },
+    "fairPlay": "KKR"
+  },
+  "2017": {
+    "season": 2017,
+    "orangeCap": {
+      "player": "David Warner",
+      "team": "SRH",
+      "runs": 641
+    },
+    "purpleCap": {
+      "player": "Bhuvneshwar Kumar",
+      "team": "SRH",
+      "wickets": 26
+    },
+    "mvp": {
+      "player": "David Warner",
+      "team": "SRH"
+    },
+    "emergingPlayer": {
+      "player": "Basil Thampi",
+      "team": "GL"
+    },
+    "fairPlay": "MI"
+  },
+  "2018": {
+    "season": 2018,
+    "orangeCap": {
+      "player": "Kane Williamson",
+      "team": "SRH",
+      "runs": 735
+    },
+    "purpleCap": {
+      "player": "Andrew Tye",
+      "team": "PBKS",
+      "wickets": 24
+    },
+    "mvp": {
+      "player": "Sunil Narine",
+      "team": "KKR"
+    },
+    "emergingPlayer": {
+      "player": "Rasikh Salam",
+      "team": "MI"
+    },
+    "fairPlay": "RR"
+  },
+  "2019": {
+    "season": 2019,
+    "orangeCap": {
+      "player": "David Warner",
+      "team": "SRH",
+      "runs": 692
+    },
+    "purpleCap": {
+      "player": "Imran Tahir",
+      "team": "CSK",
+      "wickets": 26
+    },
+    "mvp": {
+      "player": "Andre Russell",
+      "team": "KKR"
+    },
+    "emergingPlayer": {
+      "player": "Shubman Gill",
+      "team": "KKR"
+    },
+    "fairPlay": "CSK"
+  },
+  "2020": {
+    "season": 2020,
+    "orangeCap": {
+      "player": "KL Rahul",
+      "team": "PBKS",
+      "runs": 670
+    },
+    "purpleCap": {
+      "player": "Kagiso Rabada",
+      "team": "DC",
+      "wickets": 30
+    },
+    "mvp": {
+      "player": "Jofra Archer",
+      "team": "RR"
+    },
+    "emergingPlayer": {
+      "player": "Ravi Bishnoi",
+      "team": "PBKS"
+    },
+    "fairPlay": "MI"
+  },
+  "2021": {
+    "season": 2021,
+    "orangeCap": {
+      "player": "Ruturaj Gaikwad",
+      "team": "CSK",
+      "runs": 635
+    },
+    "purpleCap": {
+      "player": "Harshal Patel",
+      "team": "RCB",
+      "wickets": 32
+    },
+    "mvp": {
+      "player": "Harshal Patel",
+      "team": "RCB"
+    },
+    "emergingPlayer": {
+      "player": "Ruturaj Gaikwad",
+      "team": "CSK"
+    },
+    "fairPlay": "CSK"
+  },
+  "2022": {
+    "season": 2022,
+    "orangeCap": {
+      "player": "Jos Buttler",
+      "team": "RR",
+      "runs": 863
+    },
+    "purpleCap": {
+      "player": "Yuzvendra Chahal",
+      "team": "RR",
+      "wickets": 27
+    },
+    "mvp": {
+      "player": "Jos Buttler",
+      "team": "RR"
+    },
+    "emergingPlayer": {
+      "player": "Umran Malik",
+      "team": "SRH"
+    },
+    "fairPlay": "GT"
+  },
+  "2023": {
+    "season": 2023,
+    "orangeCap": {
+      "player": "Shubman Gill",
+      "team": "GT",
+      "runs": 890
+    },
+    "purpleCap": {
+      "player": "Mohammed Shami",
+      "team": "GT",
+      "wickets": 28
+    },
+    "mvp": {
+      "player": "Shubman Gill",
+      "team": "GT"
+    },
+    "emergingPlayer": {
+      "player": "Yashasvi Jaiswal",
+      "team": "RR"
+    },
+    "fairPlay": "LSG"
+  },
+  "2024": {
+    "season": 2024,
+    "orangeCap": {
+      "player": "Virat Kohli",
+      "team": "RCB",
+      "runs": 741
+    },
+    "purpleCap": {
+      "player": "Harshal Patel",
+      "team": "PBKS",
+      "wickets": 24
+    },
+    "mvp": {
+      "player": "Sunil Narine",
+      "team": "KKR"
+    },
+    "emergingPlayer": {
+      "player": "Mayank Yadav",
+      "team": "LSG"
+    },
+    "fairPlay": "RCB"
+  },
+  "2025": {
+    "season": 2025,
+    "orangeCap": {
+      "player": "Virat Kohli",
+      "team": "RCB",
+      "runs": 812
+    },
+    "purpleCap": {
+      "player": "Josh Hazlewood",
+      "team": "RCB",
+      "wickets": 25
+    },
+    "mvp": {
+      "player": "Virat Kohli",
+      "team": "RCB"
+    },
+    "emergingPlayer": {
+      "player": "Vaibhav Suryavanshi",
+      "team": "RR"
+    },
+    "fairPlay": "RCB"
+  },
+  "2026": {
+    "season": 2026,
+    "orangeCap": {
+      "player": "Sai Sudharsan",
+      "team": "GT",
+      "runs": 759
+    },
+    "purpleCap": {
+      "player": "Jasprit Bumrah",
+      "team": "MI",
+      "wickets": 28
+    },
+    "mvp": {
+      "player": "Shubman Gill",
+      "team": "GT"
+    },
+    "emergingPlayer": {
+      "player": "Vaibhav Suryavanshi",
+      "team": "RR"
+    },
+    "fairPlay": "GT"
+  }
 }

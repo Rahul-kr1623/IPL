@@ -108,31 +108,39 @@ export const getLiveScore = async (req, res) => {
   }
 };
 
+let latestFinishedCache = { data: null, fetchedAt: 0 };
+const LATEST_FINISHED_CACHE_MS = 2 * 60 * 1000; // 2 minutes
+
 // ─── GET /api/v1/latest-finished ─────────────────────────────────────────────
 export const getLatestFinished = async (req, res) => {
   try {
-    // Tier 1: JSON file written by scheduler on every FINISHED match (most up to date)
-    const jsonResult = getLatestFinishedFromJson();
-    if (jsonResult) return res.json({ match: jsonResult, source: 'json' });
+    const age = Date.now() - latestFinishedCache.fetchedAt;
+    
+    if (age < LATEST_FINISHED_CACHE_MS && latestFinishedCache.data) {
+      return res.json({ match: latestFinishedCache.data, source: 'espn-scraped' });
+    }
 
-    // Tier 2: MongoDB LiveMatch marked as FINISHED/RECENTLY FINISHED
-    const mongoResult = await getLatestFinishedMatch();
-    if (mongoResult) return res.json({ match: mongoResult.toObject(), source: 'liveMatch' });
-
-    // Tier 3: Live ESPN scrape — tries scoreboard + date-range
+    // Tier 1: Live ESPN scrape — most dynamic and accurate
     try {
       const scraped = await scrapeLatestCompletedMatch();
       if (scraped) {
         const result = { ...scraped, source: 'espn-scraped', _source: 'espn-scraped' };
+        latestFinishedCache = { data: result, fetchedAt: Date.now() };
         return res.json({ match: result, source: 'espn-scraped' });
       }
     } catch (e) {
       console.log('[getLatestFinished] ESPN scrape failed:', e.message);
     }
 
-    // Tier 4: Return null — DO NOT fall back to hardcoded stale data.
-    // The frontend will hide Box 3 when match is null.
-    // This is better than showing a weeks-old result forever.
+    // Tier 2: JSON file written by scheduler on every FINISHED match
+    const jsonResult = getLatestFinishedFromJson();
+    if (jsonResult) return res.json({ match: jsonResult, source: 'json' });
+
+    // Tier 3: MongoDB LiveMatch marked as FINISHED/RECENTLY FINISHED
+    const mongoResult = await getLatestFinishedMatch();
+    if (mongoResult) return res.json({ match: mongoResult.toObject(), source: 'liveMatch' });
+
+    // Tier 4: Return null
     return res.json({ match: null, source: 'none' });
   } catch (err) {
     res.status(500).json({ error: err.message, match: null });

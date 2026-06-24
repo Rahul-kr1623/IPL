@@ -11,6 +11,7 @@
  */
 
 import { scrapeAllSlots, scrapeIPLStandingsAndStats } from './scraperService.js';
+import { simulateAllSlots } from './simulatorService.js';
 import { saveMatch, getLatestMatch, markMatchFinished } from './dbService.js';
 import scraperState, {
   FREEZE_MS, NEED_CONFIRM, MAX_FAILS,
@@ -296,7 +297,8 @@ export const runLiveSyncAllSlots = async () => {
   }
 
   try {
-    const { slot1, slot2 } = await scrapeAllSlots();
+    const isSimulating = process.env.SIMULATE_LIVE === 'true';
+    const { slot1, slot2 } = isSimulating ? await simulateAllSlots() : await scrapeAllSlots();
     await Promise.allSettled([
       processSlot('slot1', slot1),
       processSlot('slot2', slot2),
@@ -330,7 +332,10 @@ export const restoreStateFromDb = async () => {
 };
 
 export const startScheduler = () => {
-  setInterval(runLiveSyncAllSlots,      40_000);
+  const isSimulating = process.env.SIMULATE_LIVE === 'true';
+  const pollInterval = isSimulating ? 5_000 : 40_000;
+  
+  setInterval(runLiveSyncAllSlots, pollInterval);
   setInterval(updateStandingsAndStats, 12 * 60 * 60_000);
-  console.log('⏰ Scheduler started (live: 40s, standings: 12h)');
+  console.log(`⏰ Scheduler started (live: ${pollInterval/1000}s${isSimulating ? ' [SIMULATION MODE]' : ''}, standings: 12h)`);
 };

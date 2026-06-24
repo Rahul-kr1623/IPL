@@ -16,14 +16,16 @@
  *   utils/        — shared state, data engine, cache
  */
 
-import express    from 'express';
-import cors       from 'cors';
-import dotenv     from 'dotenv';
-import mongoose   from 'mongoose';
-import https      from 'https';
+import express from 'express';
+import cors from 'cors';
+import { createServer } from 'http';
+import { initGameServer } from './game/gameServer.js';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import https from 'https';
 
-import liveRoutes    from './routes/live.js';
-import debugRoutes   from './routes/debug.js';
+import liveRoutes from './routes/live.js';
+import debugRoutes from './routes/debug.js';
 import commentRoutes from './routes/comments.js';
 
 import {
@@ -48,9 +50,9 @@ app.use(express.json());
 // Routes
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.use('/api/v1',        liveRoutes);
-app.use('/api/v1/debug',  debugRoutes);
-app.use('/api/comments',  commentRoutes);
+app.use('/api/v1', liveRoutes);
+app.use('/api/v1/debug', debugRoutes);
+app.use('/api/comments', commentRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Start server
@@ -63,7 +65,10 @@ mongoose
   .then(async () => {
     console.log('✅ MongoDB connected');
 
-    app.listen(PORT, async () => {
+    const httpServer = createServer(app);
+    initGameServer(httpServer);
+
+    httpServer.listen(PORT, async () => {
       console.log(`🚀 Server → http://localhost:${PORT}`);
 
       // Keep Render free tier awake — ping /api/v1/health every 14 minutes

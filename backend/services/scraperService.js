@@ -78,23 +78,82 @@ const oversToFloat = (ov) => {
   return (parseInt(o || 0)) + ((parseInt(b || 0)) / 6);
 };
 
-// ─── HTTP helper ──────────────────────────────────────────────────────────────
-const fetchRaw = (url, hdrs = {}, ms = 15000) => new Promise((res, rej) => {
-  const lib = url.startsWith('https') ? https : http;
-  const req = lib.get(url, {
+// ─── HTTP Stealth helper ──────────────────────────────────────────────────────
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0'
+];
+
+const getRandomAgent = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+
+// Custom HTTPS Agent to spoof TLS fingerprint
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  ciphers: [
+    "TLS_AES_128_GCM_SHA256",
+    "TLS_AES_256_GCM_SHA384",
+    "TLS_CHACHA20_POLY1305_SHA256",
+    "ECDHE-ECDSA-AES128-GCM-SHA256",
+    "ECDHE-RSA-AES128-GCM-SHA256",
+    "ECDHE-ECDSA-AES256-GCM-SHA384",
+    "ECDHE-RSA-AES256-GCM-SHA384",
+    "ECDHE-ECDSA-CHACHA20-POLY1305",
+    "ECDHE-RSA-CHACHA20-POLY1305",
+    "ECDHE-RSA-AES128-SHA",
+    "ECDHE-RSA-AES256-SHA",
+    "AES128-GCM-SHA256",
+    "AES256-GCM-SHA384",
+    "AES128-SHA",
+    "AES256-SHA"
+  ].join(':'),
+  minVersion: 'TLSv1.2',
+  maxVersion: 'TLSv1.3'
+});
+
+const fetchRaw = (url, hdrs = {}, ms = 15000, attempt = 1) => new Promise((res, rej) => {
+  const isHttps = url.startsWith('https');
+  const lib = isHttps ? https : http;
+  
+  const options = {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
-      'Accept': 'application/json, */*',
+      'User-Agent': getRandomAgent(),
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       'Accept-Language': 'en-US,en;q=0.9',
       'Cache-Control': 'no-cache',
+      'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
       ...hdrs,
     },
     timeout: ms,
-  }, r => {
-    if ([301, 302, 303, 307, 308].includes(r.statusCode) && r.headers.location)
-      return fetchRaw(r.headers.location, hdrs, ms).then(res).catch(rej);
-    let d = ''; r.on('data', c => d += c); r.on('end', () => res({ status: r.statusCode, body: d }));
+    agent: isHttps ? httpsAgent : undefined
+  };
+
+  const req = lib.get(url, options, async r => {
+    if ([301, 302, 303, 307, 308].includes(r.statusCode) && r.headers.location) {
+      return fetchRaw(r.headers.location, hdrs, ms, attempt).then(res).catch(rej);
+    }
+    
+    let d = ''; r.on('data', c => d += c); 
+    r.on('end', async () => {
+      // Exponential backoff for rate limits or WAF blocks
+      if ((r.statusCode === 403 || r.statusCode === 429) && attempt <= 3) {
+        console.log(`  [HTTP ${r.statusCode}] Blocked. Retrying (${attempt}/3) in ${attempt * 2}s...`);
+        await wait(attempt * 2000);
+        return fetchRaw(url, hdrs, ms, attempt + 1).then(res).catch(rej);
+      }
+      res({ status: r.statusCode, body: d });
+    });
   });
+  
   req.on('error', rej);
   req.on('timeout', () => { req.destroy(); rej(new Error('timeout')); });
 });
@@ -497,6 +556,11 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
     const comp0Overs = parseFloat(ps0?.overs || '0');
     const comp1Overs = parseFloat(ps1?.overs || '0');
 
+    // Extract embedded target to definitively know who is chasing
+    const matchTarget0 = (comp0?.score || '').match(/target[:\s]*(\d{2,3})/i);
+    const matchTarget1 = (comp1?.score || '').match(/target[:\s]*(\d{2,3})/i);
+    const embeddedTarget = matchTarget0 || matchTarget1;
+
     // --- Signal 1: toss note parsing ---
     // e.g. "CSK won the toss and elected to bat"  → CSK = team1 (batted first)
     // e.g. "MI won the toss and elected to field" → MI fielded first → OTHER team batted first
@@ -562,11 +626,40 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
       //      currently NOT at that over is the one that already completed theirs
       //   4. homeAway         — weakest signal, last resort
 
-      const comp0Finished = comp0Overs >= 19.5;
-      const comp1Finished = comp1Overs >= 19.5;
+      const comp0Finished = comp0Overs >= 19.5 || status === 'FINISHED';
+      const comp1Finished = comp1Overs >= 19.5 || status === 'FINISHED';
 
-      // Signal 1: overs clearly show one innings done
-      if (comp0Finished && !comp1Finished) {
+      // Signal 0.5: If match is FINISHED, use the result string!
+      // "won by X wickets" -> winner batted second.
+      // "won by X runs" -> winner batted first.
+      let resultBatFirst = null;
+      if (status === 'FINISHED' && result) {
+        const resStr = result.toLowerCase();
+        const winner = resStr.includes(ct0.toLowerCase()) ? ct0 : (resStr.includes(ct1.toLowerCase()) ? ct1 : null);
+        if (winner) {
+          if (resStr.includes('wicket')) {
+            // Winner chased
+            resultBatFirst = winner === ct0 ? ct1 : ct0;
+          } else if (resStr.includes('run')) {
+            // Winner defended
+            resultBatFirst = winner;
+          }
+        }
+      }
+
+      if (resultBatFirst) {
+        assignByFirstBatter(resultBatFirst);
+        console.log(`  [ESPN] score-string fallback (result string: ${result} → batFirst=${resultBatFirst})`);
+      } else if (embeddedTarget) {
+        // The competitor whose score string contains "target" is the one currently chasing.
+        if (matchTarget0) {
+          assignByFirstBatter(ct1);
+          console.log(`  [ESPN] score-string fallback (target in comp0 → comp1 batted first)`);
+        } else if (matchTarget1) {
+          assignByFirstBatter(ct0);
+          console.log(`  [ESPN] score-string fallback (target in comp1 → comp0 batted first)`);
+        }
+      } else if (comp0Finished && !comp1Finished) {
         assignByFirstBatter(ct0);
         console.log(`  [ESPN] score-string fallback (comp0 complete overs, comp1 chasing)`);
       } else if (comp1Finished && !comp0Finished) {
@@ -576,9 +669,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
         // Signal 2: run-total heuristic
         // The team with MORE runs has almost certainly finished their innings — they
         // batted first. The live chase score is always lower (chase is in progress).
-        // Exception: match finished with a chase win — both overs are 20.0 — but in
-        // that case the overs signal above already handled it.
-        // We add a margin of 5 runs to avoid misfire when scores are very close.
+        // Exception: match finished with a chase win — but the resultBatFirst logic above handles that.
         const r0 = parseInt(ps0.runs || 0);
         const r1 = parseInt(ps1.runs || 0);
         const runDiff = Math.abs(r0 - r1);
@@ -1350,15 +1441,34 @@ export const scrapeLatestCompletedMatch = async () => {
       ? new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
       : '';
 
+    // Fix inversion: Who batted first?
+    // "won by X wickets" -> winner chased (batted second).
+    // "won by X runs" -> winner defended (batted first).
+    let team1 = t0;
+    let team2 = t1;
+    let team1Score = fmt(c0);
+    let team2Score = fmt(c1);
+
+    const resStr = note.toLowerCase();
+    if (winTeam) {
+      if (resStr.includes('wicket')) {
+        // Winner chased -> winner is team2
+        if (winTeam === t0) { team1 = t1; team2 = t0; team1Score = fmt(c1); team2Score = fmt(c0); }
+      } else if (resStr.includes('run')) {
+        // Winner defended -> winner is team1
+        if (winTeam === t1) { team1 = t1; team2 = t0; team1Score = fmt(c1); team2Score = fmt(c0); }
+      }
+    }
+
     return {
-      team1: t0, team2: t1,
-      team1Score: fmt(c0), team2Score: fmt(c1),
+      team1, team2,
+      team1Score, team2Score,
       winner: winTeam, result: note,
       matchNumber: `Match ${comp.id || ev.id || ''}`,
       date: dateLabel, venue: comp.venue?.fullName || '',
       status: 'FINISHED',
-      winProbT1: winTeam === t0 ? 100 : 0,
-      winProbT2: winTeam === t1 ? 100 : 0,
+      winProbT1: winTeam === team1 ? 100 : 0,
+      winProbT2: winTeam === team2 ? 100 : 0,
       source: 'espn-scraped', _source: 'espn-scraped',
     };
   };

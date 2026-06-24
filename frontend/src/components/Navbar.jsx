@@ -13,6 +13,7 @@ const navLinks = [
   { name: 'Stats',      href: '/stats' },
   { name: 'Points',     href: '/points' },
   { name: 'Stadiums',   href: '/stadiums' },
+  { name: '🏏 Play',     href: '/play', highlight: true },
 ];
 
 const Navbar = () => {
