@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoveLeft, Shield, Zap, Target, Users, Trophy, Star } from 'lucide-react';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
-import { CURRENT_SEASON, TEAM_COLORS } from '../data/seasons/index.js';
+import { CURRENT_SEASON, TEAM_COLORS } from '../utils/constants.js';
 
 // ─── Squad data per team per season ──────────────────────────────────────────
 const SQUADS = {

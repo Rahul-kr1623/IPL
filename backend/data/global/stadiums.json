@@ -1,0 +1,41 @@
+[
+  {
+    "id": "chinnaswamy",
+    "name": "M. Chinnaswamy Stadium",
+    "city": "Bengaluru",
+    "capacity": 40000,
+    "homeTeam": "RCB",
+    "stats": {
+      "matchesPlayed": 95,
+      "highestScore": "263/5",
+      "lowestScore": "82/10",
+      "avgFirstInnings": 175
+    }
+  },
+  {
+    "id": "wankhede",
+    "name": "Wankhede Stadium",
+    "city": "Mumbai",
+    "capacity": 33108,
+    "homeTeam": "MI",
+    "stats": {
+      "matchesPlayed": 115,
+      "highestScore": "235/1",
+      "lowestScore": "67/10",
+      "avgFirstInnings": 169
+    }
+  },
+  {
+    "id": "chepauk",
+    "name": "M.A. Chidambaram Stadium",
+    "city": "Chennai",
+    "capacity": 38200,
+    "homeTeam": "CSK",
+    "stats": {
+      "matchesPlayed": 82,
+      "highestScore": "246/5",
+      "lowestScore": "70/10",
+      "avgFirstInnings": 163
+    }
+  }
+]

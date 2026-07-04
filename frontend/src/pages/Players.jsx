@@ -1,368 +1,335 @@
-import React, { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoveLeft, Shield, Zap, Target, Users, Trophy, Star } from 'lucide-react';
-import SeasonDropdown from '../components/SeasonDropdown.jsx';
-import { CURRENT_SEASON, TEAM_COLORS } from '../data/seasons/index.js';
-
-// ─── Squad data per team per season ──────────────────────────────────────────
-const SQUADS = {
-  csk: {
-    2026: [
-      { name: 'Ruturaj Gaikwad', role: 'Batter', type: 'captain' },
-      { name: 'Devon Conway',    role: 'Batter', type: 'overseas' },
-      { name: 'Rahul Tripathi',  role: 'Batter' },
-      { name: 'Shaik Rasheed',   role: 'Batter' },
-      { name: 'Sameer Rizvi',    role: 'Batter' },
-      { name: 'MS Dhoni',        role: 'Wicket-Keeper', type: 'icon' },
-      { name: 'Kartik Sharma',   role: 'Wicket-Keeper' },
-      { name: 'Ravindra Jadeja', role: 'All-Rounder' },
-      { name: 'Shivam Dube',     role: 'All-Rounder' },
-      { name: 'Moeen Ali',       role: 'All-Rounder', type: 'overseas' },
-      { name: 'Mitchell Santner',role: 'All-Rounder', type: 'overseas' },
-      { name: 'Matheesha Pathirana', role: 'Bowler', type: 'overseas' },
-      { name: 'Deepak Chahar',   role: 'Bowler' },
-      { name: 'Tushar Deshpande',role: 'Bowler' },
-      { name: 'Noor Ahmad',      role: 'Bowler', type: 'overseas' },
-      { name: 'Nathan Ellis',    role: 'Bowler', type: 'overseas' },
-    ],
-    2025: [
-      { name: 'Ruturaj Gaikwad', role: 'Batter', type: 'captain' },
-      { name: 'Devon Conway',    role: 'Batter', type: 'overseas' },
-      { name: 'MS Dhoni',        role: 'Wicket-Keeper', type: 'icon' },
-      { name: 'Ravindra Jadeja', role: 'All-Rounder' },
-      { name: 'Shivam Dube',     role: 'All-Rounder' },
-      { name: 'Matheesha Pathirana', role: 'Bowler', type: 'overseas' },
-      { name: 'Deepak Chahar',   role: 'Bowler' },
-    ],
-    2024: [
-      { name: 'Ruturaj Gaikwad', role: 'Batter', type: 'captain' },
-      { name: 'MS Dhoni',        role: 'Wicket-Keeper', type: 'icon' },
-      { name: 'Ravindra Jadeja', role: 'All-Rounder' },
-      { name: 'Deepak Chahar',   role: 'Bowler' },
-      { name: 'Matheesha Pathirana', role: 'Bowler', type: 'overseas' },
-    ],
-  },
-  mi: {
-    2026: [
-      { name: 'Rohit Sharma',    role: 'Batter', type: 'icon' },
-      { name: 'Tilak Varma',     role: 'Batter' },
-      { name: 'Naman Dhir',      role: 'Batter' },
-      { name: 'Ishan Kishan',    role: 'Wicket-Keeper' },
-      { name: 'Hardik Pandya',   role: 'All-Rounder', type: 'captain' },
-      { name: 'Tim David',       role: 'All-Rounder', type: 'overseas' },
-      { name: 'Romario Shepherd',role: 'All-Rounder', type: 'overseas' },
-      { name: 'Jasprit Bumrah',  role: 'Bowler', type: 'icon' },
-      { name: 'Gerald Coetzee',  role: 'Bowler', type: 'overseas' },
-      { name: 'Akash Madhwal',   role: 'Bowler' },
-      { name: 'Piyush Chawla',   role: 'Bowler' },
-    ],
-    2025: [
-      { name: 'Rohit Sharma',    role: 'Batter', type: 'captain' },
-      { name: 'Tilak Varma',     role: 'Batter' },
-      { name: 'Ishan Kishan',    role: 'Wicket-Keeper' },
-      { name: 'Hardik Pandya',   role: 'All-Rounder' },
-      { name: 'Jasprit Bumrah',  role: 'Bowler', type: 'icon' },
-    ],
-    2024: [
-      { name: 'Rohit Sharma',    role: 'Batter', type: 'captain' },
-      { name: 'Hardik Pandya',   role: 'All-Rounder' },
-      { name: 'Jasprit Bumrah',  role: 'Bowler', type: 'icon' },
-      { name: 'Suryakumar Yadav',role: 'Batter' },
-    ],
-  },
-  rcb: {
-    2026: [
-      { name: 'Virat Kohli',     role: 'Batter', type: 'icon' },
-      { name: 'Rajat Patidar',   role: 'Batter', type: 'captain' },
-      { name: 'Devdutt Padikkal',role: 'Batter' },
-      { name: 'Jacob Bethell',   role: 'Batter', type: 'overseas' },
-      { name: 'Phil Salt',       role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Jitesh Sharma',   role: 'Wicket-Keeper' },
-      { name: 'Krunal Pandya',   role: 'All-Rounder' },
-      { name: 'Josh Hazlewood',  role: 'Bowler', type: 'overseas' },
-      { name: 'Bhuvneshwar Kumar',role: 'Bowler' },
-      { name: 'Yash Dayal',      role: 'Bowler' },
-    ],
-    2025: [
-      { name: 'Virat Kohli',     role: 'Batter', type: 'icon' },
-      { name: 'Rajat Patidar',   role: 'Batter', type: 'captain' },
-      { name: 'Josh Hazlewood',  role: 'Bowler', type: 'overseas' },
-      { name: 'Bhuvneshwar Kumar',role: 'Bowler' },
-    ],
-  },
-  kkr: {
-    2026: [
-      { name: 'Ajinkya Rahane',  role: 'Batter', type: 'captain' },
-      { name: 'Rinku Singh',     role: 'Batter' },
-      { name: 'Venkatesh Iyer',  role: 'Batter' },
-      { name: 'Rahmanullah Gurbaz', role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Andre Russell',   role: 'All-Rounder', type: 'overseas' },
-      { name: 'Sunil Narine',    role: 'All-Rounder', type: 'overseas' },
-      { name: 'Mitchell Starc',  role: 'Bowler', type: 'overseas' },
-      { name: 'Varun Chakravarthy', role: 'Bowler' },
-      { name: 'Harshit Rana',    role: 'Bowler' },
-    ],
-    2024: [
-      { name: 'Shreyas Iyer',    role: 'Batter', type: 'captain' },
-      { name: 'Sunil Narine',    role: 'All-Rounder', type: 'overseas' },
-      { name: 'Andre Russell',   role: 'All-Rounder', type: 'overseas' },
-      { name: 'Mitchell Starc',  role: 'Bowler', type: 'overseas' },
-      { name: 'Varun Chakravarthy', role: 'Bowler' },
-    ],
-  },
-  rr: {
-    2026: [
-      { name: 'Riyan Parag',     role: 'All-Rounder', type: 'captain' },
-      { name: 'Yashasvi Jaiswal',role: 'Batter' },
-      { name: 'Sanju Samson',    role: 'Wicket-Keeper' },
-      { name: 'Jos Buttler',     role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Dhruv Jurel',     role: 'Wicket-Keeper' },
-      { name: 'Rovman Powell',   role: 'All-Rounder', type: 'overseas' },
-      { name: 'Trent Boult',     role: 'Bowler', type: 'overseas' },
-      { name: 'Yuzvendra Chahal',role: 'Bowler' },
-    ],
-    2022: [
-      { name: 'Sanju Samson',    role: 'Wicket-Keeper', type: 'captain' },
-      { name: 'Jos Buttler',     role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Yashasvi Jaiswal',role: 'Batter' },
-      { name: 'Trent Boult',     role: 'Bowler', type: 'overseas' },
-      { name: 'Yuzvendra Chahal',role: 'Bowler' },
-    ],
-  },
-  gt: {
-    2026: [
-      { name: 'Shubman Gill',    role: 'Batter', type: 'captain' },
-      { name: 'Sai Sudharsan',   role: 'Batter' },
-      { name: 'Kane Williamson', role: 'Batter', type: 'overseas' },
-      { name: 'Wriddhiman Saha', role: 'Wicket-Keeper' },
-      { name: 'Rahul Tewatia',   role: 'All-Rounder' },
-      { name: 'Rashid Khan',     role: 'All-Rounder', type: 'overseas' },
-      { name: 'Mohammed Shami',  role: 'Bowler' },
-      { name: 'Joshua Little',   role: 'Bowler', type: 'overseas' },
-    ],
-    2022: [
-      { name: 'Hardik Pandya',   role: 'All-Rounder', type: 'captain' },
-      { name: 'Shubman Gill',    role: 'Batter' },
-      { name: 'Rashid Khan',     role: 'All-Rounder', type: 'overseas' },
-      { name: 'Mohammed Shami',  role: 'Bowler' },
-    ],
-  },
-  srh: {
-    2026: [
-      { name: 'Pat Cummins',     role: 'Bowler', type: 'captain' },
-      { name: 'Travis Head',     role: 'Batter', type: 'overseas' },
-      { name: 'Abhishek Sharma', role: 'Batter' },
-      { name: 'Heinrich Klaasen',role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Marco Jansen',    role: 'All-Rounder', type: 'overseas' },
-      { name: 'Washington Sundar',role: 'All-Rounder' },
-      { name: 'Bhuvneshwar Kumar',role: 'Bowler' },
-    ],
-  },
-  dc: {
-    2026: [
-      { name: 'Axar Patel',      role: 'All-Rounder', type: 'captain' },
-      { name: 'KL Rahul',        role: 'Batter' },
-      { name: 'Abhishek Porel',  role: 'Wicket-Keeper' },
-      { name: 'Tristan Stubbs',  role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Kuldeep Yadav',   role: 'Bowler' },
-      { name: 'Mitchell Starc',  role: 'Bowler', type: 'overseas' },
-    ],
-  },
-  pbks: {
-    2026: [
-      { name: 'Shreyas Iyer',    role: 'Batter', type: 'captain' },
-      { name: 'Prabhsimran Singh',role:'Batter' },
-      { name: 'Jonny Bairstow',  role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Sam Curran',      role: 'All-Rounder', type: 'overseas' },
-      { name: 'Arshdeep Singh',  role: 'Bowler' },
-      { name: 'Kagiso Rabada',   role: 'Bowler', type: 'overseas' },
-    ],
-  },
-  lsg: {
-    2026: [
-      { name: 'Rishabh Pant',    role: 'Wicket-Keeper', type: 'captain' },
-      { name: 'Ayush Badoni',    role: 'Batter' },
-      { name: 'Nicholas Pooran', role: 'Wicket-Keeper', type: 'overseas' },
-      { name: 'Krunal Pandya',   role: 'All-Rounder' },
-      { name: 'Ravi Bishnoi',    role: 'Bowler' },
-      { name: 'Mark Wood',       role: 'Bowler', type: 'overseas' },
-    ],
-  },
-};
+import { Search, Shield, Zap, Target, Star, Swords, X, ChevronRight, Loader2 } from 'lucide-react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 const ROLE_ICON = {
-  'Batter':         <Target className="w-4 h-4" />,
-  'Bowler':         <Zap className="w-4 h-4" />,
-  'Wicket-Keeper':  <Shield className="w-4 h-4" />,
-  'All-Rounder':    <Star className="w-4 h-4" />,
+  'Batter': <Target className="w-4 h-4" />,
+  'Bowler': <Zap className="w-4 h-4" />,
+  'WK-Batter': <Shield className="w-4 h-4" />,
+  'All-Rounder': <Star className="w-4 h-4" />,
 };
 
-const ROLE_ORDER = ['Batter', 'Wicket-Keeper', 'All-Rounder', 'Bowler'];
-
-const teamsMeta = {
-  csk:  { name: 'Chennai Super Kings',         color: '#F7B111' },
-  mi:   { name: 'Mumbai Indians',               color: '#004BA0' },
-  rcb:  { name: 'Royal Challengers Bengaluru',  color: '#CC0000' },
-  kkr:  { name: 'Kolkata Knight Riders',        color: '#3A225D' },
-  rr:   { name: 'Rajasthan Royals',             color: '#EA1A85' },
-  srh:  { name: 'Sunrisers Hyderabad',          color: '#FF822A' },
-  dc:   { name: 'Delhi Capitals',               color: '#005CA5' },
-  pbks: { name: 'Punjab Kings',                 color: '#ED1B24' },
-  gt:   { name: 'Gujarat Titans',               color: '#1B2133' },
-  lsg:  { name: 'Lucknow Super Giants',         color: '#0ea5e9' },
+const TEAM_COLORS = {
+  CSK: '#F7B111', MI: '#004BA0', RCB: '#CC0000', KKR: '#3A225D',
+  RR: '#EA1A85', SRH: '#FF822A', DC: '#005CA5', PBKS: '#ED1B24',
+  GT: '#1B2133', LSG: '#0ea5e9',
 };
 
-const Squad = () => {
-  const { id } = useParams();
-  const meta   = teamsMeta[id] || { name: 'Unknown Team', color: '#fff' };
-  const color  = meta.color;
+const Players = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('All');
+  const [compareList, setCompareList] = useState([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Find available seasons for this team
-  const teamSeasons = Object.keys(SQUADS[id] || {}).map(Number).sort((a, b) => b - a);
-  const defaultSeason = teamSeasons.includes(CURRENT_SEASON) ? CURRENT_SEASON : (teamSeasons[0] || CURRENT_SEASON);
-  const [season, setSeason] = useState(defaultSeason);
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/v1/data/players');
+        const data = await response.json();
+        setPlayers(data.players || []);
+      } catch (error) {
+        console.error('Failed to load players:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlayers();
+  }, []);
 
-  const squad = useMemo(() => {
-    const raw = SQUADS[id]?.[season] || SQUADS[id]?.[defaultSeason] || [];
-    return ROLE_ORDER.flatMap(role => raw.filter(p => p.role === role));
-  }, [id, season]);
+  const filteredPlayers = useMemo(() => {
+    return players.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = selectedRole === 'All' || p.role === selectedRole;
+      return matchesSearch && matchesRole;
+    });
+  }, [searchTerm, selectedRole, players]);
 
-  const grouped = useMemo(() => {
-    return ROLE_ORDER.reduce((acc, role) => {
-      const group = squad.filter(p => p.role === role);
-      if (group.length) acc[role] = group;
-      return acc;
-    }, {});
-  }, [squad]);
+  const toggleCompare = (player) => {
+    if (compareList.find(p => p.id === player.id)) {
+      setCompareList(compareList.filter(p => p.id !== player.id));
+    } else {
+      if (compareList.length < 2) {
+        setCompareList([...compareList, player]);
+      }
+    }
+  };
 
-  const captain = squad.find(p => p.type === 'captain');
+  const getChartData = () => {
+    if (compareList.length !== 2) return [];
+    const [p1, p2] = compareList;
+    
+    // Normalize stats for comparison (0 to 100 scale roughly)
+    const normalize = (val, max) => Math.min(100, Math.max(0, ((val || 0) / max) * 100));
+
+    return [
+      {
+        subject: 'Batting Avg',
+        A: normalize(p1.careerBatting?.avg, 50),
+        B: normalize(p2.careerBatting?.avg, 50),
+        fullMark: 100,
+      },
+      {
+        subject: 'Strike Rate',
+        A: normalize(p1.careerBatting?.sr, 180),
+        B: normalize(p2.careerBatting?.sr, 180),
+        fullMark: 100,
+      },
+      {
+        subject: 'Boundaries',
+        A: normalize((p1.careerBatting?.fours || 0) + (p1.careerBatting?.sixes || 0), 800),
+        B: normalize((p2.careerBatting?.fours || 0) + (p2.careerBatting?.sixes || 0), 800),
+        fullMark: 100,
+      },
+      {
+        subject: 'Bowling Avg', // Lower is better, inverted for chart
+        A: p1.careerBowling?.avg ? 100 - normalize(p1.careerBowling?.avg, 50) : 0,
+        B: p2.careerBowling?.avg ? 100 - normalize(p2.careerBowling?.avg, 50) : 0,
+        fullMark: 100,
+      },
+      {
+        subject: 'Wickets',
+        A: normalize(p1.careerBowling?.wickets, 200),
+        B: normalize(p2.careerBowling?.wickets, 200),
+        fullMark: 100,
+      }
+    ];
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-10 relative z-10 space-y-10">
-
-      {/* Back */}
-      <Link to="/teams"
-        className="inline-flex items-center gap-2 px-4 py-2 border border-white/10 rounded-full bg-white/5
-                   hover:bg-white/10 transition-colors text-[10px] uppercase font-black tracking-widest text-gray-400">
-        <MoveLeft className="w-3 h-3" /> Back to Teams
-      </Link>
-
-      {/* Hero banner */}
-      <div className="relative flex flex-col md:flex-row items-center gap-8 p-8 rounded-3xl border border-white/10 bg-white/5 overflow-hidden group">
-        <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity"
-          style={{ background: `radial-gradient(ellipse at top right, ${color}, transparent 70%)` }} />
-
-        <img src={`/logos/${id}_logo.png`} alt={meta.name}
-          className="w-28 h-28 object-contain drop-shadow-2xl z-10"
-          onError={e => { e.target.src = 'https://cricketvectors.akamaized.net/teams/IPL/BCCI.png'; }} />
-
-        <div className="z-10 text-center md:text-left flex-1">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic uppercase" style={{ color }}>
-            {meta.name}
+      
+      {/* Header & Search */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic uppercase text-white">
+            Player <span className="text-ipl-neon">Database</span>
           </h1>
-          {captain && (
-            <p className="text-gray-400 font-bold tracking-widest uppercase text-xs mt-1">
-              Captain: <span className="text-white">{captain.name}</span>
-            </p>
-          )}
-          <p className="text-[10px] text-gray-600 font-mono mt-1">
-            {squad.length} players · IPL {season} Roster
+          <p className="text-gray-400 font-bold tracking-widest uppercase text-xs mt-2">
+            Explore and compare IPL legends
           </p>
         </div>
-
-        {/* Season selector */}
-        <div className="z-10">
-          <SeasonDropdown
-            selected={season}
-            onChange={yr => setSeason(yr)}
-            showAllTime={false}
-            label="Season"
-          />
-          {!SQUADS[id]?.[season] && season !== defaultSeason && (
-            <p className="text-[9px] text-yellow-500/80 font-bold mt-2 text-center">
-              Showing {defaultSeason} roster
-            </p>
-          )}
+        
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input 
+              type="text" 
+              placeholder="Search players..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full sm:w-64 bg-white/5 border border-white/10 rounded-full py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-ipl-neon/50 transition-colors"
+            />
+          </div>
+          <select 
+            value={selectedRole} 
+            onChange={e => setSelectedRole(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-full py-2.5 px-4 text-sm text-gray-300 focus:outline-none focus:border-ipl-neon/50 cursor-pointer"
+          >
+            <option value="All">All Roles</option>
+            <option value="Batter">Batter</option>
+            <option value="Bowler">Bowler</option>
+            <option value="WK-Batter">WK-Batter</option>
+            <option value="All-Rounder">All-Rounder</option>
+          </select>
         </div>
       </div>
 
-      {/* Stats strip */}
-      <div className="grid grid-cols-4 gap-3">
-        {ROLE_ORDER.map(role => (
-          <div key={role} className="glass bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-            <div className="flex justify-center mb-2" style={{ color }}>
-              {ROLE_ICON[role]}
-            </div>
-            <p className="text-xl font-black text-white">{grouped[role]?.length || 0}</p>
-            <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mt-0.5">
-              {role === 'Wicket-Keeper' ? 'WK' : role}s
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Grouped roster */}
-      <div className="space-y-8">
-        {ROLE_ORDER.filter(role => grouped[role]).map(role => (
-          <div key={role}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-xl border border-white/10 bg-white/5" style={{ color }}>
-                {ROLE_ICON[role]}
-              </div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">
-                {role}s <span className="text-gray-600">({grouped[role].length})</span>
-              </h3>
-              <div className="flex-1 h-px bg-white/5" />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {grouped[role].map((player, idx) => (
-                <motion.div
-                  key={player.name}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.04 }}
-                  whileHover={{ y: -4 }}
-                  className={`glass p-5 rounded-2xl border bg-white/5 group flex gap-4 items-center relative overflow-hidden
-                    ${player.type === 'captain' ? 'border-yellow-400/30' : 'border-white/10'}
-                    ${player.type === 'icon'    ? 'border-ipl-neon/20'  : ''}`}
-                >
-                  <div className="absolute -bottom-4 -right-4 w-20 h-20 blur-2xl opacity-10 group-hover:opacity-25 transition-all"
-                    style={{ backgroundColor: color }} />
-
-                  {/* Avatar */}
-                  <div className="w-12 h-12 rounded-full border-2 border-dashed flex-shrink-0 flex items-center justify-center text-lg"
-                    style={{ borderColor: `${color}60`, backgroundColor: `${color}15`, color }}>
-                    {ROLE_ICON[player.role]}
+      {/* Floating Compare Action Bar */}
+      <AnimatePresence>
+        {compareList.length > 0 && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 glass bg-slate-900/90 border border-white/20 rounded-full px-6 py-3 flex items-center gap-6 shadow-2xl shadow-ipl-neon/20"
+          >
+            <div className="flex items-center gap-4">
+              {compareList.map(p => (
+                <div key={p.id} className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/20">
+                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
                   </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="text-sm font-black tracking-tight text-white leading-tight">
-                        {player.name}
-                      </h4>
-                      {player.type === 'captain' && (
-                        <span className="text-[8px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-full font-black tracking-widest">C</span>
-                      )}
-                      {player.type === 'overseas' && (
-                        <span className="text-[8px] bg-blue-400/10 text-blue-400 border border-blue-400/20 px-1.5 py-0.5 rounded-full font-black tracking-widest">OS</span>
-                      )}
-                    </div>
-                    <p className="text-[9px] font-bold tracking-widest uppercase mt-0.5" style={{ color }}>
-                      {player.role}
-                    </p>
-                    <p className="text-[8px] text-gray-600 font-mono mt-0.5">IPL {season}</p>
-                  </div>
-                </motion.div>
+                  <span className="text-sm font-bold text-white hidden sm:block">{p.name}</span>
+                </div>
               ))}
+              {compareList.length === 1 && (
+                <span className="text-sm font-medium text-gray-400 italic">Select one more player...</span>
+              )}
             </div>
-          </div>
-        ))}
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCompareList([])}
+                className="p-2 rounded-full hover:bg-white/10 text-gray-400 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <button 
+                disabled={compareList.length !== 2}
+                onClick={() => setShowCompareModal(true)}
+                className={`px-4 py-2 rounded-full text-xs font-black tracking-widest uppercase transition-colors flex items-center gap-2 ${
+                  compareList.length === 2 
+                  ? 'bg-ipl-neon text-black hover:bg-white' 
+                  : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <Swords className="w-4 h-4" /> Compare
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Grid */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-8 h-8 text-ipl-neon animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredPlayers.map((player, idx) => {
+          const color = TEAM_COLORS[player.activeTeam] || '#888';
+          const isSelected = compareList.find(p => p.id === player.id);
+
+          return (
+            <motion.div
+              key={player.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className={`glass rounded-3xl border overflow-hidden relative group flex flex-col transition-all duration-300 ${
+                isSelected ? 'border-ipl-neon ring-1 ring-ipl-neon/50' : 'border-white/10 hover:border-white/20'
+              }`}
+            >
+              {/* Background gradient */}
+              <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-20 transition-opacity group-hover:opacity-40" 
+                style={{ backgroundColor: color }} />
+              
+              {/* Top Banner */}
+              <div className="h-16 relative flex items-start justify-between p-4 z-10" style={{ background: `linear-gradient(to right, ${color}20, transparent)` }}>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/70 px-2 py-1 rounded bg-black/30 border border-white/10 backdrop-blur-md">
+                  {player.activeTeam || 'Free Agent'}
+                </span>
+                <button 
+                  onClick={() => toggleCompare(player)}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center border transition-colors ${
+                    isSelected ? 'bg-ipl-neon border-ipl-neon text-black' : 'bg-black/30 border-white/20 text-white hover:bg-white/20'
+                  }`}
+                  title="Compare"
+                >
+                  <Swords className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Avatar & Info */}
+              <div className="px-6 pb-6 pt-2 flex flex-col items-center text-center z-10 flex-1">
+                <div className="w-24 h-24 rounded-full border-4 bg-slate-800 flex items-center justify-center overflow-hidden mb-4 relative z-10 shadow-xl"
+                  style={{ borderColor: color }}>
+                  <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+                </div>
+                
+                <h3 className="text-xl font-black text-white tracking-tight mb-1">{player.name}</h3>
+                
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 tracking-widest uppercase mb-4">
+                  <span style={{ color }}>{ROLE_ICON[player.role]}</span>
+                  {player.role}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 w-full mb-6 text-left">
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Matches</p>
+                    <p className="text-lg font-mono text-white">{player.careerBatting?.matches || player.careerBowling?.matches || 0}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Runs/Wkts</p>
+                    <p className="text-lg font-mono text-ipl-neon">
+                      {player.role.includes('Bowler') ? player.careerBowling?.wickets : player.careerBatting?.runs}
+                    </p>
+                  </div>
+                </div>
+
+                <Link 
+                  to={`/player/${player.id}`}
+                  className="mt-auto w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold text-xs tracking-widest uppercase flex justify-center items-center gap-2 transition-colors"
+                >
+                  View Stats <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
+      )}
+
+      {/* Compare Modal */}
+      <AnimatePresence>
+        {showCompareModal && compareList.length === 2 && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex justify-center items-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-4xl bg-[#0f172a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white flex items-center gap-3">
+                  <Swords className="text-ipl-neon" /> Face-off
+                </h2>
+                <button onClick={() => setShowCompareModal(false)} className="text-gray-400 hover:text-white p-2">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 md:p-10 flex flex-col lg:flex-row gap-10 overflow-y-auto">
+                
+                {/* Players Column */}
+                <div className="flex flex-row lg:flex-col justify-around gap-6 lg:w-1/3">
+                  {compareList.map((p, i) => (
+                    <div key={p.id} className="flex flex-col items-center text-center">
+                      <div className={`w-20 h-20 md:w-32 md:h-32 rounded-full border-4 flex items-center justify-center overflow-hidden mb-3 bg-slate-800 shadow-xl ${i === 0 ? 'border-blue-500' : 'border-ipl-neon'}`}>
+                        <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                      </div>
+                      <h3 className="text-lg md:text-2xl font-black text-white tracking-tight">{p.name}</h3>
+                      <p className="text-xs font-bold tracking-widest text-gray-500 uppercase mt-1">{p.role}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Radar Chart */}
+                <div className="lg:w-2/3 h-[400px] flex-shrink-0 bg-white/5 rounded-2xl border border-white/10 p-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={getChartData()}>
+                      <PolarGrid stroke="#334155" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                      <Radar name={compareList[0].name} dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} strokeWidth={2} />
+                      <Radar name={compareList[1].name} dataKey="B" stroke="#bfff00" fill="#bfff00" fillOpacity={0.4} strokeWidth={2} />
+                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} itemStyle={{ fontWeight: 'bold' }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
 
-export default Squad;
+export default Players;

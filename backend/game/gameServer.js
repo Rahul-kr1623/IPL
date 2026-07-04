@@ -1,379 +1,273 @@
 /**
  * gameServer.js
- * Socket.io server for Cricket Blitz multiplayer.
- * Attach to the existing Express HTTP server via initGameServer(httpServer).
- *
- * Events (server → client):
- *   game:state     — full game state sync
- *   game:ball      — ball result (runs/wicket/wide)
- *   game:over      — innings/match over
- *   room:joined    — confirmed room join with role
- *   room:ready     — both players connected, game starts
- *   queue:waiting  — in matchmaking queue
- *   queue:matched  — matched with stranger
- *   error          — error message string
- *
- * Events (client → server):
- *   room:create    — create a friend room
- *   room:join      — join a friend room by code
- *   queue:join     — join stranger matchmaking
- *   queue:leave    — leave matchmaking queue
- *   game:shot      — player plays a shot (timing value 0-1)
- *   game:ready     — player ready to start next ball
+ * Hand Cricket Multiplayer Socket.io server
  */
-
 import { Server } from 'socket.io';
 
-// ─── In-memory state ─────────────────────────────────────────────────────────
-const rooms   = new Map();   // roomCode → RoomState
-const queue   = [];          // socket ids waiting for stranger match
-const players = new Map();   // socketId → { roomCode, role }
+const rooms = {};
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const genCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+function generateCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
 
-const freshInnings = () => ({
-  runs: 0, wickets: 0, balls: 0, overs: 0,
-  batsmen: [
-    { name: 'Player 1', runs: 0, balls: 0 },
-    { name: 'Player 2', runs: 0, balls: 0 },
-  ],
-  activeBat: 0,
-  partnerships: [],
-  extras: 0,
-  ballLog: [],   // array of { run, wicket, wide, noball, label }
-});
+function getRoomBySocket(socketId) {
+  return Object.entries(rooms).find(([, r]) => r.players.some(p => p.id === socketId));
+}
 
-const freshGame = (totalOvers = 2) => ({
-  phase:      'toss',         // toss | batting | bowling | innings_break | result
-  totalOvers,
-  innings:    1,
-  target:     null,
-  inn1:       freshInnings(),
-  inn2:       freshInnings(),
-  tossWinner: null,
-  tossChoice: null,           // bat | bowl
-  waitingBall: false,         // true while waiting for bowler ready
-});
-
-const currentInnings = (game) => game.innings === 1 ? game.inn1 : game.inn2;
-
-// Determine ball result from batter timing (0-1) and bowler variation (0-1)
-const resolveBall = (batTiming, bowlVariation, difficulty = 'normal') => {
-  // Perfect timing window narrows on harder difficulty
-  const windows = {
-    easy:   { perfect: 0.25, good: 0.45, edge: 0.65 },
-    normal: { perfect: 0.15, good: 0.32, edge: 0.55 },
-    hard:   { perfect: 0.10, good: 0.22, edge: 0.48 },
-  };
-  const w = windows[difficulty] || windows.normal;
-
-  // bowler gets a deviation bonus — the further from center, the harder to time
-  const bowlOffset = Math.abs(bowlVariation - 0.5) * 0.3;
-  const diff = Math.abs(batTiming - 0.5);     // 0 = perfect center timing
-  const adjusted = diff + bowlOffset;
-
-  // Wide / No-ball chance (bot bowler only)
-  if (Math.random() < 0.04) return { runs: 1, wide: true,   label: 'WD' };
-  if (Math.random() < 0.015) return { runs: 1, noball: true, label: 'NB' };
-
-  if (adjusted < w.perfect) {
-    const r = Math.random();
-    if (r < 0.12) return { runs: 6, label: '6' };
-    if (r < 0.32) return { runs: 4, label: '4' };
-    if (r < 0.52) return { runs: 3, label: '3' };
-    if (r < 0.75) return { runs: 2, label: '2' };
-    return { runs: 1, label: '1' };
-  }
-  if (adjusted < w.good) {
-    const r = Math.random();
-    if (r < 0.06) return { runs: 6, label: '6' };
-    if (r < 0.18) return { runs: 4, label: '4' };
-    if (r < 0.36) return { runs: 2, label: '2' };
-    if (r < 0.65) return { runs: 1, label: '1' };
-    return { runs: 0, label: '·' };
-  }
-  if (adjusted < w.edge) {
-    const r = Math.random();
-    if (r < 0.35) return { runs: 0, wicket: true, label: 'W' };
-    if (r < 0.55) return { runs: 4, label: '4' };
-    return { runs: 0, label: '·' };
-  }
-  // Missed / dot / wicket
-  if (Math.random() < 0.55) return { runs: 0, wicket: true, label: 'W' };
-  return { runs: 0, label: '·' };
-};
-
-// Apply ball result to innings state, return updated innings + event flags
-const applyBall = (inn, result, totalOvers) => {
-  const isLegal = !result.wide && !result.noball;
-
-  inn.runs += result.runs;
-  if (result.wide)   inn.extras++;
-  if (result.noball) inn.extras++;
-
-  if (isLegal) {
-    inn.balls++;
-    const bat = inn.batsmen[inn.activeBat];
-    bat.runs  += result.runs;
-    bat.balls++;
-
-    if (result.wicket) {
-      inn.wickets++;
-      // Rotate strike: swap batsmen, reset new one
-      inn.batsmen[inn.activeBat] = { name: `Player ${inn.wickets + 2}`, runs: 0, balls: 0 };
-    } else if (result.runs % 2 === 1) {
-      inn.activeBat = inn.activeBat === 0 ? 1 : 0;
-    }
-  }
-
-  inn.overs = Math.floor(inn.balls / 6) + (inn.balls % 6) / 10;
-  inn.ballLog.push(result.label);
-
-  const oversCompleted = Math.floor(inn.balls / 6);
-  const allOut = inn.wickets >= 10;
-  const inningsOver = allOut || oversCompleted >= totalOvers;
-
-  return { inn, inningsOver, allOut };
-};
-
-// ─── Room broadcast ───────────────────────────────────────────────────────────
-const broadcastState = (io, roomCode) => {
-  const room = rooms.get(roomCode);
-  if (!room) return;
-  io.to(roomCode).emit('game:state', {
-    game: room.game,
-    roles: { bat: room.batSocketId, bowl: room.bowlSocketId },
-  });
-};
-
-// ─── Main initialiser ─────────────────────────────────────────────────────────
 export const initGameServer = (httpServer) => {
   const io = new Server(httpServer, {
     cors: { origin: '*', methods: ['GET', 'POST'] },
     path: '/socket.io',
   });
 
-  io.on('connection', (socket) => {
-    console.log(`[Game] Socket connected: ${socket.id}`);
+  io.on("connection", (socket) => {
+    console.log(`[Hand Cricket] Connected: ${socket.id}`);
 
-    // ── CREATE friend room ────────────────────────────────────────────────────
-    socket.on('room:create', ({ overs = 2, name = 'Player 1' } = {}) => {
-      const code = genCode();
-      rooms.set(code, {
-        code,
-        game:         freshGame(overs),
-        player1:      { id: socket.id, name },
-        player2:      null,
-        batSocketId:  null,
-        bowlSocketId: null,
-        mode:         'friend',
-      });
-      players.set(socket.id, { roomCode: code, role: 'host' });
+    // ── Create Room ──
+    socket.on("createRoom", ({ name }) => {
+      let code;
+      do { code = generateCode(); } while (rooms[code]);
+
+      rooms[code] = {
+        players: [{ id: socket.id, name }],
+        scores: {},
+        toss: { moves: {}, winnerId: null },
+        batting: null,
+        target: null,
+        innings: 1,
+        phase: "waiting",
+        currentMoves: {},
+        rematchVotes: new Set(),
+      };
+
       socket.join(code);
-      socket.emit('room:joined', { code, role: 'host', playerNum: 1 });
-      console.log(`[Game] Room created: ${code} by ${socket.id}`);
+      socket.emit("roomCreated", { code });
+      console.log(`[Room] ${code} created by "${name}"`);
     });
 
-    // ── JOIN friend room ──────────────────────────────────────────────────────
-    socket.on('room:join', ({ code, name = 'Player 2' } = {}) => {
-      const room = rooms.get(code?.toUpperCase());
-      if (!room) { socket.emit('error', 'Room not found'); return; }
-      if (room.player2) { socket.emit('error', 'Room is full'); return; }
+    // ── Join Room ──
+    socket.on("joinRoom", ({ name, roomCode }) => {
+      const room = rooms[roomCode];
+      if (!room) { socket.emit("roomError", { message: "Room not found. Check the code." }); return; }
+      if (room.players.length >= 2) { socket.emit("roomError", { message: "Room is full." }); return; }
+      if (room.phase !== "waiting") { socket.emit("roomError", { message: "Game already in progress." }); return; }
 
-      room.player2 = { id: socket.id, name };
-      players.set(socket.id, { roomCode: code, role: 'guest' });
-      socket.join(code);
-      socket.emit('room:joined', { code, role: 'guest', playerNum: 2 });
-      io.to(code).emit('room:ready', {
-        player1: room.player1.name,
-        player2: room.player2.name,
-      });
-      console.log(`[Game] ${socket.id} joined room ${code}`);
+      room.players.push({ id: socket.id, name });
+      room.phase = "toss";
+      socket.join(roomCode);
+
+      const names = room.players.map(p => p.name);
+
+      // Tell Player 2 they joined successfully
+      socket.emit("joinedRoom", { code: roomCode, names });
+
+      // Tell Player 1 someone joined
+      socket.to(roomCode).emit("playerJoined", { names });
+
+      console.log(`[Room] "${name}" joined ${roomCode}`);
     });
 
-    // ── JOIN stranger queue ───────────────────────────────────────────────────
-    socket.on('queue:join', ({ overs = 2, name = 'Stranger' } = {}) => {
-      if (queue.length > 0) {
-        const opponent = queue.shift();
-        const code = genCode();
-        const oppSocket = io.sockets.sockets.get(opponent.id);
+    // ── Toss Pick ──
+    socket.on("tossPick", ({ roomCode, move }) => {
+      const room = rooms[roomCode];
+      if (!room || room.phase !== "toss") return;
+      if (room.toss.moves[socket.id] !== undefined) return; // already picked
 
-        rooms.set(code, {
-          code,
-          game:         freshGame(overs),
-          player1:      opponent,
-          player2:      { id: socket.id, name },
-          batSocketId:  null,
-          bowlSocketId: null,
-          mode:         'stranger',
+      room.toss.moves[socket.id] = move;
+
+      if (Object.keys(room.toss.moves).length === 2) {
+        const [p1, p2] = room.players;
+        const m1 = room.toss.moves[p1.id];
+        const m2 = room.toss.moves[p2.id];
+        const sum = m1 + m2;
+        // Even sum = p1 wins, Odd = p2 wins
+        const winnerId = sum % 2 === 0 ? p1.id : p2.id;
+        const winner = room.players.find(p => p.id === winnerId).name;
+        room.toss.winnerId = winnerId;
+
+        room.phase = "tossResult";
+        
+        room.players.forEach(p => {
+          const you = room.toss.moves[p.id];
+          const opponent = room.players.find(x => x.id !== p.id);
+          if (!opponent) return;
+
+          const opp = room.toss.moves[opponent.id];
+          const iWon = String(p.id) === String(winnerId);
+          io.to(p.id).emit("tossResult", { you, opp, sum, winner, iWon });
         });
 
-        players.set(opponent.id, { roomCode: code, role: 'host' });
-        players.set(socket.id,   { roomCode: code, role: 'guest' });
-
-        oppSocket?.join(code);
-        socket.join(code);
-
-        io.to(code).emit('queue:matched', { code });
-        io.to(code).emit('room:ready', {
-          player1: opponent.name,
-          player2: name,
-        });
-        console.log(`[Game] Matched strangers in room ${code}`);
-      } else {
-        queue.push({ id: socket.id, name });
-        socket.emit('queue:waiting');
-        console.log(`[Game] ${socket.id} added to queue (length: ${queue.length})`);
+        console.log(`[Toss] ${roomCode}: sum=${sum}, winner="${winner}"`);
       }
     });
 
-    socket.on('queue:leave', () => {
-      const idx = queue.findIndex(q => q.id === socket.id);
-      if (idx !== -1) queue.splice(idx, 1);
-      socket.emit('queue:left');
+    // ── Toss Choice (winner picks bat/bowl) ──
+    socket.on("tossChoice", ({ roomCode, choice }) => {
+      const room = rooms[roomCode];
+      if (!room || room.toss.winnerId !== socket.id) return;
+
+      const battingId = choice === "bat"
+        ? socket.id
+        : room.players.find(p => p.id !== socket.id).id;
+
+      room.batting = battingId;
+      room.phase = "game";
+      room.innings = 1;
+      room.scores = {};
+      room.players.forEach(p => { room.scores[p.id] = 0; });
+      room.currentMoves = {};
+
+      const names = room.players.map(p => p.name);
+      io.to(roomCode).emit("gameStart", { battingId, innings: 1, names });
+      console.log(`[Game] ${roomCode} started. Batting: ${battingId}`);
     });
 
-    // ── TOSS ─────────────────────────────────────────────────────────────────
-    socket.on('game:toss', ({ choice } = {}) => {
-      const info = players.get(socket.id);
-      if (!info) return;
-      const room = rooms.get(info.roomCode);
-      if (!room || room.game.phase !== 'toss') return;
+    // ── Player Move ──
+    socket.on("playerMove", ({ roomCode, move }) => {
+      const room = rooms[roomCode];
+      if (!room || room.phase !== "game") return;
+      if (room.currentMoves[socket.id] !== undefined) return; // already submitted
 
-      const flip = Math.random() < 0.5 ? 'heads' : 'tails';
-      const won  = (choice === flip);
+      room.currentMoves[socket.id] = move;
 
-      room.game.tossWinner = won ? socket.id : (
-        socket.id === room.player1?.id ? room.player2?.id : room.player1?.id
-      );
+      if (Object.keys(room.currentMoves).length === 2) {
+        const batter = room.batting;
+        const bowler = room.players.find(p => p.id !== batter).id;
+        const batterMove = room.currentMoves[batter];
+        const bowlerMove = room.currentMoves[bowler];
+        const broadcastMoves = { [batter]: batterMove, [bowler]: bowlerMove };
 
-      io.to(info.roomCode).emit('game:toss_result', {
-        flip, choice, winner: room.game.tossWinner,
-      });
+        // Reset for next ball immediately
+        room.currentMoves = {};
+
+        const isOut = batterMove === bowlerMove;
+
+        if (!isOut) {
+          // Hand cricket rule: if move is 0, it means defense. Usually 0 scores the bowler's move.
+          // Wait, let me check the script.js or logic for score addition.
+          // In the provided server.js: room.scores[batter] = (room.scores[batter] || 0) + batterMove;
+          // If batterMove is 0, they score 0? Oh wait, in some variants 0 = 6 or 0 = bowlerMove.
+          // Let's just use what the server.js provided.
+          let runsScored = batterMove;
+          if (batterMove === 0) {
+            runsScored = bowlerMove; // commonly in hand cricket, 0 scores bowler's run
+          }
+          room.scores[batter] = (room.scores[batter] || 0) + runsScored;
+        }
+
+        const scoresCopy = { ...room.scores };
+
+        if (isOut) {
+          if (room.innings === 1) {
+            // End of innings 1 — switch
+            room.target = room.scores[batter] + 1;
+            const newBatter = bowler;
+
+            io.to(roomCode).emit("roundResult", {
+              moves: broadcastMoves, batter, runs: 0, isOut: true,
+              scores: scoresCopy, targetVal: null,
+            });
+
+            setTimeout(() => {
+              room.innings = 2;
+              room.batting = newBatter;
+              const names = room.players.map(p => p.name);
+              io.to(roomCode).emit("inningsEnd", { target: room.target });
+              io.to(roomCode).emit("gameStart", { battingId: newBatter, innings: 2, names });
+              console.log(`[Game] ${roomCode} innings 2 starts. Target: ${room.target}`);
+            }, 1500);
+
+          } else {
+            // Innings 2 — chaser out before target
+            const winnerId = bowler;
+            io.to(roomCode).emit("roundResult", {
+              moves: broadcastMoves, batter, runs: 0, isOut: true,
+              scores: scoresCopy, targetVal: room.target,
+            });
+            setTimeout(() => {
+              io.to(roomCode).emit("gameOver", { winnerId, scores: scoresCopy, reason: "Bowled out!" });
+              room.phase = "over";
+            }, 1200);
+          }
+
+        } else {
+          // Not out — check if chaser reached target
+          const chaseWon = room.innings === 2 && room.scores[batter] >= room.target;
+          let runsScored = batterMove;
+          if (batterMove === 0) runsScored = bowlerMove;
+
+          io.to(roomCode).emit("roundResult", {
+            moves: broadcastMoves, batter, runs: runsScored, isOut: false,
+            scores: scoresCopy, targetVal: room.target ?? null,
+          });
+
+          if (chaseWon) {
+            setTimeout(() => {
+              io.to(roomCode).emit("gameOver", {
+                winnerId: batter, scores: scoresCopy, reason: "Target chased!",
+              });
+              room.phase = "over";
+            }, 1200);
+          }
+        }
+      }
     });
 
-    socket.on('game:toss_choice', ({ choice } = {}) => {
-      const info = players.get(socket.id);
-      if (!info) return;
-      const room = rooms.get(info.roomCode);
+    // ── Rematch ──
+    socket.on("requestRematch", ({ roomCode }) => {
+      const room = rooms[roomCode];
       if (!room) return;
 
-      if (choice === 'bat') {
-        room.batSocketId  = socket.id;
-        room.bowlSocketId = socket.id === room.player1?.id ? room.player2?.id : room.player1?.id;
-      } else {
-        room.bowlSocketId = socket.id;
-        room.batSocketId  = socket.id === room.player1?.id ? room.player2?.id : room.player1?.id;
+      // Handle Map/Set correctly in JSON by converting Set to size or array if needed elsewhere, 
+      // but here it's purely internal.
+      if (!room.rematchVotes) room.rematchVotes = new Set();
+      room.rematchVotes.add(socket.id);
+      console.log(`[Rematch] ${roomCode}: ${room.rematchVotes.size}/2 votes`);
+
+      if (room.rematchVotes.size === 1) {
+        socket.emit("waitingForRematch");
       }
-      room.game.phase = 'batting';
-      broadcastState(io, info.roomCode);
-    });
 
-    // ── SHOT (batter plays) ───────────────────────────────────────────────────
-    socket.on('game:shot', ({ timing } = {}) => {
-      const info = players.get(socket.id);
-      if (!info) return;
-      const room = rooms.get(info.roomCode);
-      if (!room || room.game.phase !== 'batting') return;
-      if (socket.id !== room.batSocketId) { socket.emit('error', 'Not your turn to bat'); return; }
-      if (room.pendingShot) { socket.emit('error', 'Ball already in progress'); return; }
-
-      room.pendingTiming = Math.max(0, Math.min(1, timing ?? 0.5));
-      room.pendingShot   = true;
-
-      // If there's a bowler (multiplayer), wait for their delivery
-      // If bot mode, resolve immediately
-      if (!room.bowlSocketId || room.mode === 'bot') {
-        const bowlVar = Math.random();
-        _resolveBall(io, room, room.pendingTiming, bowlVar);
-      }
-      // else: wait for game:bowl event from bowler
-    });
-
-    // ── BOWL (bowler delivers) ────────────────────────────────────────────────
-    socket.on('game:bowl', ({ variation = 0.5 } = {}) => {
-      const info = players.get(socket.id);
-      if (!info) return;
-      const room = rooms.get(info.roomCode);
-      if (!room || room.game.phase !== 'batting') return;
-      if (socket.id !== room.bowlSocketId) { socket.emit('error', 'Not your turn to bowl'); return; }
-
-      const bowlVar = Math.max(0, Math.min(1, variation));
-
-      if (room.pendingShot) {
-        _resolveBall(io, room, room.pendingTiming, bowlVar);
-      } else {
-        // Store bowl, wait for shot
-        room.pendingBowl = bowlVar;
+      if (room.rematchVotes.size === 2) {
+        room.rematchVotes = new Set();
+        room.toss = { moves: {}, winnerId: null };
+        room.batting = null;
+        room.target = null;
+        room.innings = 1;
+        room.phase = "toss";
+        room.scores = {};
+        room.currentMoves = {};
+        io.to(roomCode).emit("rematchReady");
+        console.log(`[Rematch] ${roomCode} restarting`);
       }
     });
 
-    // ── DISCONNECT ────────────────────────────────────────────────────────────
-    socket.on('disconnect', () => {
-      console.log(`[Game] Socket disconnected: ${socket.id}`);
-      const info = players.get(socket.id);
-      if (info?.roomCode) {
-        io.to(info.roomCode).emit('game:opponent_left');
-        rooms.delete(info.roomCode);
-      }
-      players.delete(socket.id);
-      const qi = queue.findIndex(q => q.id === socket.id);
-      if (qi !== -1) queue.splice(qi, 1);
+    // ── Leave Room ──
+    socket.on("leaveRoom", ({ roomCode }) => {
+      cleanupRoom(socket.id, roomCode);
     });
+
+    // ── Disconnect ──
+    socket.on("disconnect", () => {
+      console.log(`[Hand Cricket] Disconnected: ${socket.id}`);
+      const entry = getRoomBySocket(socket.id);
+      if (entry) cleanupRoom(socket.id, entry[0]);
+    });
+
+    function cleanupRoom(socketId, roomCode) {
+      const room = rooms[roomCode];
+      if (!room) return;
+      room.players
+        .filter(p => p.id !== socketId)
+        .forEach(p => io.to(p.id).emit("opponentLeft"));
+      delete rooms[roomCode];
+      console.log(`[Room] ${roomCode} deleted`);
+    }
   });
 
-  // ── Internal: resolve a ball and update state ─────────────────────────────
-  function _resolveBall(io, room, timing, bowlVar) {
-    room.pendingShot = false;
-    room.pendingTiming = null;
-    room.pendingBowl   = null;
-
-    const result = resolveBall(timing, bowlVar, room.difficulty || 'normal');
-    const inn    = currentInnings(room.game);
-    const { inningsOver } = applyBall(inn, result, room.game.totalOvers);
-
-    io.to(room.code).emit('game:ball', { result, inn });
-
-    if (inningsOver) {
-      if (room.game.innings === 1) {
-        room.game.target  = inn.runs + 1;
-        room.game.innings = 2;
-        room.game.phase   = 'innings_break';
-        io.to(room.code).emit('game:innings_break', {
-          inn1:   inn,
-          target: room.game.target,
-        });
-
-        // Swap bat/bowl for 2nd innings
-        const tmp             = room.batSocketId;
-        room.batSocketId      = room.bowlSocketId;
-        room.bowlSocketId     = tmp;
-
-        setTimeout(() => {
-          room.game.phase = 'batting';
-          broadcastState(io, room.code);
-        }, 4000);
-      } else {
-        // Match over
-        const inn1   = room.game.inn1;
-        const inn2   = room.game.inn2;
-        const winner = inn2.runs >= room.game.target
-          ? (room.batSocketId  || 'Player 2')
-          : (room.bowlSocketId || 'Player 1');
-        room.game.phase = 'result';
-        io.to(room.code).emit('game:over', {
-          inn1, inn2, winner,
-          margin: inn2.runs >= room.game.target
-            ? `${10 - inn2.wickets} wickets`
-            : `${room.game.target - inn2.runs - 1} runs`,
-        });
-      }
-    } else {
-      broadcastState(io, room.code);
-    }
-  }
-
-  console.log('[Game] Socket.io game server initialised');
+  console.log('[Game] Socket.io hand cricket server initialised');
   return io;
 };

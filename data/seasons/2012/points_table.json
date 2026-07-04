@@ -1,0 +1,66 @@
+[
+  {
+    "team": "DC",
+    "played": 33,
+    "won": 15,
+    "lost": 18,
+    "points": 30,
+    "nrr": 0
+  },
+  {
+    "team": "KKR",
+    "played": 17,
+    "won": 12,
+    "lost": 5,
+    "points": 24,
+    "nrr": 0
+  },
+  {
+    "team": "CSK",
+    "played": 18,
+    "won": 10,
+    "lost": 8,
+    "points": 20,
+    "nrr": 0
+  },
+  {
+    "team": "MI",
+    "played": 17,
+    "won": 10,
+    "lost": 7,
+    "points": 20,
+    "nrr": 0
+  },
+  {
+    "team": "PBKS",
+    "played": 16,
+    "won": 8,
+    "lost": 8,
+    "points": 16,
+    "nrr": 0
+  },
+  {
+    "team": "RCB",
+    "played": 15,
+    "won": 8,
+    "lost": 7,
+    "points": 16,
+    "nrr": 0
+  },
+  {
+    "team": "RR",
+    "played": 16,
+    "won": 7,
+    "lost": 9,
+    "points": 14,
+    "nrr": 0
+  },
+  {
+    "team": "PWI",
+    "played": 16,
+    "won": 4,
+    "lost": 12,
+    "points": 8,
+    "nrr": 0
+  }
+]

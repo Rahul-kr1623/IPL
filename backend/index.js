@@ -27,6 +27,7 @@ import https from 'https';
 import liveRoutes from './routes/live.js';
 import debugRoutes from './routes/debug.js';
 import commentRoutes from './routes/comments.js';
+import dataRoutes from './routes/data.js';
 
 import {
   runLiveSync,
@@ -52,6 +53,7 @@ app.use(express.json());
 
 app.use('/api/v1', liveRoutes);
 app.use('/api/v1/debug', debugRoutes);
+app.use('/api/v1/data', dataRoutes);
 app.use('/api/comments', commentRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────

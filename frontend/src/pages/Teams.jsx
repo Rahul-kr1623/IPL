@@ -1,10 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Trophy, Users, MoveRight, Swords, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, Users, MoveRight, Swords, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
-import { CURRENT_SEASON, TEAM_COLORS, TEAM_NAMES } from '../data/seasons/index.js';
-import h2hData from '../data/global/head_to_head.json';
+import { CURRENT_SEASON, TEAM_COLORS, TEAM_NAMES } from '../utils/constants.js';
 
 const teamsData = [
   { id:'csk',  name:'Chennai Super Kings',          short:'CSK',  color:'#F7B111', titles:5, captain:'Ruturaj Gaikwad', founded:2008, homeGround:'MA Chidambaram Stadium' },
@@ -33,7 +32,8 @@ const trophyData = [
 ];
 
 // ── H2H helpers ───────────────────────────────────────────────────────────────
-const findH2H = (t1, t2) => {
+const findH2H = (t1, t2, h2hData) => {
+  if (!h2hData || !h2hData.records) return null;
   const r = h2hData.records.find(r =>
     (r.team1 === t1 && r.team2 === t2) || (r.team1 === t2 && r.team2 === t1)
   );
@@ -48,7 +48,22 @@ const SHORTS = teamsData.map(t => t.short);
 const Teams = () => {
   const [h2hTeam1, setH2hTeam1] = useState('CSK');
   const [h2hTeam2, setH2hTeam2] = useState('MI');
-  const h2h = useMemo(() => findH2H(h2hTeam1, h2hTeam2), [h2hTeam1, h2hTeam2]);
+  const [h2hData, setH2hData] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/v1/data/global/head_to_head');
+        const data = await response.json();
+        setH2hData(data);
+      } catch (error) {
+        console.error('Failed to load head to head data:', error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const h2h = useMemo(() => findH2H(h2hTeam1, h2hTeam2, h2hData), [h2hTeam1, h2hTeam2, h2hData]);
   const c1 = TEAM_COLORS[h2hTeam1] || '#fff';
   const c2 = TEAM_COLORS[h2hTeam2] || '#fff';
 

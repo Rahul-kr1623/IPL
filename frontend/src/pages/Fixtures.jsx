@@ -5,8 +5,7 @@ import { Calendar, MapPin, Clock, Trophy, X, Activity, Search, Zap, Radio } from
 import { useMatchContext } from '../context/MatchContext';
 import { useCompletedMatches } from '../hooks/useCompletedMatches';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
-import { CURRENT_SEASON } from '../data/seasons/index.js';
-import fixturesHistory from '../data/seasons/fixtures_history.json';
+import { CURRENT_SEASON } from '../utils/constants.js';
 
 const COLORS = {
   CSK: "#FDB913", RCB: "#CC0000", MI: "#004BA0", KKR: "#3A225D",
@@ -820,6 +819,8 @@ const Fixtures = () => {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [teamFilter, setTeamFilter] = useState('all');
+  const [historicalData, setHistoricalData] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const { state } = useMatchContext();
   const liveMatch = state.currentMatch;
@@ -830,11 +831,34 @@ const Fixtures = () => {
   const allTeams = ['all', 'CSK', 'MI', 'RCB', 'KKR', 'RR', 'PBKS', 'DC', 'GT', 'LSG', 'SRH'];
 
   // ── Historical season matches (non-2026) ──────────────────────────────────
+  useEffect(() => {
+    if (isCurrentSeason) {
+      setHistoricalData(null);
+      return;
+    }
+    const fetchHistory = async () => {
+      setLoadingHistory(true);
+      try {
+        const res = await fetch(`http://localhost:5000/api/v1/data/season/${season}/fixtures`);
+        if (res.ok) {
+          const data = await res.json();
+          setHistoricalData(data);
+        } else {
+          setHistoricalData({ matches: [] });
+        }
+      } catch (err) {
+        console.error('Failed to fetch historical fixtures:', err);
+        setHistoricalData({ matches: [] });
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    fetchHistory();
+  }, [season, isCurrentSeason]);
+
   const historicalMatches = useMemo(() => {
-    if (isCurrentSeason) return null;
-    const hist = fixturesHistory[String(season)];
-    if (!hist) return [];
-    return (hist.matches || []).map(m => ({
+    if (isCurrentSeason || !historicalData) return null;
+    return (historicalData.matches || []).map(m => ({
       ...m,
       teamA: m.team1,
       teamB: m.team2,
@@ -843,7 +867,7 @@ const Fixtures = () => {
       day: '',
       time: '',
     }));
-  }, [season, isCurrentSeason]);
+  }, [historicalData, isCurrentSeason]);
 
   const filteredHistorical = useMemo(() => {
     if (!historicalMatches) return null;
@@ -918,7 +942,6 @@ const Fixtures = () => {
 
   // ── Historical season render ────────────────────────────────────────────────
   if (!isCurrentSeason) {
-    const hist = fixturesHistory[String(season)];
     const displayMatches = filteredHistorical || [];
     const finals   = displayMatches.filter(m => m.type === 'Final' || m.type === 'Qualifier' || m.type === 'Eliminator');
     const league   = displayMatches.filter(m => !m.type || m.type === 'League Match');
@@ -931,7 +954,7 @@ const Fixtures = () => {
               IPL <span className="text-ipl-neon">{season}</span>
             </h2>
             <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">
-              {hist?.totalMatches} Matches · Winner: <span className="text-ipl-neon">{hist?.winner || '—'}</span>
+              {historicalData?.totalMatches} Matches · Winner: <span className="text-ipl-neon">{historicalData?.winner || '—'}</span>
             </p>
           </div>
           <SeasonDropdown

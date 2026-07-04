@@ -1,0 +1,19 @@
+{
+  "lastUpdated": "2026-03-01",
+  "squads": {
+    "CSK": [
+      { "name": "Ruturaj Gaikwad", "role": "Batter", "type": "captain" },
+      { "name": "MS Dhoni", "role": "WK-Batter", "type": "icon" },
+      { "name": "Ravindra Jadeja", "role": "All-Rounder" }
+    ],
+    "MI": [
+      { "name": "Hardik Pandya", "role": "All-Rounder", "type": "captain" },
+      { "name": "Rohit Sharma", "role": "Batter", "type": "icon" },
+      { "name": "Jasprit Bumrah", "role": "Bowler", "type": "icon" }
+    ],
+    "RCB": [
+      { "name": "Rajat Patidar", "role": "Batter", "type": "captain" },
+      { "name": "Virat Kohli", "role": "Batter", "type": "icon" }
+    ]
+  }
+}

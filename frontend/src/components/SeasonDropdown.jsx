@@ -1,7 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Trophy, Calendar, Clock } from 'lucide-react';
-import { SEASONS_DESC, TEAM_COLORS, CURRENT_SEASON, UPCOMING_SEASON } from '../data/seasons/index.js';
+import { TEAM_COLORS, CURRENT_SEASON } from '../utils/constants.js';
+
+const SEASONS_DESC = [
+  { year: 2026, winner: null, upcoming: true },
+  { year: 2025, winner: 'RCB' },
+  { year: 2024, winner: 'KKR' },
+  { year: 2023, winner: 'CSK' },
+  { year: 2022, winner: 'GT' },
+  { year: 2021, winner: 'CSK' },
+  { year: 2020, winner: 'MI', hosted: 'UAE' },
+  { year: 2019, winner: 'MI' },
+  { year: 2018, winner: 'CSK' },
+  { year: 2017, winner: 'MI' },
+  { year: 2016, winner: 'SRH' },
+  { year: 2015, winner: 'MI' },
+  { year: 2014, winner: 'KKR', hosted: 'UAE/India' },
+  { year: 2013, winner: 'MI' },
+  { year: 2012, winner: 'KKR' },
+  { year: 2011, winner: 'CSK' },
+  { year: 2010, winner: 'CSK' },
+  { year: 2009, winner: 'DC', hosted: 'South Africa' },
+  { year: 2008, winner: 'RR' }
+];
 
 const SeasonDropdown = ({
   selected,
@@ -26,7 +48,7 @@ const SeasonDropdown = ({
 
   const displayLabel =
     selected === 'all'            ? 'All Time'
-    : selected === UPCOMING_SEASON ? `${selected} (Upcoming)`
+    : selected === CURRENT_SEASON ? `${selected} (Upcoming)`
     : String(selected);
 
   return (

@@ -1,16 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useMatchContext } from '../context/MatchContext.jsx';
-import { Activity, Target, Zap, BarChart2, Award } from 'lucide-react';
+import { Activity, Target, Zap, BarChart2, Award, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
-import { CURRENT_SEASON, TEAM_COLORS, ACTIVE_TEAMS } from '../data/seasons/index.js';
-import awardsData from '../data/seasons/awards.json';
-import pointsData from '../data/seasons/points_tables.json';
-import masterPlayers from '../data/global/players_master.json';
+import { CURRENT_SEASON, TEAM_COLORS, ACTIVE_TEAMS } from '../utils/constants.js';
 
 // ── Historical top scorers per season (orange cap) ────────────────────────────
-const buildSeasonLeaders = (year) => {
+const buildSeasonLeaders = (year, awardsData) => {
+  if (!awardsData) return { batting: [], bowling: [] };
   const a = awardsData[String(year)];
   if (!a) return { batting: [], bowling: [] };
   const batting = a.orangeCap ? [
@@ -23,7 +21,8 @@ const buildSeasonLeaders = (year) => {
 };
 
 // ── All-time orange/purple cap winners chart data ─────────────────────────────
-const buildAllTimeChart = () => {
+const buildAllTimeChart = (awardsData) => {
+  if (!awardsData) return [];
   return Object.entries(awardsData)
     .filter(([, a]) => a.orangeCap)
     .map(([yr, a]) => ({
@@ -37,7 +36,8 @@ const buildAllTimeChart = () => {
 };
 
 // ── Team NRR chart for a season ───────────────────────────────────────────────
-const buildNRRChart = (year) => {
+const buildNRRChart = (year, pointsData) => {
+  if (!pointsData) return [];
   const d = pointsData[String(year)];
   if (!d) return [];
   return (d.teams || [])
@@ -64,6 +64,34 @@ const Stats = () => {
   const [teamFilter, setTeamFilter] = useState('ALL');
   const [chartTab, setChartTab] = useState('nrr'); // 'nrr' | 'orange' | 'purple'
 
+  const [data, setData] = useState({
+    awardsData: null,
+    pointsData: null,
+    masterPlayers: { players: [] },
+    loading: true
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [awardsRes, pointsRes, playersRes] = await Promise.all([
+          fetch('http://localhost:5000/api/v1/data/global/awards'),
+          fetch('http://localhost:5000/api/v1/data/global/points_tables'),
+          fetch('http://localhost:5000/api/v1/data/players')
+        ]);
+        const awardsData = await awardsRes.json();
+        const pointsData = await pointsRes.json();
+        const masterPlayers = await playersRes.json();
+        
+        setData({ awardsData, pointsData, masterPlayers, loading: false });
+      } catch (error) {
+        console.error('Failed to load global data:', error);
+        setData(prev => ({ ...prev, loading: false }));
+      }
+    };
+    fetchData();
+  }, []);
+
   // Live stats (only for current season)
   const isLive = season === CURRENT_SEASON;
   const isDormant = !match.score || match.score === '0';
@@ -75,17 +103,25 @@ const Stats = () => {
   const recent = match.recent || [];
 
   // Historical chart data
-  const allTimeChart  = useMemo(buildAllTimeChart, []);
-  const nrrChart      = useMemo(() => buildNRRChart(season === 'all' ? 2024 : season), [season]);
-  const leaders       = useMemo(() => season === 'all' ? { batting:[], bowling:[] } : buildSeasonLeaders(season), [season]);
+  const allTimeChart  = useMemo(() => buildAllTimeChart(data.awardsData), [data.awardsData]);
+  const nrrChart      = useMemo(() => buildNRRChart(season === 'all' ? 2024 : season, data.pointsData), [season, data.pointsData]);
+  const leaders       = useMemo(() => season === 'all' ? { batting:[], bowling:[] } : buildSeasonLeaders(season, data.awardsData), [season, data.awardsData]);
 
   // Career stats for team filter (all-time)
   const careerStats = useMemo(() => {
-    if (teamFilter === 'ALL') return masterPlayers.players;
-    return masterPlayers.players.filter(p =>
+    if (teamFilter === 'ALL') return data.masterPlayers.players || [];
+    return (data.masterPlayers.players || []).filter(p =>
       p.teams?.some(t => t.team === teamFilter) || p.activeTeam === teamFilter
     );
-  }, [teamFilter]);
+  }, [teamFilter, data.masterPlayers]);
+
+  if (data.loading) {
+    return (
+      <div className="w-full flex justify-center items-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-ipl-neon animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-10 space-y-10 relative z-10">
@@ -161,7 +197,7 @@ const Stats = () => {
       )}
 
       {/* ── Season Awards ── */}
-      {season !== 'all' && (() => { const a = awardsData[String(season)]; return a && (a.orangeCap || a.purpleCap) && (
+      {season !== 'all' && (() => { const a = data.awardsData?.[String(season)]; return a && (a.orangeCap || a.purpleCap) && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { icon:'🟠', label:'Orange Cap', p:a.orangeCap?.player,  t:a.orangeCap?.team,  stat:a.orangeCap?.runs   ? `${a.orangeCap.runs} runs`   : null },

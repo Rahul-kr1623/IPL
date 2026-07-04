@@ -1,46 +1,76 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Trophy, Star, Medal } from 'lucide-react';
+import { TrendingUp, TrendingDown, Trophy, Star, Medal, Loader2 } from 'lucide-react';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
-import { CURRENT_SEASON, TEAM_COLORS, TEAM_NAMES } from '../data/seasons/index.js';
-import pointsData from '../data/seasons/points_tables.json';
-import awardsData from '../data/seasons/awards.json';
+import { CURRENT_SEASON, TEAM_COLORS, TEAM_NAMES } from '../utils/constants.js';
 
 // ── All-Time aggregated table ────────────────────────────────────────────────
-const buildAllTime = () => {
-  const map = {};
-  Object.values(pointsData).forEach(({ teams }) => {
-    (teams || []).forEach(t => {
-      if (!map[t.team]) map[t.team] = { team: t.team, played: 0, won: 0, lost: 0, tied: 0, nr: 0, pts: 0, titles: 0, finals: 0, semis: 0 };
-      map[t.team].played += (t.played || 0);
-      map[t.team].won    += (t.won   || 0);
-      map[t.team].lost   += (t.lost  || 0);
-      map[t.team].tied   += (t.tied  || 0);
-      map[t.team].nr     += (t.nr    || 0);
-      map[t.team].pts    += (t.pts   || 0);
-      if (t.finalPosition === 'Winner')    { map[t.team].titles++; map[t.team].finals++; }
-      if (t.finalPosition === 'Runner-Up') map[t.team].finals++;
-      if (t.finalPosition === 'Semifinal') map[t.team].semis++;
-    });
-  });
-  return Object.values(map)
-    .map(t => ({ ...t, winPct: t.played ? ((t.won / t.played) * 100).toFixed(1) : '0.0' }))
-    .sort((a, b) => b.titles - a.titles || b.won - a.won);
-};
-
 const QUAL_LINE = 4; // top 4 qualify
 
 const PointsTable = () => {
   const [season, setSeason] = useState(CURRENT_SEASON);
+  const [pointsData, setPointsData] = useState({});
+  const [awardsData, setAwardsData] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [pointsRes, awardsRes] = await Promise.all([
+          fetch('http://localhost:5000/api/v1/data/global/points_tables'),
+          fetch('http://localhost:5000/api/v1/data/global/awards')
+        ]);
+        const points = await pointsRes.json();
+        const awards = await awardsRes.json();
+        setPointsData(points);
+        setAwardsData(awards);
+      } catch (error) {
+        console.error('Failed to fetch points table data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const buildAllTime = () => {
+    const map = {};
+    Object.values(pointsData).forEach(({ teams }) => {
+      (teams || []).forEach(t => {
+        if (!map[t.team]) map[t.team] = { team: t.team, played: 0, won: 0, lost: 0, tied: 0, nr: 0, pts: 0, titles: 0, finals: 0, semis: 0 };
+        map[t.team].played += (t.played || 0);
+        map[t.team].won    += (t.won   || 0);
+        map[t.team].lost   += (t.lost  || 0);
+        map[t.team].tied   += (t.tied  || 0);
+        map[t.team].nr     += (t.nr    || 0);
+        map[t.team].pts    += (t.pts   || 0);
+        if (t.finalPosition === 'Winner')    { map[t.team].titles++; map[t.team].finals++; }
+        if (t.finalPosition === 'Runner-Up') map[t.team].finals++;
+        if (t.finalPosition === 'Semifinal') map[t.team].semis++;
+      });
+    });
+    return Object.values(map)
+      .map(t => ({ ...t, winPct: t.played ? ((t.won / t.played) * 100).toFixed(1) : '0.0' }))
+      .sort((a, b) => b.titles - a.titles || b.won - a.won);
+  };
 
   const tableData = useMemo(() => {
+    if (Object.keys(pointsData).length === 0) return [];
     if (season === 'all') return buildAllTime();
     const d = pointsData[String(season)];
     return (d?.teams || []).slice().sort((a, b) => a.rank - b.rank);
-  }, [season]);
+  }, [season, pointsData]);
 
   const award = season !== 'all' ? awardsData[String(season)] : null;
   const isAllTime = season === 'all';
+
+  if (loading) {
+    return (
+      <div className="w-full flex justify-center items-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-ipl-neon animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-10 space-y-10 relative z-10">

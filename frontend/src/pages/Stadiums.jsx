@@ -1,19 +1,45 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Users, TrendingUp, TrendingDown, Zap, Shield } from 'lucide-react';
-import { TEAM_COLORS } from '../data/seasons/index.js';
-import stadiumsRaw from '../data/global/stadiums.json';
+import { MapPin, Users, TrendingUp, TrendingDown, Zap, Shield, Loader2 } from 'lucide-react';
+import { TEAM_COLORS } from '../utils/constants.js';
 
 const PITCH_COLORS = { Batting:'#10b981', Spin:'#f59e0b', Balanced:'#0ea5e9' };
 
 const Stadiums = () => {
   const [filter, setFilter] = useState('ALL');
   const pitchTypes = ['ALL', 'Batting', 'Spin', 'Balanced'];
+  const [stadiumsRaw, setStadiumsRaw] = useState({ stadiums: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/v1/data/stadiums');
+        const data = await response.json();
+        // Handle array or object structure
+        setStadiumsRaw(Array.isArray(data) ? { stadiums: data } : data);
+      } catch (error) {
+        console.error('Failed to fetch stadiums:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const stadiums = useMemo(() => {
+    if (!stadiumsRaw.stadiums) return [];
     if (filter === 'ALL') return stadiumsRaw.stadiums;
     return stadiumsRaw.stadiums.filter(s => s.pitchType === filter);
-  }, [filter]);
+  }, [filter, stadiumsRaw]);
+
+  if (loading) {
+    return (
+      <div className="w-full flex justify-center items-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-ipl-neon animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-10 relative z-10 space-y-10">
@@ -42,10 +68,11 @@ const Stadiums = () => {
       </div>
 
       {/* Stats overview */}
+      {stadiumsRaw.stadiums.length > 0 && (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label:'Total Venues', val: stadiumsRaw.stadiums.length, icon:'🏟️' },
-          { label:'Avg 1st Innings', val: Math.round(stadiumsRaw.stadiums.reduce((a,s)=>a+s.avgFirst,0)/stadiumsRaw.stadiums.length), icon:'🏏', suffix:' runs' },
+          { label:'Avg 1st Innings', val: Math.round(stadiumsRaw.stadiums.reduce((a,s)=>a+(s.avgFirst||s.stats?.avgFirstInnings||0),0)/stadiumsRaw.stadiums.length), icon:'🏏', suffix:' runs' },
           { label:'Batting Tracks', val: stadiumsRaw.stadiums.filter(s=>s.pitchType==='Batting').length, icon:'📈' },
           { label:'Spin Tracks',    val: stadiumsRaw.stadiums.filter(s=>s.pitchType==='Spin').length,    icon:'🌀' },
         ].map(card => (
@@ -56,6 +83,7 @@ const Stadiums = () => {
           </div>
         ))}
       </div>
+      )}
 
       {/* Stadium Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -112,11 +140,11 @@ const Stadiums = () => {
                 <div className="space-y-1.5 text-xs">
                   <div className="flex gap-2">
                     <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest w-20 shrink-0">High Score</span>
-                    <span className="font-bold text-green-400 text-[10px]">{s.highScore}</span>
+                    <span className="font-bold text-green-400 text-[10px]">{s.highScore || s.stats?.highestScore}</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest w-20 shrink-0">Low Score</span>
-                    <span className="font-bold text-red-400 text-[10px]">{s.lowScore}</span>
+                    <span className="font-bold text-red-400 text-[10px]">{s.lowScore || s.stats?.lowestScore}</span>
                   </div>
                 </div>
 

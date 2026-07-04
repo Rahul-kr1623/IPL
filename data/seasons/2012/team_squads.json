@@ -1,0 +1,781 @@
+{
+  "lastUpdated": "2026-07-04T10:07:28.799Z",
+  "squads": {
+    "CSK": [
+      {
+        "name": "F du Plessis",
+        "role": "Unknown"
+      },
+      {
+        "name": "M Vijay",
+        "role": "Unknown"
+      },
+      {
+        "name": "SK Raina",
+        "role": "Unknown"
+      },
+      {
+        "name": "DJ Bravo",
+        "role": "Unknown"
+      },
+      {
+        "name": "JA Morkel",
+        "role": "Unknown"
+      },
+      {
+        "name": "S Badrinath",
+        "role": "Unknown"
+      },
+      {
+        "name": "MS Dhoni",
+        "role": "Unknown"
+      },
+      {
+        "name": "RA Jadeja",
+        "role": "Unknown"
+      },
+      {
+        "name": "R Ashwin",
+        "role": "Unknown"
+      },
+      {
+        "name": "SB Jakati",
+        "role": "Unknown"
+      },
+      {
+        "name": "DE Bollinger",
+        "role": "Unknown"
+      },
+      {
+        "name": "KMDN Kulasekara",
+        "role": "Unknown"
+      },
+      {
+        "name": "VY Mahesh",
+        "role": "Unknown"
+      },
+      {
+        "name": "WP Saha",
+        "role": "Unknown"
+      },
+      {
+        "name": "MEK Hussey",
+        "role": "Unknown"
+      },
+      {
+        "name": "BW Hilfenhaus",
+        "role": "Unknown"
+      },
+      {
+        "name": "S Anirudha",
+        "role": "Unknown"
+      }
+    ],
+    "MI": [
+      {
+        "name": "RE Levi",
+        "role": "Unknown"
+      },
+      {
+        "name": "SR Tendulkar",
+        "role": "Unknown"
+      },
+      {
+        "name": "RG Sharma",
+        "role": "Unknown"
+      },
+      {
+        "name": "AT Rayudu",
+        "role": "Unknown"
+      },
+      {
+        "name": "JEC Franklin",
+        "role": "Unknown"
+      },
+      {
+        "name": "KD Karthik",
+        "role": "Unknown"
+      },
+      {
+        "name": "KA Pollard",
+        "role": "Unknown"
+      },
+      {
+        "name": "Harbhajan Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "SL Malinga",
+        "role": "Unknown"
+      },
+      {
+        "name": "AN Ahmed",
+        "role": "Unknown"
+      },
+      {
+        "name": "PP Ojha",
+        "role": "Unknown"
+      },
+      {
+        "name": "SA Yadav",
+        "role": "Unknown"
+      },
+      {
+        "name": "MM Patel",
+        "role": "Unknown"
+      },
+      {
+        "name": "TL Suman",
+        "role": "Unknown"
+      },
+      {
+        "name": "DJ Jacobs",
+        "role": "Unknown"
+      },
+      {
+        "name": "CJ McKay",
+        "role": "Unknown"
+      },
+      {
+        "name": "RP Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "NLTC Perera",
+        "role": "Unknown"
+      },
+      {
+        "name": "RJ Peterson",
+        "role": "Unknown"
+      },
+      {
+        "name": "AC Blizzard",
+        "role": "Unknown"
+      },
+      {
+        "name": "R Shukla",
+        "role": "Unknown"
+      },
+      {
+        "name": "DR Smith",
+        "role": "Unknown"
+      },
+      {
+        "name": "HH Gibbs",
+        "role": "Unknown"
+      },
+      {
+        "name": "DS Kulkarni",
+        "role": "Unknown"
+      }
+    ],
+    "KKR": [
+      {
+        "name": "BB McCullum",
+        "role": "Unknown"
+      },
+      {
+        "name": "JH Kallis",
+        "role": "Unknown"
+      },
+      {
+        "name": "G Gambhir",
+        "role": "Unknown"
+      },
+      {
+        "name": "MK Tiwary",
+        "role": "Unknown"
+      },
+      {
+        "name": "YK Pathan",
+        "role": "Unknown"
+      },
+      {
+        "name": "DB Das",
+        "role": "Unknown"
+      },
+      {
+        "name": "LR Shukla",
+        "role": "Unknown"
+      },
+      {
+        "name": "R Bhatia",
+        "role": "Unknown"
+      },
+      {
+        "name": "B Lee",
+        "role": "Unknown"
+      },
+      {
+        "name": "Iqbal Abdulla",
+        "role": "Unknown"
+      },
+      {
+        "name": "M de Lange",
+        "role": "Unknown"
+      },
+      {
+        "name": "SP Narine",
+        "role": "Unknown"
+      },
+      {
+        "name": "MS Bisla",
+        "role": "Unknown"
+      },
+      {
+        "name": "RN ten Doeschate",
+        "role": "Unknown"
+      },
+      {
+        "name": "Shakib Al Hasan",
+        "role": "Unknown"
+      },
+      {
+        "name": "L Balaji",
+        "role": "Unknown"
+      },
+      {
+        "name": "JD Unadkat",
+        "role": "Unknown"
+      },
+      {
+        "name": "PJ Sangwan",
+        "role": "Unknown"
+      }
+    ],
+    "DC": [
+      {
+        "name": "AJ Finch",
+        "role": "Unknown"
+      },
+      {
+        "name": "V Sehwag",
+        "role": "Unknown"
+      },
+      {
+        "name": "IK Pathan",
+        "role": "Unknown"
+      },
+      {
+        "name": "GJ Maxwell",
+        "role": "Unknown"
+      },
+      {
+        "name": "NV Ojha",
+        "role": "Unknown"
+      },
+      {
+        "name": "Y Venugopal Rao",
+        "role": "Unknown"
+      },
+      {
+        "name": "M Morkel",
+        "role": "Unknown"
+      },
+      {
+        "name": "Y Nagar",
+        "role": "Unknown"
+      },
+      {
+        "name": "RE van der Merwe",
+        "role": "Unknown"
+      },
+      {
+        "name": "UT Yadav",
+        "role": "Unknown"
+      },
+      {
+        "name": "S Nadeem",
+        "role": "Unknown"
+      },
+      {
+        "name": "DAJ Bracewell",
+        "role": "Unknown"
+      },
+      {
+        "name": "DJ Harris",
+        "role": "Unknown"
+      },
+      {
+        "name": "S Dhawan",
+        "role": "Unknown"
+      },
+      {
+        "name": "PA Patel",
+        "role": "Unknown"
+      },
+      {
+        "name": "CL White",
+        "role": "Unknown"
+      },
+      {
+        "name": "B Chipli",
+        "role": "Unknown"
+      },
+      {
+        "name": "DT Christian",
+        "role": "Unknown"
+      },
+      {
+        "name": "MS Gony",
+        "role": "Unknown"
+      },
+      {
+        "name": "DB Ravi Teja",
+        "role": "Unknown"
+      },
+      {
+        "name": "Ankit Sharma",
+        "role": "Unknown"
+      },
+      {
+        "name": "DW Steyn",
+        "role": "Unknown"
+      },
+      {
+        "name": "TP Sudhindra",
+        "role": "Unknown"
+      },
+      {
+        "name": "KC Sangakkara",
+        "role": "Unknown"
+      },
+      {
+        "name": "A Mishra",
+        "role": "Unknown"
+      },
+      {
+        "name": "Anand Rajan",
+        "role": "Unknown"
+      },
+      {
+        "name": "KP Pietersen",
+        "role": "Unknown"
+      },
+      {
+        "name": "DPMD Jayawardene",
+        "role": "Unknown"
+      },
+      {
+        "name": "LRPL Taylor",
+        "role": "Unknown"
+      },
+      {
+        "name": "AB Agarkar",
+        "role": "Unknown"
+      },
+      {
+        "name": "JP Duminy",
+        "role": "Unknown"
+      },
+      {
+        "name": "T Mishra",
+        "role": "Unknown"
+      },
+      {
+        "name": "AA Jhunjhunwala",
+        "role": "Unknown"
+      },
+      {
+        "name": "V Pratap Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "P Negi",
+        "role": "Unknown"
+      },
+      {
+        "name": "IR Jaggi",
+        "role": "Unknown"
+      },
+      {
+        "name": "A Ashish Reddy",
+        "role": "Unknown"
+      },
+      {
+        "name": "J Theron",
+        "role": "Unknown"
+      },
+      {
+        "name": "BB Samantray",
+        "role": "Unknown"
+      },
+      {
+        "name": "PA Reddy",
+        "role": "Unknown"
+      },
+      {
+        "name": "DA Warner",
+        "role": "Unknown"
+      },
+      {
+        "name": "VR Aaron",
+        "role": "Unknown"
+      },
+      {
+        "name": "AD Russell",
+        "role": "Unknown"
+      },
+      {
+        "name": "UBT Chand",
+        "role": "Unknown"
+      },
+      {
+        "name": "CA Lynn",
+        "role": "Unknown"
+      },
+      {
+        "name": "Sunny Gupta",
+        "role": "Unknown"
+      }
+    ],
+    "RR": [
+      {
+        "name": "R Dravid",
+        "role": "Unknown"
+      },
+      {
+        "name": "AM Rahane",
+        "role": "Unknown"
+      },
+      {
+        "name": "AL Menaria",
+        "role": "Unknown"
+      },
+      {
+        "name": "BJ Hodge",
+        "role": "Unknown"
+      },
+      {
+        "name": "OA Shah",
+        "role": "Unknown"
+      },
+      {
+        "name": "KK Cooper",
+        "role": "Unknown"
+      },
+      {
+        "name": "J Botha",
+        "role": "Unknown"
+      },
+      {
+        "name": "AA Chavan",
+        "role": "Unknown"
+      },
+      {
+        "name": "SP Goswami",
+        "role": "Unknown"
+      },
+      {
+        "name": "A Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "SK Trivedi",
+        "role": "Unknown"
+      },
+      {
+        "name": "GB Hogg",
+        "role": "Unknown"
+      },
+      {
+        "name": "Pankaj Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "DH Yagnik",
+        "role": "Unknown"
+      },
+      {
+        "name": "STR Binny",
+        "role": "Unknown"
+      },
+      {
+        "name": "A Chandila",
+        "role": "Unknown"
+      },
+      {
+        "name": "SR Watson",
+        "role": "Unknown"
+      },
+      {
+        "name": "SW Tait",
+        "role": "Unknown"
+      }
+    ],
+    "PBKS": [
+      {
+        "name": "AC Gilchrist",
+        "role": "Unknown"
+      },
+      {
+        "name": "PC Valthaty",
+        "role": "Unknown"
+      },
+      {
+        "name": "SE Marsh",
+        "role": "Unknown"
+      },
+      {
+        "name": "AM Nayar",
+        "role": "Unknown"
+      },
+      {
+        "name": "DJ Hussey",
+        "role": "Unknown"
+      },
+      {
+        "name": "Mandeep Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "Bipul Sharma",
+        "role": "Unknown"
+      },
+      {
+        "name": "PP Chawla",
+        "role": "Unknown"
+      },
+      {
+        "name": "JP Faulkner",
+        "role": "Unknown"
+      },
+      {
+        "name": "P Kumar",
+        "role": "Unknown"
+      },
+      {
+        "name": "Harmeet Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "AD Mascarenhas",
+        "role": "Unknown"
+      },
+      {
+        "name": "P Awana",
+        "role": "Unknown"
+      },
+      {
+        "name": "P Dogra",
+        "role": "Unknown"
+      },
+      {
+        "name": "BA Bhatt",
+        "role": "Unknown"
+      },
+      {
+        "name": "N Saini",
+        "role": "Unknown"
+      },
+      {
+        "name": "DA Miller",
+        "role": "Unknown"
+      },
+      {
+        "name": "Azhar Mahmood",
+        "role": "Unknown"
+      },
+      {
+        "name": "SD Chitnis",
+        "role": "Unknown"
+      },
+      {
+        "name": "RJ Harris",
+        "role": "Unknown"
+      },
+      {
+        "name": "Gurkeerat Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "RR Powar",
+        "role": "Unknown"
+      }
+    ],
+    "PWI": [
+      {
+        "name": "MK Pandey",
+        "role": "Unknown"
+      },
+      {
+        "name": "SC Ganguly",
+        "role": "Unknown"
+      },
+      {
+        "name": "WD Parnell",
+        "role": "Unknown"
+      },
+      {
+        "name": "RV Uthappa",
+        "role": "Unknown"
+      },
+      {
+        "name": "CJ Ferguson",
+        "role": "Unknown"
+      },
+      {
+        "name": "SPD Smith",
+        "role": "Unknown"
+      },
+      {
+        "name": "MN Samuels",
+        "role": "Unknown"
+      },
+      {
+        "name": "B Kumar",
+        "role": "Unknown"
+      },
+      {
+        "name": "M Kartik",
+        "role": "Unknown"
+      },
+      {
+        "name": "R Sharma",
+        "role": "Unknown"
+      },
+      {
+        "name": "AB Dinda",
+        "role": "Unknown"
+      },
+      {
+        "name": "JD Ryder",
+        "role": "Unknown"
+      },
+      {
+        "name": "A Nehra",
+        "role": "Unknown"
+      },
+      {
+        "name": "AD Mathews",
+        "role": "Unknown"
+      },
+      {
+        "name": "M Manhas",
+        "role": "Unknown"
+      },
+      {
+        "name": "AC Thomas",
+        "role": "Unknown"
+      },
+      {
+        "name": "LJ Wright",
+        "role": "Unknown"
+      },
+      {
+        "name": "MJ Clarke",
+        "role": "Unknown"
+      },
+      {
+        "name": "AP Majumdar",
+        "role": "Unknown"
+      },
+      {
+        "name": "MD Mishra",
+        "role": "Unknown"
+      },
+      {
+        "name": "K Upadhyay",
+        "role": "Unknown"
+      },
+      {
+        "name": "Harpreet Singh",
+        "role": "Unknown"
+      },
+      {
+        "name": "AG Murtaza",
+        "role": "Unknown"
+      }
+    ],
+    "RCB": [
+      {
+        "name": "AB McDonald",
+        "role": "Unknown"
+      },
+      {
+        "name": "CA Pujara",
+        "role": "Unknown"
+      },
+      {
+        "name": "V Kohli",
+        "role": "Unknown"
+      },
+      {
+        "name": "AB de Villiers",
+        "role": "Unknown"
+      },
+      {
+        "name": "SS Tiwary",
+        "role": "Unknown"
+      },
+      {
+        "name": "MA Agarwal",
+        "role": "Unknown"
+      },
+      {
+        "name": "DL Vettori",
+        "role": "Unknown"
+      },
+      {
+        "name": "R Vinay Kumar",
+        "role": "Unknown"
+      },
+      {
+        "name": "HV Patel",
+        "role": "Unknown"
+      },
+      {
+        "name": "Z Khan",
+        "role": "Unknown"
+      },
+      {
+        "name": "M Muralitharan",
+        "role": "Unknown"
+      },
+      {
+        "name": "CH Gayle",
+        "role": "Unknown"
+      },
+      {
+        "name": "RR Bhatkal",
+        "role": "Unknown"
+      },
+      {
+        "name": "M Kaif",
+        "role": "Unknown"
+      },
+      {
+        "name": "S Aravind",
+        "role": "Unknown"
+      },
+      {
+        "name": "TM Dilshan",
+        "role": "Unknown"
+      },
+      {
+        "name": "KP Appanna",
+        "role": "Unknown"
+      },
+      {
+        "name": "KB Arun Karthik",
+        "role": "Unknown"
+      },
+      {
+        "name": "AUK Pathan",
+        "role": "Unknown"
+      },
+      {
+        "name": "J Syed Mohammad",
+        "role": "Unknown"
+      },
+      {
+        "name": "A Mithun",
+        "role": "Unknown"
+      },
+      {
+        "name": "P Parameswaran",
+        "role": "Unknown"
+      }
+    ]
+  }
+}

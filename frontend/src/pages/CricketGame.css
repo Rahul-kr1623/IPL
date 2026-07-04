@@ -1,0 +1,306 @@
+/* ── Reset & Base ── */
+
+.hand-cricket-wrapper {
+  background: #0d1b2a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  touch-action: manipulation;
+}
+
+/* ── Screens ── */
+.hand-cricket-wrapper .screen { display: none; width: 100%; max-width: 420px; }
+.hand-cricket-wrapper .screen.active { display: flex; justify-content: center; }
+
+/* ── Game Container ── */
+.hand-cricket-wrapper .game-container {
+  background: #16213e;
+  padding: 2rem 1.75rem;
+  border-radius: 18px;
+  text-align: center;
+  border: 1px solid #1f3a5f;
+  width: 100%;
+  max-width: 420px;
+  animation: fadeIn 0.3s ease;
+}
+
+/* - FOOTER- */
+.hand-cricket-wrapper .footer-text {
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: #9aa6b2;
+  text-align: center;
+  opacity: 0.8;
+  font-weight: 500;          
+  letter-spacing: 0.5px;     
+}
+
+.hand-cricket-wrapper .footer-text span {
+  color: #e94560;
+}
+
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.hand-cricket-wrapper h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+.hand-cricket-wrapper .subtitle { font-size: 0.85rem; color: #7a8fa6; margin-bottom: 1.25rem; }
+
+/* ── Buttons ── */
+.hand-cricket-wrapper .btn {
+  display: inline-block;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.15s, transform 0.1s;
+  margin: 5px;
+}
+.hand-cricket-wrapper .btn:active { transform: scale(0.96); }
+.hand-cricket-wrapper .btn-primary { background: #e94560; color: #fff; }
+.hand-cricket-wrapper .btn-primary:hover { background: #ff6080; }
+.hand-cricket-wrapper .btn-secondary { background: #0f3460; color: #fff; }
+.hand-cricket-wrapper .btn-secondary:hover { background: #1a4d8a; }
+.hand-cricket-wrapper .btn-copy { background: #1b4332; color: #95d5b2; border: 1px solid #2d6a4f; }
+.hand-cricket-wrapper .btn-copy:hover { background: #2d6a4f; }
+
+/* ── Inputs ── */
+.hand-cricket-wrapper input[type="text"] {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0d1b2a;
+  border: 1px solid #1f3a5f;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.hand-cricket-wrapper input[type="text"]:focus { border-color: #e94560; }
+.hand-cricket-wrapper input::placeholder { color: #4a6580; }
+
+/* ── Lobby ── */
+.hand-cricket-wrapper .lobby-section { margin-bottom: 1rem; }
+.hand-cricket-wrapper .divider { color: #4a6580; font-size: 0.8rem; margin: 0.5rem 0; }
+
+/* ── Room Code ── */
+.hand-cricket-wrapper .room-display {
+  background: #0d1b2a;
+  border: 1px dashed #1f3a5f;
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 1rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: #7a8fa6;
+}
+.hand-cricket-wrapper .room-code {
+  display: block;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #e94560;
+  letter-spacing: 6px;
+  margin-top: 0.25rem;
+}
+.hand-cricket-wrapper .hint { font-size: 0.78rem; color: #4a6580; margin-bottom: 0.75rem; }
+
+/* ── Status Messages ── */
+.hand-cricket-wrapper .status-msg {
+  font-size: 0.85rem;
+  color: #00d2d3;
+  margin-top: 0.75rem;
+  min-height: 20px;
+}
+.hand-cricket-wrapper .status-msg.error { color: #e94560; }
+
+/* ── Top Bar ── */
+.hand-cricket-wrapper .top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.hand-cricket-wrapper .innings-badge {
+  background: #0f3460;
+  color: #7ab3f5;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.hand-cricket-wrapper .status-inline {
+  font-size: 0.8rem;
+  color: #95d5b2;
+  background: #1b4332;
+  border-radius: 20px;
+  padding: 3px 12px;
+}
+.hand-cricket-wrapper .status-inline.bowling { color: #ffb3b3; background: #3a1a1a; }
+
+/* ── Scoreboard ── */
+.hand-cricket-wrapper .scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  margin-bottom: 0.75rem;
+}
+.hand-cricket-wrapper .score-box {
+  background: #0f3460;
+  padding: 10px 8px;
+  border-radius: 10px;
+}
+.hand-cricket-wrapper .target-box { background: #1a1a3e; }
+.hand-cricket-wrapper .score-label { font-size: 0.72rem; color: #7a8fa6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.hand-cricket-wrapper .score-value { font-size: 1.8rem; font-weight: 700; line-height: 1; color: #fff; }
+.hand-cricket-wrapper .score-value.chasing { color: #f4c542; }
+
+/* ── Chase Bar ── */
+.hand-cricket-wrapper .chase-bar-wrap { margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px; }
+.hand-cricket-wrapper .chase-bar-bg { flex: 1; height: 6px; background: #0d1b2a; border-radius: 3px; overflow: hidden; }
+.hand-cricket-wrapper .chase-bar-fill { height: 100%; background: #2d9a5f; border-radius: 3px; transition: width 0.4s; }
+.hand-cricket-wrapper .chase-bar-label { font-size: 0.75rem; color: #7a8fa6; white-space: nowrap; }
+
+/* ── Play Area ── */
+.hand-cricket-wrapper .play-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.75rem 0;
+  gap: 8px;
+}
+.hand-cricket-wrapper .hand-box { flex: 1; }
+.hand-cricket-wrapper .hand-box p { font-size: 0.75rem; color: #7a8fa6; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.hand-cricket-wrapper .hand { font-size: 3.2rem; transition: transform 0.2s; line-height: 1; }
+.hand-cricket-wrapper .move-val {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e94560;
+  min-height: 28px;
+  margin-top: 4px;
+}
+.hand-cricket-wrapper .vs-label { font-size: 0.8rem; color: #4a6580; font-weight: 700; }
+
+/* ── Shake Animation ── */
+.hand-cricket-wrapper .shake { animation: shakeHand 0.5s ease-in-out; }
+@keyframes shakeHand {
+  0%   { transform: translateY(0); }
+  25%  { transform: translateY(-18px); }
+  50%  { transform: translateY(0); }
+  75%  { transform: translateY(-18px); }
+  100% { transform: translateY(0); }
+}
+
+/* ── Round Result ── */
+.hand-cricket-wrapper .round-result {
+  min-height: 36px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.25rem 0 0.5rem;
+  border-radius: 8px;
+  padding: 6px 10px;
+  transition: background 0.2s;
+}
+.hand-cricket-wrapper .round-result.out    { color: #ff6b6b; background: #2a1010; }
+.hand-cricket-wrapper .round-result.scored { color: #95d5b2; background: #0d2a1a; }
+.hand-cricket-wrapper .round-result.dot    { color: #7a8fa6; }
+
+/* ── Ball Log ── */
+.hand-cricket-wrapper .ball-log-wrap { margin: 0.5rem 0; text-align: left; }
+.hand-cricket-wrapper .ball-log-title { font-size: 0.7rem; color: #4a6580; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.hand-cricket-wrapper .ball-log { display: flex; flex-wrap: wrap; gap: 5px; min-height: 28px; }
+.hand-cricket-wrapper .ball {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 600;
+  border: 1px solid transparent;
+}
+.hand-cricket-wrapper .ball.w    { background: #2a1010; color: #ff6b6b; border-color: #5a2020; }
+.hand-cricket-wrapper .ball.six  { background: #0d2a1a; color: #95d5b2; border-color: #2d6a4f; }
+.hand-cricket-wrapper .ball.four { background: #0d1b3a; color: #7ab3f5; border-color: #1f3a5f; }
+.hand-cricket-wrapper .ball.run  { background: #1a1a2e; color: #c0c0c0; border-color: #2a2a4a; }
+.hand-cricket-wrapper .ball.dot  { background: #131320; color: #4a6580; border-color: #1f1f3a; }
+
+/* ── Number Controls ── */
+.hand-cricket-wrapper .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0.75rem 0; }
+.hand-cricket-wrapper .controls button {
+  background: #e94560;
+  color: white;
+  border: none;
+  width: 46px; height: 46px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: background 0.15s, transform 0.1s;
+}
+.hand-cricket-wrapper .controls button:hover { background: #ff6080; }
+.hand-cricket-wrapper .controls button:active { transform: scale(0.93); }
+.hand-cricket-wrapper .controls button:disabled { background: #2a2a4a; color: #4a6580; cursor: not-allowed; transform: none; }
+.hand-cricket-wrapper .controls button.selected { background: #2d9a5f; border: 2px solid #95d5b2; }
+
+/* ── Toss ── */
+.hand-cricket-wrapper .toss-result-text {
+  font-size: 0.9rem;
+  color: #e0e0e0;
+  background: #0f3460;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 0.75rem 0;
+}
+
+/* ── Result Screen ── */
+.hand-cricket-wrapper .result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.hand-cricket-wrapper .final-scores {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 1rem 0;
+}
+.hand-cricket-wrapper .final-scores .score-box { min-width: 100px; }
+.hand-cricket-wrapper .final-stats {
+  font-size: 0.8rem;
+  color: #7a8fa6;
+  background: #0d1b2a;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 0.75rem 0;
+  text-align: left;
+  line-height: 1.8;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .hand-cricket-wrapper .game-container {
+    padding: 1.2rem;
+    border-radius: 14px;
+  }
+
+  .hand-cricket-wrapper h1 {
+    font-size: 1.4rem;
+  }
+
+  .hand-cricket-wrapper .controls button {
+    width: 52px;
+    height: 52px;
+    font-size: 1rem;
+  }
+
+  .hand-cricket-wrapper .hand {
+    font-size: 2.4rem;
+  }
+
+  .hand-cricket-wrapper .score-value {
+    font-size: 1.5rem;
+  }
+
+  .hand-cricket-wrapper .room-code {
+    font-size: 1.8rem;
+    letter-spacing: 4px;
+  }
+}
