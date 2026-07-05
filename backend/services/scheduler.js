@@ -264,7 +264,6 @@ const processSlot = async (slotKey, data) => {
     }
 
     await saveMatch({ ...data, slot: slotKey });
-    await broadcastLiveScore();
     return;
   }
 
@@ -313,7 +312,6 @@ const processSlot = async (slotKey, data) => {
   }
 
   await saveMatch({ ...data, slot: slotKey });
-  await broadcastLiveScore();
 };
 
 // ─── Main sync cycle ─────────────────────────────────────────────────────────

@@ -114,35 +114,18 @@ export const debugClearFreeze = (req, res) => {
 // ─── GET /api/v1/debug/espn-dump ─────────────────────────────────────────────
 export const debugEspnDump = async (req, res) => {
   try {
-    // Step 1: find current live match ID from header
-    const hdRes  = await fetch('https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket&region=in&tz=Asia/Calcutta');
-    const hdData = await hdRes.json();
-
+    const LEAGUE_ID = process.env.ESPN_LEAGUE_ID || '8048';
+    
+    // Step 1: find current live match ID from scoreboard
+    const sbRes = await fetch(`https://site.api.espn.com/apis/site/v2/sports/cricket/${LEAGUE_ID}/scoreboard`);
+    const sbData = await sbRes.json();
     let espnId = null, matchName = null;
-    for (const sport of (hdData.sports || [])) {
-      for (const league of (sport.leagues || [])) {
-        for (const ev of (league.events || [])) {
-          if ((ev.status || '').toUpperCase() !== 'PRE') {
-            espnId    = ev.id || String(ev.uid || '').split('~e:')[1];
-            matchName = ev.name || ev.shortName;
-            break;
-          }
-        }
-        if (espnId) break;
-      }
-      if (espnId) break;
-    }
-
-    // Fallback via scoreboard
-    if (!espnId) {
-      const sbRes  = await fetch('https://site.api.espn.com/apis/site/v2/sports/cricket/23694/scoreboard');
-      const sbData = await sbRes.json();
-      for (const ev of (sbData.events || [])) {
-        if (ev.status?.type?.name !== 'STATUS_SCHEDULED') {
-          espnId    = ev.id;
-          matchName = ev.name;
-          break;
-        }
+    
+    for (const ev of (sbData.events || [])) {
+      if (ev.status?.type?.name !== 'STATUS_SCHEDULED') {
+        espnId = ev.id;
+        matchName = ev.name || ev.shortName;
+        break;
       }
     }
 
@@ -156,7 +139,7 @@ export const debugEspnDump = async (req, res) => {
     }
 
     // Step 2: full summary
-    const sumRes  = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/cricket/23694/summary?contentorigin=espn&event=${espnId}&lang=en&region=in`);
+    const sumRes  = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/cricket/${LEAGUE_ID}/summary?contentorigin=espn&event=${espnId}&lang=en&region=in`);
     const summary = await sumRes.json();
     const gpkg    = summary.gamepackageJSON || {};
 

@@ -27,11 +27,18 @@ import https from 'https';
 import http from 'http';
 import { existsSync } from 'fs';
 
-const TEAMS = ['CSK', 'MI', 'RCB', 'KKR', 'RR', 'PBKS', 'DC', 'GT', 'LSG', 'SRH'];
+// Environment Overrides for Testing Other Leagues (e.g. MLC)
+const TEAMS = process.env.SCRAPER_TEAMS 
+  ? process.env.SCRAPER_TEAMS.split(',').map(t => t.trim()) 
+  : ['CSK', 'MI', 'RCB', 'KKR', 'RR', 'PBKS', 'DC', 'GT', 'LSG', 'SRH'];
+
+// Global cached Puppeteer browser instance (only used on platforms that support Chrome)
+let _pptr = null;
+const ESPN_LEAGUE_ID = process.env.ESPN_LEAGUE_ID || '8048';
+
 const wait = ms => new Promise(r => setTimeout(r, ms));
 // ESPN IPL league IDs:  23694 = IPL 2025 (old),  8048 = IPL 2026 (ESPN.com series ID)
 // The site.api.espn.com cricket endpoint uses the same numeric slug as espn.com/cricket/series/_/id/
-const ESPN_IPL_ID = '8048';
 
 // Chrome detection
 const CHROME_PATHS = [
@@ -232,7 +239,7 @@ export const espnFindAllMatches = async () => {
 
   // Source 2: scoreboard (catches anything header missed)
   const sb = await fetchJSON(
-    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/scoreboard`,
     {}, 'ESPN scoreboard'
   );
   for (const ev of (sb?.events || [])) {
@@ -260,7 +267,7 @@ export const espnFindAllMatches = async () => {
 
 const espnGetScore = async ({ espnId, compA, compB }) => {
   const summary = await fetchJSON(
-    `https://site.web.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/summary?contentorigin=espn&event=${espnId}&lang=en&region=in`,
+    `https://site.web.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/summary?contentorigin=espn&event=${espnId}&lang=en&region=in`,
     {}, `ESPN summary/${espnId}`
   );
   if (!summary) return null;
@@ -927,7 +934,7 @@ const espnGetScore = async ({ espnId, compA, compB }) => {
   if (batsmen.length === 0) {
     try {
       const sb2 = await fetchJSON(
-        `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+        `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/scoreboard`,
         {}, 'ESPN scoreboard (player fallback)'
       );
       const sbEvent = (sb2?.events || []).find(e => String(e.id) === String(espnId));
@@ -1476,7 +1483,7 @@ export const scrapeLatestCompletedMatch = async () => {
   // Try scoreboard first (has today's completed + live matches)
   try {
     const sb = await fetchJSON(
-      `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+      `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/scoreboard`,
       {}, 'ESPN scoreboard (completed check)'
     );
     const events = sb?.events || [];
@@ -1492,7 +1499,7 @@ export const scrapeLatestCompletedMatch = async () => {
     const today = new Date();
     const weekAgo = new Date(today - 7 * 86400000);
     const fmt2 = d => d.toISOString().slice(0, 10).replace(/-/g, '');
-    const url = `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard?dates=${fmt2(weekAgo)}-${fmt2(today)}`;
+    const url = `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/scoreboard?dates=${fmt2(weekAgo)}-${fmt2(today)}`;
     const data = await fetchJSON(url, {}, 'ESPN events (date range)');
     const events = data?.events || [];
     const done = events.filter(isCompleted).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
@@ -1510,7 +1517,7 @@ export const scrapeLatestCompletedMatch = async () => {
 const _scrapeLatestCompletedMatchOLD = async () => {
   try {
     const sb = await fetchJSON(
-      `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+      `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/scoreboard`,
       {}, 'ESPN scoreboard (completed)'
     );
     if (!sb?.events?.length) return null;
@@ -1552,7 +1559,7 @@ const _scrapeLatestCompletedMatchOLD = async () => {
 
 const getFixturesData = async () => {
   const scoreboard = await fetchJSON(
-    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/scoreboard`,
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/scoreboard`,
     {},
     'ESPN fixtures'
   );
@@ -1979,12 +1986,12 @@ export const scrapeIPLStandingsAndStats = async () => {
   let topBatsmen = [], topBowlers = [];
 
   // ── ESPN Standings ─────────────────────────────────────────────────────────
-  // The ESPN_IPL_ID constant (8048) is the series scoreboard ID.
+  // The ESPN_LEAGUE_ID constant (8048) is the series scoreboard ID.
   // The standings endpoint sometimes uses a DIFFERENT child league ID.
   // We try three URL patterns to catch whichever ESPN currently serves.
   const espnStandingsUrls = [
-    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/standings`,
-    `https://site.api.espn.com/apis/v2/sports/cricket/leagues/${ESPN_IPL_ID}/standings`,
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/standings`,
+    `https://site.api.espn.com/apis/v2/sports/cricket/leagues/${ESPN_LEAGUE_ID}/standings`,
     `https://site.api.espn.com/apis/site/v2/sports/cricket/ipl/standings`,
   ];
 
@@ -2060,8 +2067,8 @@ export const scrapeIPLStandingsAndStats = async () => {
   // ── ESPN batting stats (Orange Cap) ───────────────────────────────────────
   // Try both the series stats endpoint and the separate statistics endpoint.
   const espnBattingUrls = [
-    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/statistics?type=batting`,
-    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/leaders?type=batting`,
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/statistics?type=batting`,
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/leaders?type=batting`,
   ];
   for (const url of espnBattingUrls) {
     if (topBatsmen.length > 0) break;
@@ -2087,8 +2094,8 @@ export const scrapeIPLStandingsAndStats = async () => {
 
   // ── ESPN bowling stats (Purple Cap) ───────────────────────────────────────
   const espnBowlingUrls = [
-    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/statistics?type=bowling`,
-    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_IPL_ID}/leaders?type=bowling`,
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/statistics?type=bowling`,
+    `https://site.api.espn.com/apis/site/v2/sports/cricket/${ESPN_LEAGUE_ID}/leaders?type=bowling`,
   ];
   for (const url of espnBowlingUrls) {
     if (topBowlers.length > 0) break;
@@ -2175,7 +2182,6 @@ export const scrapeIPLStandings = scrapeIPLStandingsAndStats;
 // ─────────────────────────────────────────────────────────────────────────────
 // Browser fallback (local dev only)
 // ─────────────────────────────────────────────────────────────────────────────
-let _pptr = null;
 const getPptr = async () => {
   if (_pptr) return _pptr;
   try { _pptr = (await import('puppeteer-core')).default; return _pptr; } catch { }
