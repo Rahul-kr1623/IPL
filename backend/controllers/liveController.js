@@ -24,6 +24,10 @@ import { scrapeLatestCompletedMatch, scrapeAllSlots } from '../services/scraperS
 const slotFallbackCache = { slot1: null, slot2: null, fetchedAt: 0 };
 const SLOT_CACHE_MS = 50_000; // 50 seconds — slightly longer than the 40s poll
 
+// In-flight guard: ensures only one on-demand scrape runs at a time.
+// Concurrent callers await the same promise instead of firing parallel scrapes.
+let scrapeInFlight = null;
+
 // ─── GET /api/v1/live-score ───────────────────────────────────────────────────
 export const getLiveScore = async (req, res) => {
   try {
@@ -78,15 +82,25 @@ export const getLiveScore = async (req, res) => {
     if (!slot1 || !slot2) {
       const cacheAge = Date.now() - slotFallbackCache.fetchedAt;
       if (cacheAge > SLOT_CACHE_MS) {
-        // Cache stale — hit the scraper directly
-        try {
-          const fresh = await scrapeAllSlots();
-          if (fresh.slot1) slotFallbackCache.slot1 = fresh.slot1;
-          if (fresh.slot2) slotFallbackCache.slot2 = fresh.slot2;
-          slotFallbackCache.fetchedAt = Date.now();
-          console.log(`[getLiveScore] Direct scrape fallback: slot1=${fresh.slot1?.team1?.name || 'empty'} slot2=${fresh.slot2?.team1?.name || 'empty'}`);
-        } catch (e) {
-          console.log('[getLiveScore] Direct scrape fallback failed:', e.message);
+        if (scrapeInFlight) {
+          // A scrape is already running — don't block this request, just return what we have
+          console.log('[getLiveScore] Scrape already in flight — returning cached/empty');
+        } else {
+          // No scrape running — start one, share the promise with concurrent callers
+          scrapeInFlight = scrapeAllSlots()
+            .then(fresh => {
+              if (fresh.slot1) slotFallbackCache.slot1 = fresh.slot1;
+              if (fresh.slot2) slotFallbackCache.slot2 = fresh.slot2;
+              slotFallbackCache.fetchedAt = Date.now();
+              console.log(`[getLiveScore] Direct scrape fallback: slot1=${fresh.slot1?.team1?.name || 'empty'} slot2=${fresh.slot2?.team1?.name || 'empty'}`);
+            })
+            .catch(e => {
+              console.log('[getLiveScore] Direct scrape fallback failed:', e.message);
+            })
+            .finally(() => {
+              scrapeInFlight = null;
+            });
+          await scrapeInFlight;
         }
       }
       if (!slot1 && slotFallbackCache.slot1) slot1 = slotFallbackCache.slot1;
