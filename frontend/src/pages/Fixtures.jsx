@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Calendar, MapPin, Clock, Trophy, X, Activity, Search, Zap, Radio } from 'lucide-react';
+import { Calendar, MapPin, Clock, Trophy, X, Activity, Search, Zap, Radio, ChevronDown, Filter, ExternalLink, Loader2 } from 'lucide-react';
 import { useMatchContext } from '../context/MatchContext';
 import { useCompletedMatches } from '../hooks/useCompletedMatches';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
+import Pagination from '../components/Pagination.jsx';
 import { CURRENT_SEASON } from '../utils/constants.js';
 
 const COLORS = {
@@ -822,6 +823,15 @@ const Fixtures = () => {
   const [historicalData, setHistoricalData] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, search, teamFilter, season]);
+
   const { state } = useMatchContext();
   const liveMatch = state.currentMatch;
   const isCurrentSeason = season === CURRENT_SEASON;
@@ -1001,8 +1011,14 @@ const Fixtures = () => {
           <div>
             <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-4 border-b border-white/5 pb-2">League Stage ({league.length} matches)</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {league.map(m => <HistoricalMatchCard key={m.id} match={m} />)}
+              {league.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(m => <HistoricalMatchCard key={m.id} match={m} />)}
             </div>
+            
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={Math.ceil(league.length / itemsPerPage)}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
 
@@ -1107,18 +1123,25 @@ const Fixtures = () => {
       )}
 
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {filtered.map((match, i) => (
-            <FixtureCard
-              key={match.id}
-              match={match}
-              effectiveStatus={match.effectiveStatus}
-              // ── Pass live data ONLY to the correctly date-matched fixture ──
-              liveMatchData={isThisFixtureLive(match, liveMatch) ? liveMatch : null}
-              index={i}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((match, i) => (
+              <FixtureCard
+                key={match.id}
+                match={match}
+                effectiveStatus={match.effectiveStatus}
+                liveMatchData={isThisFixtureLive(match, liveMatch) ? liveMatch : null}
+                index={i}
+              />
+            ))}
+          </div>
+          
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / itemsPerPage)}
+            onPageChange={setCurrentPage}
+          />
+        </>
       ) : (
         <div className="flex flex-col items-center gap-4 py-24 text-center">
           <Search className="w-12 h-12 text-gray-700" />

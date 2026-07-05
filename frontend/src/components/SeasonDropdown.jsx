@@ -35,6 +35,12 @@ const SeasonDropdown = ({
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  const handleSelect = (val) => {
+    onChange(val);
+    setOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', h);
@@ -81,7 +87,7 @@ const SeasonDropdown = ({
             {/* All Time */}
             {showAllTime && (
               <button
-                onClick={() => { onChange('all'); setOpen(false); }}
+                onClick={() => handleSelect('all')}
                 className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors
                   text-xs font-bold tracking-widest uppercase border-b border-white/5
                   ${selected === 'all' ? 'bg-ipl-neon/10 text-ipl-neon' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
@@ -100,7 +106,7 @@ const SeasonDropdown = ({
                 return (
                   <button
                     key={s.year}
-                    onClick={() => { onChange(s.year); setOpen(false); }}
+                    onClick={() => handleSelect(s.year)}
                     className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors
                       ${isSelected
                         ? 'bg-ipl-neon/10 text-ipl-neon'

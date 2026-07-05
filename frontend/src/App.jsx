@@ -15,9 +15,12 @@ import Stadiums from './pages/Stadiums';
 import CricketGame from './pages/CricketGame';
 import NotFound from './pages/NotFound';
 
+import ScrollToTop from './components/ScrollToTop';
+
 function App() {
   return (
     <div className="min-h-screen flex flex-col selection:bg-ipl-neon/30">
+      <ScrollToTop />
       <Navbar />
       <IntelHub />
       <PulseEngagement />

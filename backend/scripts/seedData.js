@@ -4,8 +4,8 @@ import { fileURLToPath } from 'url';
 import csv from 'csv-parser';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const archiveDir = path.join(__dirname, '../../archive (1)');
-const backendDataDir = path.join(__dirname, '../../data');
+const archiveDir = path.join(__dirname, '../../../archive (1)');
+const backendDataDir = path.join(__dirname, '../data');
 
 const TEAM_MAP = {
   'Chennai Super Kings': 'CSK',

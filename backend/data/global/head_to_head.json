@@ -1,1 +1,1054 @@
-{}
+{
+  "records": [
+    {
+      "team1": "RCB",
+      "team2": "KKR",
+      "team1Wins": 16,
+      "team2Wins": 20,
+      "total": 36,
+      "recentForm": [
+        "RCB",
+        "KKR",
+        "RCB",
+        "KKR",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "MI",
+      "team1Wins": 16,
+      "team2Wins": 19,
+      "total": 36,
+      "recentForm": [
+        "RCB",
+        "MI",
+        "RCB",
+        "MI",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "RR",
+      "team1Wins": 17,
+      "team2Wins": 15,
+      "total": 34,
+      "recentForm": [
+        "RCB",
+        "RR",
+        "RCB",
+        "RR",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "CSK",
+      "team1Wins": 14,
+      "team2Wins": 21,
+      "total": 35,
+      "recentForm": [
+        "RCB",
+        "CSK",
+        "RCB",
+        "CSK",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "DC",
+      "team1Wins": 25,
+      "team2Wins": 19,
+      "total": 46,
+      "recentForm": [
+        "RCB",
+        "DC",
+        "RCB",
+        "DC",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "PBKS",
+      "team1Wins": 20,
+      "team2Wins": 18,
+      "total": 38,
+      "recentForm": [
+        "RCB",
+        "PBKS",
+        "RCB",
+        "PBKS",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "KTK",
+      "team1Wins": 2,
+      "team2Wins": 0,
+      "total": 2,
+      "recentForm": [
+        "RCB",
+        "KTK",
+        "RCB",
+        "KTK",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "PWI",
+      "team1Wins": 5,
+      "team2Wins": 0,
+      "total": 5,
+      "recentForm": [
+        "RCB",
+        "PWI",
+        "RCB",
+        "PWI",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "SRH",
+      "team1Wins": 12,
+      "team2Wins": 14,
+      "total": 27,
+      "recentForm": [
+        "RCB",
+        "SRH",
+        "RCB",
+        "SRH",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "RPS",
+      "team1Wins": 2,
+      "team2Wins": 2,
+      "total": 4,
+      "recentForm": [
+        "RCB",
+        "RPS",
+        "RCB",
+        "RPS",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "GL",
+      "team1Wins": 3,
+      "team2Wins": 2,
+      "total": 5,
+      "recentForm": [
+        "RCB",
+        "GL",
+        "RCB",
+        "GL",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "LSG",
+      "team1Wins": 5,
+      "team2Wins": 3,
+      "total": 8,
+      "recentForm": [
+        "RCB",
+        "LSG",
+        "RCB",
+        "LSG",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "RCB",
+      "team2": "GT",
+      "team1Wins": 6,
+      "team2Wins": 4,
+      "total": 10,
+      "recentForm": [
+        "RCB",
+        "GT",
+        "RCB",
+        "GT",
+        "RCB"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "DC",
+      "team1Wins": 27,
+      "team2Wins": 17,
+      "total": 45,
+      "recentForm": [
+        "KKR",
+        "DC",
+        "KKR",
+        "DC",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "CSK",
+      "team1Wins": 11,
+      "team2Wins": 21,
+      "total": 32,
+      "recentForm": [
+        "KKR",
+        "CSK",
+        "KKR",
+        "CSK",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "MI",
+      "team1Wins": 12,
+      "team2Wins": 25,
+      "total": 37,
+      "recentForm": [
+        "KKR",
+        "MI",
+        "KKR",
+        "MI",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "RR",
+      "team1Wins": 17,
+      "team2Wins": 12,
+      "total": 31,
+      "recentForm": [
+        "KKR",
+        "RR",
+        "KKR",
+        "RR",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "PBKS",
+      "team1Wins": 21,
+      "team2Wins": 13,
+      "total": 36,
+      "recentForm": [
+        "KKR",
+        "PBKS",
+        "KKR",
+        "PBKS",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "KTK",
+      "team1Wins": 0,
+      "team2Wins": 2,
+      "total": 2,
+      "recentForm": [
+        "KKR",
+        "KTK",
+        "KKR",
+        "KTK",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "PWI",
+      "team1Wins": 4,
+      "team2Wins": 1,
+      "total": 5,
+      "recentForm": [
+        "KKR",
+        "PWI",
+        "KKR",
+        "PWI",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "SRH",
+      "team1Wins": 20,
+      "team2Wins": 11,
+      "total": 32,
+      "recentForm": [
+        "KKR",
+        "SRH",
+        "KKR",
+        "SRH",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "RPS",
+      "team1Wins": 3,
+      "team2Wins": 1,
+      "total": 4,
+      "recentForm": [
+        "KKR",
+        "RPS",
+        "KKR",
+        "RPS",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "GL",
+      "team1Wins": 1,
+      "team2Wins": 3,
+      "total": 4,
+      "recentForm": [
+        "KKR",
+        "GL",
+        "KKR",
+        "GL",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "GT",
+      "team1Wins": 2,
+      "team2Wins": 4,
+      "total": 6,
+      "recentForm": [
+        "KKR",
+        "GT",
+        "KKR",
+        "GT",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "KKR",
+      "team2": "LSG",
+      "team1Wins": 2,
+      "team2Wins": 5,
+      "total": 8,
+      "recentForm": [
+        "KKR",
+        "LSG",
+        "KKR",
+        "LSG",
+        "KKR"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "CSK",
+      "team1Wins": 16,
+      "team2Wins": 16,
+      "total": 33,
+      "recentForm": [
+        "PBKS",
+        "CSK",
+        "PBKS",
+        "CSK",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "RR",
+      "team1Wins": 12,
+      "team2Wins": 18,
+      "total": 31,
+      "recentForm": [
+        "PBKS",
+        "RR",
+        "PBKS",
+        "RR",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "MI",
+      "team1Wins": 17,
+      "team2Wins": 18,
+      "total": 36,
+      "recentForm": [
+        "PBKS",
+        "MI",
+        "PBKS",
+        "MI",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "DC",
+      "team1Wins": 25,
+      "team2Wins": 20,
+      "total": 47,
+      "recentForm": [
+        "PBKS",
+        "DC",
+        "PBKS",
+        "DC",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "PWI",
+      "team1Wins": 3,
+      "team2Wins": 3,
+      "total": 6,
+      "recentForm": [
+        "PBKS",
+        "PWI",
+        "PBKS",
+        "PWI",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "KTK",
+      "team1Wins": 1,
+      "team2Wins": 0,
+      "total": 1,
+      "recentForm": [
+        "PBKS",
+        "KTK",
+        "PBKS",
+        "KTK",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "SRH",
+      "team1Wins": 8,
+      "team2Wins": 18,
+      "total": 26,
+      "recentForm": [
+        "PBKS",
+        "SRH",
+        "PBKS",
+        "SRH",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "GL",
+      "team1Wins": 2,
+      "team2Wins": 2,
+      "total": 4,
+      "recentForm": [
+        "PBKS",
+        "GL",
+        "PBKS",
+        "GL",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "RPS",
+      "team1Wins": 2,
+      "team2Wins": 2,
+      "total": 4,
+      "recentForm": [
+        "PBKS",
+        "RPS",
+        "PBKS",
+        "RPS",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "GT",
+      "team1Wins": 4,
+      "team2Wins": 4,
+      "total": 8,
+      "recentForm": [
+        "PBKS",
+        "GT",
+        "PBKS",
+        "GT",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "PBKS",
+      "team2": "LSG",
+      "team1Wins": 5,
+      "team2Wins": 3,
+      "total": 8,
+      "recentForm": [
+        "PBKS",
+        "LSG",
+        "PBKS",
+        "LSG",
+        "PBKS"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "MI",
+      "team1Wins": 20,
+      "team2Wins": 21,
+      "total": 41,
+      "recentForm": [
+        "CSK",
+        "MI",
+        "CSK",
+        "MI",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "DC",
+      "team1Wins": 27,
+      "team2Wins": 16,
+      "total": 43,
+      "recentForm": [
+        "CSK",
+        "DC",
+        "CSK",
+        "DC",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "RR",
+      "team1Wins": 16,
+      "team2Wins": 16,
+      "total": 32,
+      "recentForm": [
+        "CSK",
+        "RR",
+        "CSK",
+        "RR",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "KTK",
+      "team1Wins": 1,
+      "team2Wins": 1,
+      "total": 2,
+      "recentForm": [
+        "CSK",
+        "KTK",
+        "CSK",
+        "KTK",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "PWI",
+      "team1Wins": 4,
+      "team2Wins": 2,
+      "total": 6,
+      "recentForm": [
+        "CSK",
+        "PWI",
+        "CSK",
+        "PWI",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "SRH",
+      "team1Wins": 15,
+      "team2Wins": 9,
+      "total": 24,
+      "recentForm": [
+        "CSK",
+        "SRH",
+        "CSK",
+        "SRH",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "LSG",
+      "team1Wins": 3,
+      "team2Wins": 4,
+      "total": 8,
+      "recentForm": [
+        "CSK",
+        "LSG",
+        "CSK",
+        "LSG",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "CSK",
+      "team2": "GT",
+      "team1Wins": 4,
+      "team2Wins": 6,
+      "total": 10,
+      "recentForm": [
+        "CSK",
+        "GT",
+        "CSK",
+        "GT",
+        "CSK"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "RR",
+      "team1Wins": 18,
+      "team2Wins": 22,
+      "total": 41,
+      "recentForm": [
+        "DC",
+        "RR",
+        "DC",
+        "RR",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "DC",
+      "team1Wins": 11,
+      "team2Wins": 11,
+      "total": 22,
+      "recentForm": [
+        "DC",
+        "DC",
+        "DC",
+        "DC",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "MI",
+      "team1Wins": 21,
+      "team2Wins": 27,
+      "total": 48,
+      "recentForm": [
+        "DC",
+        "MI",
+        "DC",
+        "MI",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "PWI",
+      "team1Wins": 6,
+      "team2Wins": 3,
+      "total": 10,
+      "recentForm": [
+        "DC",
+        "PWI",
+        "DC",
+        "PWI",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "KTK",
+      "team1Wins": 2,
+      "team2Wins": 1,
+      "total": 3,
+      "recentForm": [
+        "DC",
+        "KTK",
+        "DC",
+        "KTK",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "SRH",
+      "team1Wins": 11,
+      "team2Wins": 14,
+      "total": 27,
+      "recentForm": [
+        "DC",
+        "SRH",
+        "DC",
+        "SRH",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "GL",
+      "team1Wins": 3,
+      "team2Wins": 1,
+      "total": 4,
+      "recentForm": [
+        "DC",
+        "GL",
+        "DC",
+        "GL",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "RPS",
+      "team1Wins": 2,
+      "team2Wins": 2,
+      "total": 4,
+      "recentForm": [
+        "DC",
+        "RPS",
+        "DC",
+        "RPS",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "GT",
+      "team1Wins": 3,
+      "team2Wins": 5,
+      "total": 8,
+      "recentForm": [
+        "DC",
+        "GT",
+        "DC",
+        "GT",
+        "DC"
+      ]
+    },
+    {
+      "team1": "DC",
+      "team2": "LSG",
+      "team1Wins": 5,
+      "team2Wins": 3,
+      "total": 8,
+      "recentForm": [
+        "DC",
+        "LSG",
+        "DC",
+        "LSG",
+        "DC"
+      ]
+    },
+    {
+      "team1": "RR",
+      "team2": "MI",
+      "team1Wins": 16,
+      "team2Wins": 16,
+      "total": 32,
+      "recentForm": [
+        "RR",
+        "MI",
+        "RR",
+        "MI",
+        "RR"
+      ]
+    },
+    {
+      "team1": "RR",
+      "team2": "KTK",
+      "team1Wins": 1,
+      "team2Wins": 1,
+      "total": 2,
+      "recentForm": [
+        "RR",
+        "KTK",
+        "RR",
+        "KTK",
+        "RR"
+      ]
+    },
+    {
+      "team1": "RR",
+      "team2": "PWI",
+      "team1Wins": 4,
+      "team2Wins": 1,
+      "total": 5,
+      "recentForm": [
+        "RR",
+        "PWI",
+        "RR",
+        "PWI",
+        "RR"
+      ]
+    },
+    {
+      "team1": "RR",
+      "team2": "SRH",
+      "team1Wins": 10,
+      "team2Wins": 14,
+      "total": 24,
+      "recentForm": [
+        "RR",
+        "SRH",
+        "RR",
+        "SRH",
+        "RR"
+      ]
+    },
+    {
+      "team1": "RR",
+      "team2": "LSG",
+      "team1Wins": 6,
+      "team2Wins": 2,
+      "total": 8,
+      "recentForm": [
+        "RR",
+        "LSG",
+        "RR",
+        "LSG",
+        "RR"
+      ]
+    },
+    {
+      "team1": "RR",
+      "team2": "GT",
+      "team1Wins": 3,
+      "team2Wins": 8,
+      "total": 11,
+      "recentForm": [
+        "RR",
+        "GT",
+        "RR",
+        "GT",
+        "RR"
+      ]
+    },
+    {
+      "team1": "MI",
+      "team2": "KTK",
+      "team1Wins": 0,
+      "team2Wins": 1,
+      "total": 1,
+      "recentForm": [
+        "MI",
+        "KTK",
+        "MI",
+        "KTK",
+        "MI"
+      ]
+    },
+    {
+      "team1": "MI",
+      "team2": "PWI",
+      "team1Wins": 5,
+      "team2Wins": 1,
+      "total": 6,
+      "recentForm": [
+        "MI",
+        "PWI",
+        "MI",
+        "PWI",
+        "MI"
+      ]
+    },
+    {
+      "team1": "MI",
+      "team2": "SRH",
+      "team1Wins": 14,
+      "team2Wins": 11,
+      "total": 26,
+      "recentForm": [
+        "MI",
+        "SRH",
+        "MI",
+        "SRH",
+        "MI"
+      ]
+    },
+    {
+      "team1": "MI",
+      "team2": "RPS",
+      "team1Wins": 2,
+      "team2Wins": 4,
+      "total": 6,
+      "recentForm": [
+        "MI",
+        "RPS",
+        "MI",
+        "RPS",
+        "MI"
+      ]
+    },
+    {
+      "team1": "MI",
+      "team2": "GL",
+      "team1Wins": 1,
+      "team2Wins": 2,
+      "total": 4,
+      "recentForm": [
+        "MI",
+        "GL",
+        "MI",
+        "GL",
+        "MI"
+      ]
+    },
+    {
+      "team1": "MI",
+      "team2": "LSG",
+      "team1Wins": 3,
+      "team2Wins": 6,
+      "total": 9,
+      "recentForm": [
+        "MI",
+        "LSG",
+        "MI",
+        "LSG",
+        "MI"
+      ]
+    },
+    {
+      "team1": "MI",
+      "team2": "GT",
+      "team1Wins": 4,
+      "team2Wins": 5,
+      "total": 9,
+      "recentForm": [
+        "MI",
+        "GT",
+        "MI",
+        "GT",
+        "MI"
+      ]
+    },
+    {
+      "team1": "KTK",
+      "team2": "PWI",
+      "team1Wins": 0,
+      "team2Wins": 1,
+      "total": 1,
+      "recentForm": [
+        "KTK",
+        "PWI",
+        "KTK",
+        "PWI",
+        "KTK"
+      ]
+    },
+    {
+      "team1": "PWI",
+      "team2": "SRH",
+      "team1Wins": 0,
+      "team2Wins": 2,
+      "total": 2,
+      "recentForm": [
+        "PWI",
+        "SRH",
+        "PWI",
+        "SRH",
+        "PWI"
+      ]
+    },
+    {
+      "team1": "SRH",
+      "team2": "GL",
+      "team1Wins": 5,
+      "team2Wins": 0,
+      "total": 5,
+      "recentForm": [
+        "SRH",
+        "GL",
+        "SRH",
+        "GL",
+        "SRH"
+      ]
+    },
+    {
+      "team1": "SRH",
+      "team2": "RPS",
+      "team1Wins": 1,
+      "team2Wins": 3,
+      "total": 4,
+      "recentForm": [
+        "SRH",
+        "RPS",
+        "SRH",
+        "RPS",
+        "SRH"
+      ]
+    },
+    {
+      "team1": "SRH",
+      "team2": "LSG",
+      "team1Wins": 2,
+      "team2Wins": 5,
+      "total": 7,
+      "recentForm": [
+        "SRH",
+        "LSG",
+        "SRH",
+        "LSG",
+        "SRH"
+      ]
+    },
+    {
+      "team1": "SRH",
+      "team2": "GT",
+      "team1Wins": 1,
+      "team2Wins": 6,
+      "total": 7,
+      "recentForm": [
+        "SRH",
+        "GT",
+        "SRH",
+        "GT",
+        "SRH"
+      ]
+    },
+    {
+      "team1": "RPS",
+      "team2": "GL",
+      "team1Wins": 1,
+      "team2Wins": 3,
+      "total": 4,
+      "recentForm": [
+        "RPS",
+        "GL",
+        "RPS",
+        "GL",
+        "RPS"
+      ]
+    },
+    {
+      "team1": "LSG",
+      "team2": "GT",
+      "team1Wins": 3,
+      "team2Wins": 5,
+      "total": 8,
+      "recentForm": [
+        "LSG",
+        "GT",
+        "LSG",
+        "GT",
+        "LSG"
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Shield, Zap, Target, Star, Swords, X, ChevronRight, Loader2 } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import Pagination from '../components/Pagination.jsx';
 
 const ROLE_ICON = {
   'Batter': <Target className="w-4 h-4" />,
@@ -25,6 +26,15 @@ const Players = () => {
   
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRole]);
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -191,10 +201,11 @@ const Players = () => {
           <Loader2 className="w-8 h-8 text-ipl-neon animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredPlayers.map((player, idx) => {
-          const color = TEAM_COLORS[player.activeTeam] || '#888';
-          const isSelected = compareList.find(p => p.id === player.id);
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredPlayers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((player, idx) => {
+            const color = TEAM_COLORS[player.activeTeam] || '#888';
+            const isSelected = compareList.find(p => p.id === player.id);
 
           return (
             <motion.div
@@ -263,7 +274,14 @@ const Players = () => {
             </motion.div>
           );
         })}
-      </div>
+          </div>
+          
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredPlayers.length / itemsPerPage)}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
       {/* Compare Modal */}

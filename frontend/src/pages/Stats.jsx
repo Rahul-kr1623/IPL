@@ -4,6 +4,7 @@ import { useMatchContext } from '../context/MatchContext.jsx';
 import { Activity, Target, Zap, BarChart2, Award, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
+import Pagination from '../components/Pagination.jsx';
 import { CURRENT_SEASON, TEAM_COLORS, ACTIVE_TEAMS } from '../utils/constants.js';
 
 // ── Historical top scorers per season (orange cap) ────────────────────────────
@@ -70,6 +71,15 @@ const Stats = () => {
     masterPlayers: { players: [] },
     loading: true
   });
+
+  // Pagination states for Career Stats
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset page when team filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [teamFilter]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -300,7 +310,7 @@ const Stats = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {careerStats.map(p => {
+              {careerStats.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(p => {
                 const b = p.careerBatting;
                 const bow = p.careerBowling;
                 const color = p.activeTeam ? (TEAM_COLORS[p.activeTeam]||'#fff') : '#6b7280';
@@ -329,6 +339,14 @@ const Stats = () => {
               })}
             </tbody>
           </table>
+        </div>
+        
+        <div className="pb-6">
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={Math.ceil(careerStats.length / itemsPerPage)}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </div>

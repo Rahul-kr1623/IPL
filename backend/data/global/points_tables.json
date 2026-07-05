@@ -1,1 +1,1565 @@
-{}
+{
+  "2008": {
+    "season": 2008,
+    "winner": "RR",
+    "teams": [
+      {
+        "team": "RR",
+        "played": 16,
+        "won": 13,
+        "lost": 3,
+        "points": 26,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "PBKS",
+        "played": 15,
+        "won": 10,
+        "lost": 5,
+        "points": 20,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "CSK",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "DC",
+        "played": 28,
+        "won": 9,
+        "lost": 19,
+        "points": 18,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "MI",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "KKR",
+        "played": 13,
+        "won": 6,
+        "lost": 7,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RCB",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 7
+      }
+    ]
+  },
+  "2009": {
+    "season": 2009,
+    "winner": "DC",
+    "teams": [
+      {
+        "team": "DC",
+        "played": 31,
+        "won": 19,
+        "lost": 12,
+        "points": 38,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "CSK",
+        "played": 14,
+        "won": 8,
+        "lost": 6,
+        "points": 16,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "RR",
+        "played": 13,
+        "won": 5,
+        "lost": 7,
+        "points": 11,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "MI",
+        "played": 13,
+        "won": 5,
+        "lost": 8,
+        "points": 10,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "KKR",
+        "played": 13,
+        "won": 3,
+        "lost": 9,
+        "points": 7,
+        "nrr": 0,
+        "rank": 7
+      }
+    ]
+  },
+  "2010": {
+    "season": 2010,
+    "winner": "DC",
+    "teams": [
+      {
+        "team": "DC",
+        "played": 30,
+        "won": 15,
+        "lost": 15,
+        "points": 30,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "MI",
+        "played": 16,
+        "won": 11,
+        "lost": 5,
+        "points": 22,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "CSK",
+        "played": 16,
+        "won": 9,
+        "lost": 6,
+        "points": 19,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 8,
+        "lost": 8,
+        "points": 16,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "KKR",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 3,
+        "lost": 10,
+        "points": 7,
+        "nrr": 0,
+        "rank": 7
+      }
+    ]
+  },
+  "2011": {
+    "season": 2011,
+    "winner": "CSK",
+    "teams": [
+      {
+        "team": "CSK",
+        "played": 16,
+        "won": 11,
+        "lost": 5,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "DC",
+        "played": 28,
+        "won": 10,
+        "lost": 17,
+        "points": 21,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 10,
+        "lost": 6,
+        "points": 20,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "MI",
+        "played": 16,
+        "won": 10,
+        "lost": 6,
+        "points": 20,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "KKR",
+        "played": 15,
+        "won": 8,
+        "lost": 7,
+        "points": 16,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RR",
+        "played": 13,
+        "won": 6,
+        "lost": 7,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "KTK",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 8
+      },
+      {
+        "team": "PWI",
+        "played": 14,
+        "won": 4,
+        "lost": 9,
+        "points": 9,
+        "nrr": 0,
+        "rank": 9
+      }
+    ]
+  },
+  "2012": {
+    "season": 2012,
+    "winner": "DC",
+    "teams": [
+      {
+        "team": "DC",
+        "played": 33,
+        "won": 15,
+        "lost": 18,
+        "points": 30,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "KKR",
+        "played": 17,
+        "won": 12,
+        "lost": 5,
+        "points": 24,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "CSK",
+        "played": 18,
+        "won": 10,
+        "lost": 8,
+        "points": 20,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "MI",
+        "played": 17,
+        "won": 10,
+        "lost": 7,
+        "points": 20,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "PBKS",
+        "played": 16,
+        "won": 8,
+        "lost": 8,
+        "points": 16,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "RCB",
+        "played": 15,
+        "won": 8,
+        "lost": 7,
+        "points": 16,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RR",
+        "played": 16,
+        "won": 7,
+        "lost": 9,
+        "points": 14,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "PWI",
+        "played": 16,
+        "won": 4,
+        "lost": 12,
+        "points": 8,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2013": {
+    "season": 2013,
+    "winner": "MI",
+    "teams": [
+      {
+        "team": "MI",
+        "played": 19,
+        "won": 13,
+        "lost": 6,
+        "points": 26,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "CSK",
+        "played": 18,
+        "won": 12,
+        "lost": 6,
+        "points": 24,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "RR",
+        "played": 18,
+        "won": 11,
+        "lost": 7,
+        "points": 22,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "SRH",
+        "played": 17,
+        "won": 9,
+        "lost": 7,
+        "points": 19,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 8,
+        "lost": 6,
+        "points": 18,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "PBKS",
+        "played": 16,
+        "won": 8,
+        "lost": 8,
+        "points": 16,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "KKR",
+        "played": 16,
+        "won": 6,
+        "lost": 10,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "PWI",
+        "played": 16,
+        "won": 4,
+        "lost": 12,
+        "points": 8,
+        "nrr": 0,
+        "rank": 8
+      },
+      {
+        "team": "DC",
+        "played": 16,
+        "won": 3,
+        "lost": 12,
+        "points": 7,
+        "nrr": 0,
+        "rank": 9
+      }
+    ]
+  },
+  "2014": {
+    "season": 2014,
+    "winner": "PBKS",
+    "teams": [
+      {
+        "team": "PBKS",
+        "played": 17,
+        "won": 12,
+        "lost": 5,
+        "points": 24,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "KKR",
+        "played": 16,
+        "won": 11,
+        "lost": 4,
+        "points": 23,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "CSK",
+        "played": 16,
+        "won": 10,
+        "lost": 6,
+        "points": 20,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "MI",
+        "played": 15,
+        "won": 7,
+        "lost": 8,
+        "points": 14,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 6,
+        "lost": 7,
+        "points": 13,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "SRH",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RCB",
+        "played": 14,
+        "won": 5,
+        "lost": 9,
+        "points": 10,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 2,
+        "lost": 12,
+        "points": 4,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2015": {
+    "season": 2015,
+    "winner": "MI",
+    "teams": [
+      {
+        "team": "MI",
+        "played": 16,
+        "won": 10,
+        "lost": 6,
+        "points": 20,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "CSK",
+        "played": 17,
+        "won": 10,
+        "lost": 7,
+        "points": 20,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 8,
+        "lost": 6,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 7,
+        "lost": 5,
+        "points": 16,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "KKR",
+        "played": 13,
+        "won": 7,
+        "lost": 6,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "SRH",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 5,
+        "lost": 8,
+        "points": 11,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 2,
+        "lost": 11,
+        "points": 5,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2016": {
+    "season": 2016,
+    "winner": "SRH",
+    "teams": [
+      {
+        "team": "SRH",
+        "played": 17,
+        "won": 11,
+        "lost": 6,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "GL",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "KKR",
+        "played": 15,
+        "won": 8,
+        "lost": 7,
+        "points": 16,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "MI",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RPS",
+        "played": 14,
+        "won": 5,
+        "lost": 9,
+        "points": 10,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2017": {
+    "season": 2017,
+    "winner": "MI",
+    "teams": [
+      {
+        "team": "MI",
+        "played": 17,
+        "won": 11,
+        "lost": 5,
+        "points": 23,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "RPS",
+        "played": 16,
+        "won": 10,
+        "lost": 6,
+        "points": 20,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "KKR",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "SRH",
+        "played": 14,
+        "won": 8,
+        "lost": 6,
+        "points": 16,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "GL",
+        "played": 14,
+        "won": 4,
+        "lost": 9,
+        "points": 9,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "RCB",
+        "played": 13,
+        "won": 3,
+        "lost": 10,
+        "points": 6,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2018": {
+    "season": 2018,
+    "winner": "CSK",
+    "teams": [
+      {
+        "team": "CSK",
+        "played": 16,
+        "won": 11,
+        "lost": 5,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "SRH",
+        "played": 17,
+        "won": 10,
+        "lost": 7,
+        "points": 20,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "KKR",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "RR",
+        "played": 15,
+        "won": 7,
+        "lost": 8,
+        "points": 14,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "MI",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RCB",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 5,
+        "lost": 9,
+        "points": 10,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2019": {
+    "season": 2019,
+    "winner": "MI",
+    "teams": [
+      {
+        "team": "MI",
+        "played": 16,
+        "won": 10,
+        "lost": 5,
+        "points": 21,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "CSK",
+        "played": 17,
+        "won": 10,
+        "lost": 7,
+        "points": 20,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "DC",
+        "played": 16,
+        "won": 9,
+        "lost": 6,
+        "points": 19,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "SRH",
+        "played": 15,
+        "won": 6,
+        "lost": 8,
+        "points": 13,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "KKR",
+        "played": 14,
+        "won": 6,
+        "lost": 7,
+        "points": 13,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RCB",
+        "played": 14,
+        "won": 5,
+        "lost": 8,
+        "points": 11,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 5,
+        "lost": 8,
+        "points": 11,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2020": {
+    "season": 2020,
+    "winner": "MI",
+    "teams": [
+      {
+        "team": "MI",
+        "played": 16,
+        "won": 11,
+        "lost": 3,
+        "points": 24,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "DC",
+        "played": 17,
+        "won": 8,
+        "lost": 8,
+        "points": 17,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "SRH",
+        "played": 16,
+        "won": 8,
+        "lost": 7,
+        "points": 17,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "RCB",
+        "played": 15,
+        "won": 6,
+        "lost": 8,
+        "points": 13,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "KKR",
+        "played": 14,
+        "won": 6,
+        "lost": 7,
+        "points": 13,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "CSK",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 5,
+        "lost": 7,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2021": {
+    "season": 2021,
+    "winner": "CSK",
+    "teams": [
+      {
+        "team": "CSK",
+        "played": 16,
+        "won": 11,
+        "lost": 5,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "DC",
+        "played": 16,
+        "won": 9,
+        "lost": 6,
+        "points": 19,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "RCB",
+        "played": 15,
+        "won": 9,
+        "lost": 6,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "KKR",
+        "played": 17,
+        "won": 9,
+        "lost": 8,
+        "points": 18,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "MI",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 5,
+        "lost": 9,
+        "points": 10,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "SRH",
+        "played": 14,
+        "won": 3,
+        "lost": 10,
+        "points": 7,
+        "nrr": 0,
+        "rank": 8
+      }
+    ]
+  },
+  "2022": {
+    "season": 2022,
+    "winner": "GT",
+    "teams": [
+      {
+        "team": "GT",
+        "played": 16,
+        "won": 12,
+        "lost": 4,
+        "points": 24,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "RR",
+        "played": 17,
+        "won": 10,
+        "lost": 7,
+        "points": 20,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "LSG",
+        "played": 15,
+        "won": 9,
+        "lost": 6,
+        "points": 18,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "KKR",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "SRH",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 8
+      },
+      {
+        "team": "CSK",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 9
+      },
+      {
+        "team": "MI",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 10
+      }
+    ]
+  },
+  "2023": {
+    "season": 2023,
+    "winner": "GT",
+    "teams": [
+      {
+        "team": "GT",
+        "played": 17,
+        "won": 11,
+        "lost": 6,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "CSK",
+        "played": 16,
+        "won": 10,
+        "lost": 5,
+        "points": 21,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "MI",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "LSG",
+        "played": 15,
+        "won": 8,
+        "lost": 6,
+        "points": 17,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "RCB",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "KKR",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 8
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 5,
+        "lost": 9,
+        "points": 10,
+        "nrr": 0,
+        "rank": 9
+      },
+      {
+        "team": "SRH",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 10
+      }
+    ]
+  },
+  "2024": {
+    "season": 2024,
+    "winner": "KKR",
+    "teams": [
+      {
+        "team": "KKR",
+        "played": 14,
+        "won": 11,
+        "lost": 3,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "SRH",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "RR",
+        "played": 15,
+        "won": 9,
+        "lost": 6,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "RCB",
+        "played": 15,
+        "won": 7,
+        "lost": 8,
+        "points": 14,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "CSK",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "LSG",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 5,
+        "lost": 9,
+        "points": 10,
+        "nrr": 0,
+        "rank": 8
+      },
+      {
+        "team": "GT",
+        "played": 12,
+        "won": 5,
+        "lost": 7,
+        "points": 10,
+        "nrr": 0,
+        "rank": 9
+      },
+      {
+        "team": "MI",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 10
+      }
+    ]
+  },
+  "2025": {
+    "season": 2025,
+    "winner": "RCB",
+    "teams": [
+      {
+        "team": "RCB",
+        "played": 15,
+        "won": 11,
+        "lost": 4,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "PBKS",
+        "played": 18,
+        "won": 10,
+        "lost": 6,
+        "points": 22,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "MI",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "GT",
+        "played": 15,
+        "won": 9,
+        "lost": 6,
+        "points": 18,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "DC",
+        "played": 15,
+        "won": 6,
+        "lost": 6,
+        "points": 15,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "SRH",
+        "played": 14,
+        "won": 6,
+        "lost": 7,
+        "points": 13,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "LSG",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "KKR",
+        "played": 13,
+        "won": 5,
+        "lost": 7,
+        "points": 11,
+        "nrr": 0,
+        "rank": 8
+      },
+      {
+        "team": "RR",
+        "played": 14,
+        "won": 4,
+        "lost": 9,
+        "points": 9,
+        "nrr": 0,
+        "rank": 9
+      },
+      {
+        "team": "CSK",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 10
+      }
+    ]
+  },
+  "2026": {
+    "season": 2026,
+    "winner": "RCB",
+    "teams": [
+      {
+        "team": "RCB",
+        "played": 16,
+        "won": 11,
+        "lost": 5,
+        "points": 22,
+        "nrr": 0,
+        "rank": 1
+      },
+      {
+        "team": "GT",
+        "played": 17,
+        "won": 10,
+        "lost": 7,
+        "points": 20,
+        "nrr": 0,
+        "rank": 2
+      },
+      {
+        "team": "SRH",
+        "played": 15,
+        "won": 9,
+        "lost": 6,
+        "points": 18,
+        "nrr": 0,
+        "rank": 3
+      },
+      {
+        "team": "RR",
+        "played": 16,
+        "won": 9,
+        "lost": 7,
+        "points": 18,
+        "nrr": 0,
+        "rank": 4
+      },
+      {
+        "team": "PBKS",
+        "played": 14,
+        "won": 7,
+        "lost": 6,
+        "points": 15,
+        "nrr": 0,
+        "rank": 5
+      },
+      {
+        "team": "DC",
+        "played": 14,
+        "won": 7,
+        "lost": 7,
+        "points": 14,
+        "nrr": 0,
+        "rank": 6
+      },
+      {
+        "team": "KKR",
+        "played": 14,
+        "won": 5,
+        "lost": 7,
+        "points": 12,
+        "nrr": 0,
+        "rank": 7
+      },
+      {
+        "team": "CSK",
+        "played": 14,
+        "won": 6,
+        "lost": 8,
+        "points": 12,
+        "nrr": 0,
+        "rank": 8
+      },
+      {
+        "team": "LSG",
+        "played": 14,
+        "won": 4,
+        "lost": 9,
+        "points": 9,
+        "nrr": 0,
+        "rank": 9
+      },
+      {
+        "team": "MI",
+        "played": 14,
+        "won": 4,
+        "lost": 10,
+        "points": 8,
+        "nrr": 0,
+        "rank": 10
+      }
+    ]
+  }
+}

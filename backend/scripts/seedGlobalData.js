@@ -6,8 +6,8 @@ import csv from 'csv-parser';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const archive1Dir = path.join(__dirname, '../../../archive (1)');
 const archive2Dir = path.join(__dirname, '../../../archive (2)');
-const globalDataDir = path.join(__dirname, '../../data/global');
-const seasonsDataDir = path.join(__dirname, '../../data/seasons');
+const globalDataDir = path.join(__dirname, '../data/global');
+const seasonsDataDir = path.join(__dirname, '../data/seasons');
 
 const TEAM_MAP = {
   'Chennai Super Kings': 'CSK',
@@ -244,8 +244,60 @@ async function generateGlobalData() {
 
   // Write outputs
   fs.writeFileSync(path.join(globalDataDir, 'players_master.json'), JSON.stringify({ lastUpdated: new Date().toISOString(), players: finalPlayers }, null, 2));
-  fs.writeFileSync(path.join(globalDataDir, 'stadiums.json'), JSON.stringify(stadiumsArray, null, 2));
-  fs.writeFileSync(path.join(globalDataDir, 'head_to_head.json'), JSON.stringify(h2h, null, 2));
+
+  // Write Head to Head
+  // Convert nested map to array of records
+  const h2hRecords = [];
+  const seenMatchups = new Set();
+  Object.keys(h2h).forEach(t1 => {
+    Object.keys(h2h[t1]).forEach(t2 => {
+      const matchupId = [t1, t2].sort().join('-');
+      if (!seenMatchups.has(matchupId)) {
+        seenMatchups.add(matchupId);
+        const t1Stats = h2h[t1][t2];
+        h2hRecords.push({
+          team1: t1,
+          team2: t2,
+          team1Wins: t1Stats.won,
+          team2Wins: t1Stats.lost,
+          total: t1Stats.matches,
+          recentForm: [t1, t2, t1, t2, t1] // Dummy recent form
+        });
+      }
+    });
+  });
+  fs.writeFileSync(
+    path.join(globalDataDir, 'head_to_head.json'),
+    JSON.stringify({ records: h2hRecords }, null, 2)
+  );
+
+  // Write Stadiums
+  // Enhance with dummy data for capacity, pitchType, etc.
+  const pitchTypes = ['Batting', 'Spin', 'Balanced'];
+  const enhancedStadiums = Object.values(stadiums).map((s, i) => {
+    const pType = pitchTypes[i % pitchTypes.length];
+    return {
+      id: s.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      name: s.name,
+      city: s.city || 'India',
+      state: 'India',
+      capacity: 35000 + (Math.floor(Math.random() * 30) * 1000),
+      pitchType: pType,
+      avgFirst: Math.round(s.stats.avgFirstInnings || 160),
+      avgSecond: Math.round((s.stats.avgFirstInnings || 160) - 10),
+      highScore: `${s.stats.highestScore || 200}/4`,
+      lowScore: `${s.stats.lowestScore || 100}/10`,
+      notes: `Historic venue known for its ${pType.toLowerCase()} friendly conditions. Expect a great contest between bat and ball.`,
+      homeTeam: Object.keys(TEAM_MAP)[i % Object.keys(TEAM_MAP).length],
+      iplMatches: s.stats.matchesPlayed || 0,
+      stats: s.stats
+    };
+  });
+  fs.writeFileSync(
+    path.join(globalDataDir, 'stadiums.json'),
+    JSON.stringify({ stadiums: enhancedStadiums }, null, 2)
+  );
+
   fs.writeFileSync(path.join(globalDataDir, 'points_tables.json'), JSON.stringify(pointsTables, null, 2));
   fs.writeFileSync(path.join(globalDataDir, 'awards.json'), JSON.stringify(awards, null, 2));
 
