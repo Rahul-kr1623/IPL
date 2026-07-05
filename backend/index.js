@@ -99,6 +99,25 @@ mongoose
       // Start recurring background cycles
       startScheduler(io);
     });
+
+    // Graceful shutdown to prevent EADDRINUSE on restarts
+    const gracefulShutdown = () => {
+      console.log('🛑 Shutting down gracefully...');
+      httpServer.close(() => {
+        console.log('HTTP server closed');
+        mongoose.connection.close(false).then(() => {
+          console.log('MongoDB connection closed');
+          process.exit(0);
+        });
+      });
+      
+      // Force exit after 5 seconds if connections hang
+      setTimeout(() => process.exit(1), 5000).unref();
+    };
+
+    process.on('SIGINT', gracefulShutdown);
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGUSR2', gracefulShutdown); // For nodemon restarts
   })
   .catch(err => {
     console.error('❌ MongoDB connection failed:', err.message);
