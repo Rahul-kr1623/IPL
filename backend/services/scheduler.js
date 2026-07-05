@@ -12,7 +12,7 @@
 
 import { scrapeAllSlots, scrapeIPLStandingsAndStats, espnFindAllMatches } from './scraperService.js';
 import { simulateAllSlots } from './simulatorService.js';
-import { saveMatch, getLatestMatch, markMatchFinished } from './dbService.js';
+import { saveMatch, getLatestMatch, markMatchFinished, getAllMatches } from './dbService.js';
 import scraperState, {
   FREEZE_MS, NEED_CONFIRM, MAX_FAILS,
 } from '../utils/scraperState.js';
@@ -26,6 +26,41 @@ import {
   generateOverCommentary,
 } from '../utils/matchDataEngine.js';
 import { saveCompletedMatch } from '../utils/seasonStore.js';
+
+let ioInstance = null;
+
+const broadcastLiveScore = async () => {
+  if (!ioInstance) return;
+  try {
+    const docs = await getAllMatches();
+    if (!docs || docs.length === 0) return;
+    const now = Date.now();
+    const mapDoc = (d) => ({ ...d.toObject(), _stale: (now - new Date(d.lastUpdated).getTime()) > 10 * 60 * 1000 });
+    const isDataless = (d) => (d.score === '0' || d.score === 0 || !d.score) && (!d.target || d.target === 'N/A') && (!d.team1Score || d.team1Score === 'N/A') && d.status !== 'UPCOMING';
+    const validDocs = docs.filter(d => !isDataless(d));
+    const docsToProcess = validDocs.length > 0 ? validDocs : docs.map(d => ({ ...d, status: 'UPCOMING' }));
+    
+    const bySlot = { slot1: null, slot2: null };
+    for (const d of docsToProcess) {
+      const slotKey = d.slot === 'slot2' ? 'slot2' : 'slot1';
+      if (!bySlot[slotKey] || new Date(d.lastUpdated) > new Date(bySlot[slotKey]?.lastUpdated || 0)) {
+        bySlot[slotKey] = d;
+      }
+    }
+    
+    let slot1 = bySlot.slot1 ? mapDoc(bySlot.slot1) : null;
+    let slot2 = bySlot.slot2 ? mapDoc(bySlot.slot2) : null;
+    if (slot1 && slot2 && slot1.matchId === slot2.matchId) slot1 = null;
+    
+    ioInstance.emit('live-score-update', {
+      slot1, slot2,
+      matches: [slot1, slot2].filter(Boolean),
+      _stale: slot1?._stale || slot2?._stale || false,
+    });
+  } catch (err) {
+    console.error('Socket broadcast error:', err.message);
+  }
+};
 
 // ─── Per-slot state ─────────────────────────────────────────────────────────
 const slotState = {
@@ -229,6 +264,7 @@ const processSlot = async (slotKey, data) => {
     }
 
     await saveMatch({ ...data, slot: slotKey });
+    await broadcastLiveScore();
     return;
   }
 
@@ -277,6 +313,7 @@ const processSlot = async (slotKey, data) => {
   }
 
   await saveMatch({ ...data, slot: slotKey });
+  await broadcastLiveScore();
 };
 
 // ─── Main sync cycle ─────────────────────────────────────────────────────────
@@ -303,6 +340,7 @@ export const runLiveSyncAllSlots = async () => {
       processSlot('slot1', slot1),
       processSlot('slot2', slot2),
     ]);
+    await broadcastLiveScore();
   } catch (err) {
     console.error('❌ Live sync error:', err.message);
   }
@@ -334,7 +372,8 @@ export const restoreStateFromDb = async () => {
 let ticks = 0;
 let isActiveWindow = true; // Assume active initially to get immediate first-run data
 
-export const startScheduler = () => {
+export const startScheduler = (io) => {
+  ioInstance = io;
   const isSimulating = process.env.SIMULATE_LIVE === 'true';
   const baseInterval = isSimulating ? 5_000 : 40_000;
   

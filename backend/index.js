@@ -68,7 +68,7 @@ mongoose
     console.log('✅ MongoDB connected');
 
     const httpServer = createServer(app);
-    initGameServer(httpServer);
+    const io = initGameServer(httpServer);
 
     httpServer.listen(PORT, async () => {
       console.log(`🚀 Server → http://localhost:${PORT}`);
@@ -97,7 +97,7 @@ mongoose
       await runLiveSync();
 
       // Start recurring background cycles
-      startScheduler();
+      startScheduler(io);
     });
   })
   .catch(err => {

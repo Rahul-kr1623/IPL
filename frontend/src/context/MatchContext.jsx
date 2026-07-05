@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { io } from 'socket.io-client';
 
 const LS_SLOTS = 'ipl_live_slots_v2';
 const LS_FINISHED = 'ipl_last_finished';
@@ -208,14 +209,47 @@ const MatchContext = createContext();
 export const MatchProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // ── Poll live scores (slot1 + slot2) every 20s ────────────────────────
+  // ── Real-time Socket & Polling fallback ────────────────────────
   useEffect(() => {
     let cancelled = false;
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+    const socket = io(API_URL, { path: '/socket.io' });
+    let isSocketConnected = false;
+    let lastPoll = 0;
+
+    socket.on('connect', () => {
+      isSocketConnected = true;
+      console.log('[MatchContext] Socket connected — relying on push updates');
+    });
+
+    socket.on('disconnect', () => {
+      isSocketConnected = false;
+      console.log('[MatchContext] Socket disconnected — falling back to 5s polling');
+    });
+
+    socket.on('live-score-update', (data) => {
+      if (cancelled) return;
+      const hasData = data.slot1 || data.slot2 || (Array.isArray(data.matches) && data.matches.length > 0);
+      if (data._empty || !hasData) {
+        dispatch({ type: 'FETCH_EMPTY' });
+      } else if (data.error) {
+        dispatch({ type: 'FETCH_ERROR', payload: data.error });
+      } else {
+        dispatch({ type: 'FETCH_SUCCESS', payload: data });
+      }
+    });
+
     const poll = async () => {
       if (cancelled) return;
-      dispatch({ type: 'FETCH_START' });
+
+      const now = Date.now();
+      // Poll every 30s as a safety net if socket is connected, else every 5s
+      const pollIntervalMs = isSocketConnected ? 30000 : 5000;
+      if (now - lastPoll < pollIntervalMs - 500) return;
+      lastPoll = now;
+
+      if (!isSocketConnected) dispatch({ type: 'FETCH_START' });
       try {
         const res = await fetch(`${API_URL}/api/v1/live-score`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -236,7 +270,7 @@ export const MatchProvider = ({ children }) => {
 
         dispatch({ type: 'FETCH_SUCCESS', payload: data });
       } catch (err) {
-        if (!cancelled) dispatch({
+        if (!cancelled && !isSocketConnected) dispatch({
           type: 'FETCH_ERROR',
           payload: err.message.includes('fetch')
             ? 'Cannot reach server. Showing last saved data.'
@@ -246,8 +280,12 @@ export const MatchProvider = ({ children }) => {
     };
 
     poll();
-    const t = setInterval(poll, 5000); // Fast polling for snappy UI
-    return () => { cancelled = true; clearInterval(t); };
+    const t = setInterval(poll, 1000); // Check every second if we should poll based on connection state
+    return () => { 
+      cancelled = true; 
+      clearInterval(t); 
+      socket.disconnect();
+    };
   }, []);
 
   // ── Fetch latest finished match every 5 min ───────────────────────────
