@@ -2179,10 +2179,11 @@ let _pptr = null;
 const getPptr = async () => {
   if (_pptr) return _pptr;
   try { _pptr = (await import('puppeteer-core')).default; return _pptr; } catch { }
-  try { _pptr = (await import('puppeteer')).default; return _pptr; } catch { }
   return null;
 };
 
+// NOTE: In production (Render free tier) this path is expected to never activate —
+// Chrome is not available. ESPN + Cricbuzz proxy + Cricbuzz direct are the real safety net.
 const browserFallback = async () => {
   const pptr = await getPptr(); if (!pptr) return null;
   let browser;
