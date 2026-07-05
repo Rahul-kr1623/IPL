@@ -202,7 +202,7 @@ const espnFindMatch = async () => {
 };
 
 // Returns ALL live IPL events (up to 2), each with slot + startTime
-const espnFindAllMatches = async () => {
+export const espnFindAllMatches = async () => {
   console.log('[ESPN] Finding all live matches...');
   const found = [];
 

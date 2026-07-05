@@ -10,7 +10,7 @@
  *            MongoDB write so it only fires once per match.
  */
 
-import { scrapeAllSlots, scrapeIPLStandingsAndStats } from './scraperService.js';
+import { scrapeAllSlots, scrapeIPLStandingsAndStats, espnFindAllMatches } from './scraperService.js';
 import { simulateAllSlots } from './simulatorService.js';
 import { saveMatch, getLatestMatch, markMatchFinished } from './dbService.js';
 import scraperState, {
@@ -331,11 +331,53 @@ export const restoreStateFromDb = async () => {
   }
 };
 
+let ticks = 0;
+let isActiveWindow = true; // Assume active initially to get immediate first-run data
+
 export const startScheduler = () => {
   const isSimulating = process.env.SIMULATE_LIVE === 'true';
-  const pollInterval = isSimulating ? 5_000 : 40_000;
+  const baseInterval = isSimulating ? 5_000 : 40_000;
   
-  setInterval(runLiveSyncAllSlots, pollInterval);
+  setInterval(async () => {
+    ticks++;
+    
+    // Check every ~5 minutes (every 7th tick of 40s = 280s, or every 2nd tick in simulation)
+    const checkInterval = isSimulating ? 2 : 7;
+    const shouldLightCheck = (ticks % checkInterval === 1); 
+    
+    if (shouldLightCheck) {
+      try {
+        if (!isActiveWindow) console.log(`[Scheduler] Lightweight check for upcoming matches...`);
+        
+        // In simulation mode, we force the window to be active so we can see the full scrape
+        const matches = isSimulating 
+          ? [{ startTime: new Date().toISOString() }] 
+          : await espnFindAllMatches();
+          
+        const now = Date.now();
+        isActiveWindow = matches.some(m => {
+          if (!m.startTime) return true; // Play it safe if no time provided
+          // Active if match starts within next 30 mins, or is already in the past (live)
+          return new Date(m.startTime).getTime() - now < 30 * 60 * 1000;
+        });
+        
+        if (!isActiveWindow) {
+          console.log(`[Scheduler] No match near. Remaining in lightweight mode.`);
+        } else if (ticks > 1) {
+          console.log(`[Scheduler] Match window active. Full scrape cycle engaged.`);
+        }
+      } catch (err) {
+        console.error('[Scheduler] Lightweight check failed:', err.message);
+      }
+    }
+    
+    // We run the full scrape if we are in an active window, OR if a global freeze is active 
+    // (meaning a match just finished and we're locking state)
+    if (isActiveWindow || scraperState.matchFinishedAt) {
+      await runLiveSyncAllSlots();
+    }
+  }, baseInterval);
+
   setInterval(updateStandingsAndStats, 12 * 60 * 60_000);
-  console.log(`⏰ Scheduler started (live: ${pollInterval/1000}s${isSimulating ? ' [SIMULATION MODE]' : ''}, standings: 12h)`);
+  console.log(`⏰ Scheduler started (base interval: ${baseInterval/1000}s${isSimulating ? ' [SIMULATION MODE]' : ''}, standings: 12h)`);
 };
