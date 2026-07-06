@@ -5,6 +5,8 @@ import { Trophy, Users, MoveRight, Swords, ChevronDown, ChevronUp, Loader2 } fro
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
 import { CURRENT_SEASON, TEAM_COLORS, TEAM_NAMES } from '../utils/constants.js';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const teamsData = [
   { id:'csk',  name:'Chennai Super Kings',          short:'CSK',  color:'#F7B111', titles:5, captain:'Ruturaj Gaikwad', founded:2008, homeGround:'MA Chidambaram Stadium' },
   { id:'mi',   name:'Mumbai Indians',                short:'MI',   color:'#004BA0', titles:5, captain:'Hardik Pandya',   founded:2008, homeGround:'Wankhede Stadium' },
@@ -53,7 +55,7 @@ const Teams = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/v1/data/global/head_to_head');
+        const response = await fetch(`${API_URL}/api/v1/data/global/head_to_head`);
         const data = await response.json();
         setH2hData(data);
       } catch (error) {

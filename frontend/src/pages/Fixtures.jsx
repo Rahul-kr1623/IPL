@@ -849,7 +849,7 @@ const Fixtures = () => {
     const fetchHistory = async () => {
       setLoadingHistory(true);
       try {
-        const res = await fetch(`http://localhost:5000/api/v1/data/season/${season}/fixtures`);
+        const res = await fetch(`${API_URL}/api/v1/data/season/${season}/fixtures`);
         if (res.ok) {
           const data = await res.json();
           setHistoricalData(data);

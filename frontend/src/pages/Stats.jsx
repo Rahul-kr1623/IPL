@@ -7,6 +7,8 @@ import SeasonDropdown from '../components/SeasonDropdown.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { CURRENT_SEASON, TEAM_COLORS, ACTIVE_TEAMS } from '../utils/constants.js';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 // ── Historical top scorers per season (orange cap) ────────────────────────────
 const buildSeasonLeaders = (year, awardsData) => {
   if (!awardsData) return { batting: [], bowling: [] };
@@ -85,9 +87,9 @@ const Stats = () => {
     const fetchData = async () => {
       try {
         const [awardsRes, pointsRes, playersRes] = await Promise.all([
-          fetch('http://localhost:5000/api/v1/data/global/awards'),
-          fetch('http://localhost:5000/api/v1/data/global/points_tables'),
-          fetch('http://localhost:5000/api/v1/data/players')
+          fetch(`${API_URL}/api/v1/data/global/awards`),
+          fetch(`${API_URL}/api/v1/data/global/points_tables`),
+          fetch(`${API_URL}/api/v1/data/players`)
         ]);
         const awardsData = await awardsRes.json();
         const pointsData = await pointsRes.json();

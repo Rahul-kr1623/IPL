@@ -17,8 +17,8 @@ const PointsTable = () => {
     const fetchData = async () => {
       try {
         const [pointsRes, awardsRes] = await Promise.all([
-          fetch('http://localhost:5000/api/v1/data/global/points_tables'),
-          fetch('http://localhost:5000/api/v1/data/global/awards')
+          fetch(`${API_URL}/api/v1/data/global/points_tables`),
+          fetch(`${API_URL}/api/v1/data/global/awards`)
         ]);
         const points = await pointsRes.json();
         const awards = await awardsRes.json();

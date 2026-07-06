@@ -21,7 +21,7 @@ const PlayerDetail = () => {
   useEffect(() => {
     const fetchPlayer = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/v1/data/players');
+        const response = await fetch(`${API_URL}/api/v1/data/players`);
         const data = await response.json();
         const p = data.players?.find(p => String(p.id) === String(id));
         setPlayerData(p);

@@ -14,7 +14,7 @@ const Stadiums = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/v1/data/stadiums');
+        const response = await fetch(`${API_URL}/api/v1/data/stadiums`);
         const data = await response.json();
         // Handle array or object structure
         setStadiumsRaw(Array.isArray(data) ? { stadiums: data } : data);

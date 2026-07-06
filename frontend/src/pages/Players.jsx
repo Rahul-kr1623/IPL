@@ -5,6 +5,8 @@ import { Search, Shield, Zap, Target, Star, Swords, X, ChevronRight, Loader2 } f
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import Pagination from '../components/Pagination.jsx';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const ROLE_ICON = {
   'Batter': <Target className="w-4 h-4" />,
   'Bowler': <Zap className="w-4 h-4" />,
@@ -39,7 +41,7 @@ const Players = () => {
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/v1/data/players');
+        const response = await fetch(`${API_URL}/api/v1/data/players`);
         const data = await response.json();
         setPlayers(data.players || []);
       } catch (error) {
