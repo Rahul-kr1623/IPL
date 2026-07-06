@@ -5,6 +5,8 @@ import { ArrowLeft, Zap, Target, Shield, TrendingUp, Star, Loader2 } from 'lucid
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TEAM_COLORS } from '../utils/constants.js';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 // Dummy match history for the graph
 const matchHistory = [
   { match: 'Match 1', runs: 45 }, { match: 'Match 2', runs: 12 },

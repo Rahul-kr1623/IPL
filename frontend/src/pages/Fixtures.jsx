@@ -8,6 +8,8 @@ import SeasonDropdown from '../components/SeasonDropdown.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { CURRENT_SEASON } from '../utils/constants.js';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const COLORS = {
   CSK: "#FDB913", RCB: "#CC0000", MI: "#004BA0", KKR: "#3A225D",
   RR: "#EA1A85", PBKS: "#ED1B24", GT: "#B59453", LSG: "#0ea5e9",

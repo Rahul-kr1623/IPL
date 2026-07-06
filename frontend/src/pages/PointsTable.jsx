@@ -4,6 +4,8 @@ import { TrendingUp, TrendingDown, Trophy, Star, Medal, Loader2 } from 'lucide-r
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
 import { CURRENT_SEASON, TEAM_COLORS, TEAM_NAMES } from '../utils/constants.js';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 // ── All-Time aggregated table ────────────────────────────────────────────────
 const QUAL_LINE = 4; // top 4 qualify
 

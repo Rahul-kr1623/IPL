@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { MapPin, Users, TrendingUp, TrendingDown, Zap, Shield, Loader2 } from 'lucide-react';
 import { TEAM_COLORS } from '../utils/constants.js';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const PITCH_COLORS = { Batting:'#10b981', Spin:'#f59e0b', Balanced:'#0ea5e9' };
 
 const Stadiums = () => {
