@@ -44,10 +44,10 @@ const SOCIALS = [
 
 const STATS_TICKER = [
   '🏏 74 matches played in IPL 2026',
-  '🏆 GT crowned champions for the 2nd time',
-  '🟠 Sai Sudharsan — Orange Cap — 759 runs',
-  '🟣 Jasprit Bumrah — Purple Cap — 28 wickets',
-  '⭐ Shubman Gill — Most Valuable Player',
+  '🏆 RCB crowned champions for the 2nd time',
+  '🟠 Vaibhav Sooryavanshi — Orange Cap — 776 runs',
+  '🟣 Kagiso Rabada — Purple Cap — 29 wickets',
+  '⭐ Vaibhav Suryavanshi — Most Valuable Player',
   '🌟 Vaibhav Suryavanshi — Emerging Player',
   '📍 19 seasons · 2008 – 2026 · India\'s premier T20 league',
 ];
