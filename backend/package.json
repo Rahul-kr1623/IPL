@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "seed": "node scripts/seedDatabase.js"
   },
   "dependencies": {
     "@google/genai": "^1.46.0",
