@@ -35,14 +35,23 @@ const trophyData = [
 
 // ── H2H helpers ───────────────────────────────────────────────────────────────
 const findH2H = (t1, t2, h2hData) => {
-  if (!h2hData || !h2hData.records) return null;
-  const r = h2hData.records.find(r =>
-    (r.team1 === t1 && r.team2 === t2) || (r.team1 === t2 && r.team2 === t1)
+  if (!h2hData) return null;
+  const list = Array.isArray(h2hData) ? h2hData : (h2hData.records || []);
+  const r = list.find(item =>
+    (item.team1 === t1 && item.team2 === t2) || (item.team1 === t2 && item.team2 === t1)
   );
   if (!r) return null;
-  if (r.team1 === t1) return r;
-  return { ...r, team1: r.team2, team2: r.team1, team1Wins: r.team2Wins, team2Wins: r.team1Wins,
-    recentForm: [...r.recentForm].reverse() };
+  const total = r.totalMatches || r.total || (r.team1Wins + r.team2Wins);
+  if (r.team1 === t1) return { ...r, total };
+  return {
+    ...r,
+    team1: r.team2,
+    team2: r.team1,
+    team1Wins: r.team2Wins,
+    team2Wins: r.team1Wins,
+    total,
+    recentForm: Array.isArray(r.recentForm) ? [...r.recentForm].reverse() : []
+  };
 };
 
 const SHORTS = teamsData.map(t => t.short);
@@ -184,17 +193,19 @@ const Teams = () => {
             </div>
 
             {/* Recent form */}
-            <div>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Recent Form (last 5)</p>
-              <div className="flex gap-2">
-                {h2h.recentForm.map((winner, i) => (
-                  <div key={i} className="flex-1 py-2 rounded-xl text-center text-[9px] font-black tracking-widest border"
-                    style={{ backgroundColor: `${TEAM_COLORS[winner] || '#fff'}15`, color: TEAM_COLORS[winner] || '#fff', borderColor: `${TEAM_COLORS[winner] || '#fff'}30` }}>
-                    {winner}
-                  </div>
-                ))}
+            {h2h.recentForm && h2h.recentForm.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Recent Form (last 5)</p>
+                <div className="flex gap-2">
+                  {h2h.recentForm.map((winner, i) => (
+                    <div key={i} className="flex-1 py-2 rounded-xl text-center text-[9px] font-black tracking-widest border"
+                      style={{ backgroundColor: `${TEAM_COLORS[winner] || '#fff'}15`, color: TEAM_COLORS[winner] || '#fff', borderColor: `${TEAM_COLORS[winner] || '#fff'}30` }}>
+                      {winner}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           <div className="p-8 text-center text-gray-600 font-bold uppercase tracking-widest text-sm">No data for this matchup</div>

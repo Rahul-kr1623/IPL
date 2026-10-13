@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiActivity, FiAward, FiMapPin, FiCalendar } from 'react-icons/fi';
+import { X, Activity, Award, MapPin, Calendar } from 'lucide-react';
 
 const ScorecardModal = ({ isOpen, onClose, match }) => {
   const [activeTab, setActiveTab] = useState('innings1');
@@ -76,16 +76,16 @@ const ScorecardModal = ({ isOpen, onClose, match }) => {
               </h2>
               {match.result && (
                 <p className="text-sm font-semibold text-emerald-400 mt-1 flex items-center gap-1.5">
-                  <FiAward className="w-4 h-4" />
+                  <Award className="w-4 h-4" />
                   {match.result}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
-              <FiX className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
