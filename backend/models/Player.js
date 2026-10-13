@@ -6,6 +6,7 @@ const playerSchema = new mongoose.Schema({
   fullName: { type: String, default: '' },
   image: { type: String, default: '/players/default_avatar.png' },
   activeTeam: { type: String, required: true, index: true },
+  currentTeam: { type: String, index: true },
   teamsPlayedFor: [String],
   role: { 
     type: String, 

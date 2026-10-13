@@ -18,11 +18,12 @@
  * Data: state.slot1 / state.slot2 / state.latestFinished from MatchContext
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Trophy, MapPin, Clock, WifiOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMatchContext } from '../context/MatchContext';
+import ScorecardModal from './ScorecardModal.jsx';
 
 // ─── Logos + colors ───────────────────────────────────────────────────────────
 const LOGOS = {
@@ -108,7 +109,7 @@ const StatusBadge = ({ status }) => {
 // LiveMatchBox — BOX 1 and BOX 2
 // match: live match object (team1:{name}, team2:{name}, score, wickets, ...)
 // ─────────────────────────────────────────────────────────────────────────────
-const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
+const LiveMatchBox = ({ slotLabel, timeLabel, match, onOpenScorecard }) => {
   const isLive = match?.status === 'LIVE';
   const isFinished = match?.status === 'FINISHED' || match?.status === 'RECENTLY FINISHED';
   const isBreak = match?.status === 'INNINGS BREAK';
@@ -132,11 +133,11 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
       : 'Yet to bat';
 
   const winner =
-    finished?.result && t1 && t2
+    match?.result && t1 && t2
       ? (
-        finished.result.toUpperCase().includes(t1.toUpperCase())
+        match.result.toUpperCase().includes(t1.toUpperCase())
           ? t1
-          : finished.result.toUpperCase().includes(t2.toUpperCase())
+          : match.result.toUpperCase().includes(t2.toUpperCase())
             ? t2
             : null
       )
@@ -185,9 +186,19 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
               <Clock className="w-2.5 h-2.5" />{timeLabel}
             </p>
           </div>
-          {match ? <StatusBadge status={match.status} /> : (
-            <span className="text-[9px] text-gray-600 uppercase tracking-widest">—</span>
-          )}
+          <div className="flex items-center gap-2">
+            {match && (
+              <button
+                onClick={() => onOpenScorecard(match)}
+                className="text-[9px] font-black uppercase tracking-wider text-ipl-neon/80 hover:text-ipl-neon bg-ipl-neon/10 hover:bg-ipl-neon/20 px-2.5 py-1 rounded-full transition-all cursor-pointer flex items-center gap-1"
+              >
+                <Activity className="w-2.5 h-2.5" /> Scorecard
+              </button>
+            )}
+            {match ? <StatusBadge status={match.status} /> : (
+              <span className="text-[9px] text-gray-600 uppercase tracking-widest">—</span>
+            )}
+          </div>
         </div>
 
         {/* ── NO MATCH STATE ── */}
@@ -379,7 +390,7 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match }) => {
 // finished: seasonStore object  (team1:"KKR", team2:"RR", team1Score:"167/8 (20.0)", ...)
 //        or MongoDB object      (team1:{name:"KKR"}, team2:{name:"RR"}, score:"145", ...)
 // ─────────────────────────────────────────────────────────────────────────────
-const LatestResultBox = ({ finished }) => {
+const LatestResultBox = ({ finished, onOpenScorecard }) => {
   // Normalise team codes — handles all shapes:
   //   CompletedMatch API: { teamA, teamB }
   //   seasonStore JSON:   { team1: "KKR", team2: "RR" } (strings)
@@ -439,9 +450,19 @@ const LatestResultBox = ({ finished }) => {
               <p className="text-[9px] text-gray-600 mt-0.5 uppercase tracking-wider">{finished.matchNumber}</p>
             )}
           </div>
-          <Link to="/fixtures" className="text-[9px] text-ipl-neon/50 hover:text-ipl-neon transition-colors font-black uppercase tracking-widest">
-            All results →
-          </Link>
+          <div className="flex items-center gap-2">
+            {finished && (
+              <button
+                onClick={() => onOpenScorecard(finished)}
+                className="text-[9px] font-black uppercase tracking-wider text-green-400/80 hover:text-green-400 bg-green-500/10 hover:bg-green-500/20 px-2.5 py-1 rounded-full transition-all cursor-pointer flex items-center gap-1"
+              >
+                <Activity className="w-2.5 h-2.5" /> Scorecard
+              </button>
+            )}
+            <Link to="/fixtures" className="text-[9px] text-ipl-neon/50 hover:text-ipl-neon transition-colors font-black uppercase tracking-widest">
+              All results →
+            </Link>
+          </div>
         </div>
 
         {/* No result yet */}
@@ -504,6 +525,7 @@ const LatestResultBox = ({ finished }) => {
 const MatchDayPanel = () => {
   const { state } = useMatchContext();
   const { slot1, slot2, latestFinished, fetchStatus } = state;
+  const [scorecardMatch, setScorecardMatch] = useState(null);
 
   // Skeleton on first load before any data
   if ((fetchStatus === 'LOADING' || fetchStatus === 'IDLE') && !slot1 && !slot2) {
@@ -523,6 +545,7 @@ const MatchDayPanel = () => {
         slotLabel="Afternoon Match"
         timeLabel="3:30 PM IST"
         match={slot1}
+        onOpenScorecard={setScorecardMatch}
       />
 
       {/* BOX 2 — Evening slot (7:30 PM) */}
@@ -530,10 +553,21 @@ const MatchDayPanel = () => {
         slotLabel="Evening Match"
         timeLabel="7:30 PM IST"
         match={slot2}
+        onOpenScorecard={setScorecardMatch}
       />
 
       {/* BOX 3 — Latest finished result */}
-      <LatestResultBox finished={latestFinished} />
+      <LatestResultBox
+        finished={latestFinished}
+        onOpenScorecard={setScorecardMatch}
+      />
+
+      {/* Reusable Scorecard Modal */}
+      <ScorecardModal
+        isOpen={!!scorecardMatch}
+        onClose={() => setScorecardMatch(null)}
+        match={scorecardMatch}
+      />
     </div>
   );
 };

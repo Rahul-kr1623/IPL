@@ -14,7 +14,11 @@ router.get('/players', async (req, res) => {
     const query = {};
 
     if (team) {
-      query.currentTeam = team.toUpperCase();
+      const teamUpper = team.toUpperCase();
+      query.$or = [
+        { currentTeam: teamUpper },
+        { activeTeam: teamUpper }
+      ];
     }
     if (role) {
       query.role = new RegExp(`^${role}$`, 'i');
@@ -139,11 +143,41 @@ router.get('/global/:file', async (req, res) => {
       const pts = await PointsTable.find().sort({ season: -1 }).lean();
       res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
       const formatted = {};
-      pts.forEach(p => { formatted[p.season] = p.standings; });
+      pts.forEach(p => {
+        const teams = (p.standings || []).map((t, idx) => ({
+          ...t,
+          rank: t.rank || idx + 1,
+          pts: t.points ?? t.pts ?? 0,
+          points: t.points ?? t.pts ?? 0,
+          nr: t.noResult ?? t.nr ?? 0,
+          noResult: t.noResult ?? t.nr ?? 0
+        }));
+        formatted[p.season] = {
+          season: p.season,
+          teams,
+          standings: teams
+        };
+      });
       return res.json(formatted);
     }
 
-    res.json([]);
+    if (file === 'awards') {
+      const pts = await PointsTable.find().sort({ season: -1 }).lean();
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
+      const formatted = {};
+      pts.forEach(p => {
+        formatted[p.season] = {
+          season: p.season,
+          orangeCap: p.orangeCap || null,
+          purpleCap: p.purpleCap || null,
+          mvp: p.mvp || null,
+          emergingPlayer: p.emergingPlayer || null
+        };
+      });
+      return res.json(formatted);
+    }
+
+    res.json({});
   } catch (error) {
     console.error(`Error reading ${req.params.file} data:`, error);
     res.status(500).json({ error: 'Failed to load global data' });
@@ -187,13 +221,21 @@ router.get('/season/:year/points_table', async (req, res) => {
 router.get('/season/:year/team_squads', async (req, res) => {
   try {
     const season = parseInt(req.params.year, 10);
-    const players = await Player.find({ currentTeam: { $exists: true, $ne: '' } }).lean();
+    const players = await Player.find({
+      $or: [
+        { currentTeam: { $exists: true, $nin: ['', 'Unassigned'] } },
+        { activeTeam: { $exists: true, $nin: ['', 'Unassigned'] } }
+      ]
+    }).lean();
 
     if (players && players.length > 0) {
       const squads = {};
       players.forEach(p => {
-        if (!squads[p.currentTeam]) squads[p.currentTeam] = [];
-        squads[p.currentTeam].push(p);
+        const teamCode = p.currentTeam || p.activeTeam;
+        if (teamCode && teamCode !== 'Unassigned') {
+          if (!squads[teamCode]) squads[teamCode] = [];
+          squads[teamCode].push(p);
+        }
       });
       res.set('Cache-Control', 'public, max-age=300, s-maxage=1800');
       return res.json(squads);
