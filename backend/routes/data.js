@@ -4,24 +4,8 @@ import Player from '../models/Player.js';
 import Stadium from '../models/Stadium.js';
 import PointsTable from '../models/PointsTable.js';
 import HeadToHead from '../models/HeadToHead.js';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const router = express.Router();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '../data');
-
-// Helper to fallback to JSON file if MongoDB is empty during migration
-const fallbackJson = async (subPath) => {
-  try {
-    const filePath = path.join(dataDir, subPath);
-    const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return null;
-  }
-};
 
 // ─── GET /api/v1/data/players ──────────────────────────────────────────────────
 router.get('/players', async (req, res) => {
@@ -43,25 +27,8 @@ router.get('/players', async (req, res) => {
     }
 
     const players = await Player.find(query).lean();
-    if (players && players.length > 0) {
-      res.set('Cache-Control', 'public, max-age=60, s-maxage=300');
-      return res.json(players);
-    }
-
-    // Fallback to JSON
-    const fallback = await fallbackJson('global/players_master.json');
-    if (fallback) {
-      let filtered = fallback;
-      if (team) filtered = filtered.filter(p => p.currentTeam === team.toUpperCase());
-      if (role) filtered = filtered.filter(p => p.role?.toLowerCase() === role.toLowerCase());
-      if (search) {
-        const s = search.toLowerCase();
-        filtered = filtered.filter(p => p.name?.toLowerCase().includes(s) || p.shortName?.toLowerCase().includes(s));
-      }
-      return res.json(filtered);
-    }
-
-    res.json([]);
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+    res.json(players || []);
   } catch (error) {
     console.error('Error fetching players:', error);
     res.status(500).json({ error: 'Failed to load players data' });
@@ -82,13 +49,6 @@ router.get('/players/:id', async (req, res) => {
 
     if (!player && id.match(/^[0-9a-fA-F]{24}$/)) {
       player = await Player.findById(id).lean();
-    }
-
-    if (!player) {
-      const fallback = await fallbackJson('global/players_master.json');
-      if (fallback) {
-        player = fallback.find(p => p.playerId === id || p.shortName?.toLowerCase() === id.toLowerCase() || p.name?.toLowerCase() === id.toLowerCase());
-      }
     }
 
     if (!player) {
@@ -152,15 +112,8 @@ router.get('/players/:id', async (req, res) => {
 router.get('/stadiums', async (req, res) => {
   try {
     const stadiums = await Stadium.find().lean();
-    if (stadiums && stadiums.length > 0) {
-      res.set('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-      return res.json(stadiums);
-    }
-
-    const fallback = await fallbackJson('global/stadiums.json');
-    if (fallback) return res.json(fallback);
-
-    res.json([]);
+    res.set('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+    res.json(stadiums || []);
   } catch (error) {
     console.error('Error fetching stadiums:', error);
     res.status(500).json({ error: 'Failed to load stadiums data' });
@@ -178,25 +131,17 @@ router.get('/global/:file', async (req, res) => {
 
     if (file === 'head_to_head') {
       const h2h = await HeadToHead.find().lean();
-      if (h2h && h2h.length > 0) {
-        res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
-        return res.json(h2h);
-      }
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
+      return res.json(h2h || []);
     }
 
     if (file === 'points_tables') {
       const pts = await PointsTable.find().sort({ season: -1 }).lean();
-      if (pts && pts.length > 0) {
-        res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
-        const formatted = {};
-        pts.forEach(p => { formatted[p.season] = p.standings; });
-        return res.json(formatted);
-      }
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
+      const formatted = {};
+      pts.forEach(p => { formatted[p.season] = p.standings; });
+      return res.json(formatted);
     }
-
-    // Fallback to JSON file
-    const fallback = await fallbackJson(`global/${file}.json`);
-    if (fallback) return res.json(fallback);
 
     res.json([]);
   } catch (error) {
@@ -213,16 +158,8 @@ router.get('/season/:year/fixtures', async (req, res) => {
       .sort({ matchNumber: 1, date: 1 })
       .lean();
 
-    if (matches && matches.length > 0) {
-      res.set('Cache-Control', season === 2026 ? 'public, max-age=15, s-maxage=30' : 'public, max-age=86400');
-      return res.json(matches);
-    }
-
-    // Fallback to JSON
-    const fallback = await fallbackJson(`seasons/${season}/fixtures.json`);
-    if (fallback) return res.json(fallback);
-
-    res.json([]);
+    res.set('Cache-Control', season === 2026 ? 'public, max-age=15, s-maxage=30' : 'public, max-age=86400');
+    res.json(matches || []);
   } catch (error) {
     console.error(`Error fetching fixtures for season ${req.params.year}:`, error);
     res.status(500).json({ error: 'Failed to load fixtures data' });
@@ -238,9 +175,6 @@ router.get('/season/:year/points_table', async (req, res) => {
       res.set('Cache-Control', season === 2026 ? 'public, max-age=15, s-maxage=30' : 'public, max-age=86400');
       return res.json(pts.standings);
     }
-
-    const fallback = await fallbackJson(`seasons/${season}/points_table.json`);
-    if (fallback) return res.json(fallback);
 
     res.json([]);
   } catch (error) {
@@ -264,9 +198,6 @@ router.get('/season/:year/team_squads', async (req, res) => {
       res.set('Cache-Control', 'public, max-age=300, s-maxage=1800');
       return res.json(squads);
     }
-
-    const fallback = await fallbackJson(`seasons/${season}/team_squads.json`);
-    if (fallback) return res.json(fallback);
 
     res.json({});
   } catch (error) {
