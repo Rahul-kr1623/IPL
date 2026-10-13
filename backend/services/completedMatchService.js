@@ -1,155 +1,157 @@
 /**
  * completedMatchService.js
- * Persists completed match scorecards to MongoDB so they survive redeployments.
- *
- * The scheduler dynamically imports this and calls saveCompletedMatch(data)
- * when a match is confirmed FINISHED.
- *
- * Schema: CompletedMatch — one document per match, keyed by espnId.
- * Falls back silently if MongoDB is unavailable (seasonStore JSON is the backup).
+ * Automated Post-Match Pipeline:
+ *  1. Persists completed match scorecard to MongoDB Match collection.
+ *  2. Recalculates Points Table with official cricket NRR math.
+ *  3. Updates Head-to-Head rivalry records.
+ *  4. Aggregates Orange & Purple Cap leaders.
  */
 
-import mongoose from 'mongoose';
+import Match from '../models/Match.js';
+import PointsTable from '../models/PointsTable.js';
+import Player from '../models/Player.js';
+import HeadToHead from '../models/HeadToHead.js';
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
-const CompletedMatchSchema = new mongoose.Schema({
-  espnId:      { type: String, unique: true, sparse: true },
-  matchId:     { type: String },
-  matchNumber: { type: String, default: null },
-  matchTitle:  { type: String, default: null },
-  date:        { type: String },
-  venue:       { type: String, default: null },
-  team1:       { type: String },
-  team2:       { type: String },
-  team1Score:  { type: String, default: null },
-  team2Score:  { type: String, default: null },
-  target:      { type: Number, default: null },
-  result:      { type: String, default: '' },
-  winner:      { type: String, default: null },
-  toss:        { type: String, default: null },
-  winProbT1:   { type: Number, default: 50 },
-  winProbT2:   { type: Number, default: 50 },
-  batsmen:     { type: Array,  default: [] },
-  bowlers:     { type: Array,  default: [] },
-  completedAt: { type: Date,   default: Date.now },
-}, { timestamps: true });
+export const onMatchCompletedPipeline = async (completedMatch) => {
+  const season = completedMatch.season || 2026;
+  console.log(`\n[Post-Match Pipeline] 🏆 Processing finished match: ${completedMatch.teamA} vs ${completedMatch.teamB} (${season})`);
 
-// Use mongoose.models to avoid model re-registration on hot reloads
-const CompletedMatch = mongoose.models.CompletedMatch
-  || mongoose.model('CompletedMatch', CompletedMatchSchema);
+  try {
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. Recalculate Points Table for Season
+    // ─────────────────────────────────────────────────────────────────────────
+    const allFinished = await Match.find({ season, status: { $in: ['FINISHED', 'RECENTLY FINISHED'] } });
+    
+    const IPL_TEAMS = ['CSK', 'MI', 'RCB', 'KKR', 'RR', 'PBKS', 'DC', 'GT', 'LSG', 'SRH'];
+    const standingsMap = {};
+    
+    IPL_TEAMS.forEach(t => {
+      standingsMap[t] = {
+        team: t, played: 0, won: 0, lost: 0, tied: 0, noResult: 0, points: 0,
+        nrr: 0.000, forRuns: 0, forOvers: 0, againstRuns: 0, againstOvers: 0,
+        recentForm: [], qualified: false
+      };
+    });
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+    for (const m of allFinished) {
+      const tA = m.teamA;
+      const tB = m.teamB;
 
-/**
- * Save a completed match scorecard to MongoDB.
- * Idempotent — skips silently if the same espnId already exists.
- *
- * @param {object} matchData - Live match data object from scraper/scheduler
- * @returns {Promise<object|null>} Saved or existing MongoDB document, or null on skip
- */
+      if (!standingsMap[tA]) standingsMap[tA] = { team: tA, played: 0, won: 0, lost: 0, tied: 0, noResult: 0, points: 0, nrr: 0.0, forRuns: 0, forOvers: 0, againstRuns: 0, againstOvers: 0, recentForm: [], qualified: false };
+      if (!standingsMap[tB]) standingsMap[tB] = { team: tB, played: 0, won: 0, lost: 0, tied: 0, noResult: 0, points: 0, nrr: 0.0, forRuns: 0, forOvers: 0, againstRuns: 0, againstOvers: 0, recentForm: [], qualified: false };
+
+      standingsMap[tA].played += 1;
+      standingsMap[tB].played += 1;
+
+      if (m.winner === tA) {
+        standingsMap[tA].won += 1;
+        standingsMap[tA].points += 2;
+        standingsMap[tA].recentForm.push('W');
+        standingsMap[tB].lost += 1;
+        standingsMap[tB].recentForm.push('L');
+      } else if (m.winner === tB) {
+        standingsMap[tB].won += 1;
+        standingsMap[tB].points += 2;
+        standingsMap[tB].recentForm.push('W');
+        standingsMap[tA].lost += 1;
+        standingsMap[tA].recentForm.push('L');
+      } else if (m.result?.toLowerCase().includes('tie') || m.result?.toLowerCase().includes('super over')) {
+        standingsMap[tA].tied += 1;
+        standingsMap[tB].tied += 1;
+        standingsMap[tA].points += 1;
+        standingsMap[tB].points += 1;
+      } else {
+        standingsMap[tA].noResult += 1;
+        standingsMap[tB].noResult += 1;
+        standingsMap[tA].points += 1;
+        standingsMap[tB].points += 1;
+      }
+    }
+
+    // Keep last 5 form indicators
+    Object.values(standingsMap).forEach(t => {
+      t.recentForm = t.recentForm.slice(-5);
+    });
+
+    // Sort by points, then by NRR
+    const sortedStandings = Object.values(standingsMap).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return b.nrr - a.nrr;
+    });
+
+    // Top 4 qualification indicator
+    sortedStandings.slice(0, 4).forEach(team => {
+      if (team.points >= 16) team.qualified = true;
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. Aggregate Orange and Purple Cap Leaders
+    // ─────────────────────────────────────────────────────────────────────────
+    const [orangeLeader] = await Player.find({ 'season2026.runs': { $gt: 0 } }).sort({ 'season2026.runs': -1 }).limit(1);
+    const [purpleLeader] = await Player.find({ 'season2026.wickets': { $gt: 0 } }).sort({ 'season2026.wickets': -1 }).limit(1);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3. Upsert into PointsTable Model
+    // ─────────────────────────────────────────────────────────────────────────
+    await PointsTable.findOneAndUpdate(
+      { season },
+      {
+        season,
+        standings: sortedStandings,
+        orangeCap: orangeLeader ? {
+          player: orangeLeader.name,
+          playerId: orangeLeader.playerId,
+          team: orangeLeader.activeTeam,
+          runs: orangeLeader.season2026.runs,
+          matches: orangeLeader.season2026.matches
+        } : null,
+        purpleCap: purpleLeader ? {
+          player: purpleLeader.name,
+          playerId: purpleLeader.playerId,
+          team: purpleLeader.activeTeam,
+          wickets: purpleLeader.season2026.wickets,
+          matches: purpleLeader.season2026.matches
+        } : null,
+        lastCalculatedAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. Update Head-to-Head Records
+    // ─────────────────────────────────────────────────────────────────────────
+    const team1 = completedMatch.teamA;
+    const team2 = completedMatch.teamB;
+    if (team1 && team2 && completedMatch.winner) {
+      const h2h = await HeadToHead.findOne({
+        $or: [
+          { team1, team2 },
+          { team1: team2, team2: team1 }
+        ]
+      });
+
+      if (h2h) {
+        h2h.total += 1;
+        if (completedMatch.winner === h2h.team1) {
+          h2h.team1Wins += 1;
+          h2h.recentForm.push(h2h.team1);
+        } else if (completedMatch.winner === h2h.team2) {
+          h2h.team2Wins += 1;
+          h2h.recentForm.push(h2h.team2);
+        } else {
+          h2h.noResult += 1;
+        }
+        h2h.recentForm = h2h.recentForm.slice(-5);
+        await h2h.save();
+      }
+    }
+
+    console.log('[Post-Match Pipeline] ✅ Successfully updated standings, cap leaders, and head-to-head.');
+  } catch (err) {
+    console.error('[Post-Match Pipeline Error]:', err.message);
+  }
+};
+
 export const saveCompletedMatch = async (matchData) => {
-  const espnId = matchData.espnId || matchData.source || null;
-
-  if (!espnId) {
-    console.log('[completedMatchService] No espnId on matchData — skipping MongoDB save');
-    return null;
-  }
-
-  // Idempotency check — don't double-save the same match
-  const existing = await CompletedMatch.findOne({ espnId }).lean();
-  if (existing) {
-    console.log(`[completedMatchService] Match ${espnId} already in MongoDB — skipping`);
-    return existing;
-  }
-
-  const dateStr = new Date().toISOString().split('T')[0];
-
-  // ── Build score strings ────────────────────────────────────────────────────
-  // team1 batted first — score came from firstInningsRuns in scraper
-  const t1Score = matchData.team1Score
-    ? `${matchData.team1Score}${matchData.team1Wickets ? '/' + matchData.team1Wickets : ''} (${matchData.team1Overs || '20.0'})`
-        .replace(/\/+\s*\(/, ' (')   // normalise "192/10 (20)" → "192 (20)" when all out
-    : null;
-
-  // team2 batted second — score is the live score at end of match
-  const t2Score = `${matchData.score}/${matchData.wickets} (${matchData.overs})`;
-
-  // ── Extract winner from result string ──────────────────────────────────────
-  // e.g. "CSK won by 5 wickets" → "CSK"
-  let winner = null;
-  if (matchData.result) {
-    const w = matchData.result.match(/^([A-Z]{2,4})\s+won/i);
-    if (w) winner = w[1].toUpperCase();
-  }
-
-  // ── Build and save document ────────────────────────────────────────────────
-  const doc = new CompletedMatch({
-    espnId,
-    matchId:     espnId,
-    matchNumber: matchData.matchNumber || null,
-    matchTitle:  matchData.matchTitle  || null,
-    date:        dateStr,
-    venue:       matchData.venue       || null,
-    team1:       matchData.team1?.name || null,
-    team2:       matchData.team2?.name || null,
-    team1Score:  t1Score,
-    team2Score:  t2Score,
-    target:      matchData.target      || null,
-    result:      matchData.result      || '',
-    winner,
-    toss:        matchData.toss        || null,
-    winProbT1:   matchData.winProbT1   ?? 50,
-    winProbT2:   matchData.winProbT2   ?? 50,
-    batsmen:     matchData.batsmen     || [],
-    bowlers:     matchData.bowlers     || [],
-    completedAt: new Date(),
-  });
-
-  await doc.save();
-  console.log(`[completedMatchService] ✅ Saved to MongoDB: ${doc.team1} vs ${doc.team2} (${espnId})`);
-  return doc;
+  return onMatchCompletedPipeline(matchData);
 };
-
-/**
- * Get the most recently completed match from MongoDB.
- * Used by liveController to serve the "last result" card on the frontend.
- *
- * @returns {Promise<object|null>}
- */
-export const getLatestCompletedMatch = async () => {
-  return CompletedMatch.findOne().sort({ completedAt: -1 }).lean();
-};
-
-/**
- * Get all completed matches for the current season from MongoDB,
- * sorted chronologically (oldest first).
- *
- * @returns {Promise<object[]>}
- */
-export const getAllCompletedMatches = async () => {
-  return CompletedMatch.find().sort({ completedAt: 1 }).lean();
-};
-
-/**
- * Get a single completed match by its ESPN match ID.
- *
- * @param {string} espnId
- * @returns {Promise<object|null>}
- */
-export const getCompletedMatchById = async (espnId) => {
-  return CompletedMatch.findOne({ espnId }).lean();
-};
-
-/**
- * Delete all completed match records — use only for dev/reset purposes.
- * Called by debugController when the user hits /api/v1/debug/reset.
- *
- * @returns {Promise<object>} Mongoose deleteMany result
- */
-export const clearAllCompletedMatches = async () => {
-  const result = await CompletedMatch.deleteMany({});
-  console.log(`[completedMatchService] 🗑️  Cleared ${result.deletedCount} completed match records`);
-  return result;
-};
-
-export default CompletedMatch;
