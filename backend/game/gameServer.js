@@ -3,6 +3,7 @@
  * Hand Cricket Multiplayer Socket.io server
  */
 import { Server } from 'socket.io';
+import Poll from '../models/Poll.js';
 
 const rooms = {};
 
@@ -248,6 +249,88 @@ export const initGameServer = (httpServer) => {
     // ── Leave Room ──
     socket.on("leaveRoom", ({ roomCode }) => {
       cleanupRoom(socket.id, roomCode);
+    });
+
+    // ── Live Fan Poll ──
+    socket.on("getPoll", async ({ slot, matchKey, question, optionA, optionB }) => {
+      try {
+        const query = matchKey ? { matchKey } : { slot };
+        let poll = await Poll.findOne(query);
+
+        if (!poll && question && optionA && optionB) {
+          poll = await Poll.create({
+            slot: slot || 'slot1',
+            matchKey: matchKey || `${optionA}_${optionB}`,
+            question,
+            optionA,
+            optionB,
+            votesA: 0,
+            votesB: 0,
+            voters: []
+          });
+        }
+
+        if (poll) {
+          socket.emit("pollData", {
+            pollId: poll._id,
+            slot: poll.slot,
+            matchKey: poll.matchKey,
+            question: poll.question,
+            optionA: poll.optionA,
+            optionB: poll.optionB,
+            votesA: poll.votesA,
+            votesB: poll.votesB,
+            totalVotes: poll.votesA + poll.votesB
+          });
+        }
+      } catch (err) {
+        console.error("[Poll] getPoll error:", err.message);
+      }
+    });
+
+    socket.on("castPollVote", async ({ slot, matchKey, choice, voterId }) => {
+      try {
+        if (!choice || !voterId || !['A', 'B'].includes(choice)) return;
+
+        const query = matchKey ? { matchKey } : { slot };
+        let poll = await Poll.findOne(query);
+        if (!poll) return;
+
+        // Check deduplication
+        const alreadyVoted = poll.voters.some(v => v.clientHash === voterId);
+        if (alreadyVoted) {
+          socket.emit("voteRejected", { reason: "Already voted in this poll" });
+          return;
+        }
+
+        const incField = choice === 'A' ? { votesA: 1 } : { votesB: 1 };
+        const updated = await Poll.findOneAndUpdate(
+          { _id: poll._id, 'voters.clientHash': { $ne: voterId } },
+          {
+            $inc: incField,
+            $push: { voters: { clientHash: voterId, choice, votedAt: new Date() } }
+          },
+          { new: true }
+        );
+
+        if (updated) {
+          const pollPayload = {
+            pollId: updated._id,
+            slot: updated.slot,
+            matchKey: updated.matchKey,
+            question: updated.question,
+            optionA: updated.optionA,
+            optionB: updated.optionB,
+            votesA: updated.votesA,
+            votesB: updated.votesB,
+            totalVotes: updated.votesA + updated.votesB
+          };
+          io.emit("pollUpdated", pollPayload);
+          socket.emit("voteConfirmed", { choice });
+        }
+      } catch (err) {
+        console.error("[Poll] castPollVote error:", err.message);
+      }
     });
 
     // ── Disconnect ──
