@@ -310,7 +310,7 @@ export const initGameServer = (httpServer) => {
             $inc: incField,
             $push: { voters: { clientHash: voterId, choice, votedAt: new Date() } }
           },
-          { new: true }
+          { returnDocument: 'after' }
         );
 
         if (updated) {

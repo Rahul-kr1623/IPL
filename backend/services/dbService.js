@@ -49,7 +49,7 @@ export const saveMatch = async (d) => {
   const savedLive = await LiveMatch.findOneAndUpdate(
     filter,
     { $set: doc },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   // 2. Also sync to unified Match collection

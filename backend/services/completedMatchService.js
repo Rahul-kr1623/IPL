@@ -114,7 +114,7 @@ export const onMatchCompletedPipeline = async (completedMatch) => {
         } : null,
         lastCalculatedAt: new Date()
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // ─────────────────────────────────────────────────────────────────────────
