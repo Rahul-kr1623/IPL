@@ -40,6 +40,11 @@ const COLORS = {
 };
 const getLogo = (c) => LOGOS[c?.toUpperCase()] || null;
 const getColor = (c) => COLORS[c?.toUpperCase()] || '#555555';
+const getTossText = (t) => {
+  if (!t) return null;
+  if (typeof t === 'object') return t.text || t.display || null;
+  return String(t);
+};
 
 // ─── TeamChip ─────────────────────────────────────────────────────────────────
 const TeamChip = ({ code, score, isWinner, dimmed }) => {
@@ -316,8 +321,8 @@ const LiveMatchBox = ({ slotLabel, timeLabel, match, onOpenScorecard }) => {
             </div>
 
             {/* Toss */}
-            {match.toss && (
-              <p className="text-[9px] text-gray-600 italic text-center mb-3">🪙 {match.toss}</p>
+            {getTossText(match.toss) && (
+              <p className="text-[9px] text-gray-600 italic text-center mb-3">🪙 {getTossText(match.toss)}</p>
             )}
 
             {/* Last 6 balls */}
@@ -509,8 +514,8 @@ const LatestResultBox = ({ finished, onOpenScorecard }) => {
             </div>
 
             {/* Toss */}
-            {finished.toss && (
-              <p className="text-[9px] text-gray-600 italic text-center">🪙 {finished.toss}</p>
+            {getTossText(finished.toss) && (
+              <p className="text-[9px] text-gray-600 italic text-center">🪙 {getTossText(finished.toss)}</p>
             )}
           </>
         )}

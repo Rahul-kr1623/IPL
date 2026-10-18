@@ -134,14 +134,19 @@ const reducer = (state, action) => {
       // saved THIS session (not from localStorage — that's cleared on stale).
       const prev = state.latestFinished;
       const prevSource = prev?._source || prev?.source || '';
-      const prevIsReal = ['espn-scraped', 'json', 'liveMatch'].includes(prevSource);
+      const prevIsReal = ['espn-scraped', 'json', 'liveMatch', 'mongo'].includes(prevSource);
       const incomingIsHardcoded = incomingSource === 'hardcoded';
 
       if (prevIsReal && incomingIsHardcoded) {
         return state; // don't downgrade real→hardcoded
       }
 
-      const merged = { ...m, _source: incomingSource };
+      let tossVal = m.toss;
+      if (tossVal && typeof tossVal === 'object') {
+        tossVal = tossVal.text || tossVal.display || String(tossVal);
+      }
+
+      const merged = { ...m, toss: tossVal, _source: incomingSource };
       saveLS(LS_FINISHED, merged);
       return {
         ...state,
@@ -201,7 +206,14 @@ const reducer = (state, action) => {
   }
 };
 
-const stripMeta = ({ _stale, _id, __v, createdAt, updatedAt, ...m } = {}) => m;
+const stripMeta = ({ _stale, _id, __v, createdAt, updatedAt, ...m } = {}) => {
+  if (!m) return m;
+  const copy = { ...m };
+  if (copy.toss && typeof copy.toss === 'object') {
+    copy.toss = copy.toss.text || copy.toss.display || String(copy.toss);
+  }
+  return copy;
+};
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 const MatchContext = createContext();

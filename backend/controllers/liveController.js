@@ -42,10 +42,16 @@ export const getLiveScore = async (req, res) => {
     }
 
     const now = Date.now();
-    const mapDoc = (d) => ({
-      ...d.toObject(),
-      _stale: (now - new Date(d.lastUpdated).getTime()) > 10 * 60 * 1000,
-    });
+    const mapDoc = (d) => {
+      const obj = d.toObject();
+      if (obj.toss && typeof obj.toss === 'object') {
+        obj.toss = obj.toss.text || obj.toss.display || null;
+      }
+      return {
+        ...obj,
+        _stale: (now - new Date(d.lastUpdated).getTime()) > 10 * 60 * 1000,
+      };
+    };
 
     // ── Filter out "dataless" docs: score=0, no target, no first-innings score ──
     // These are stale pre-match documents saved before the isDatalessLive fix.
@@ -140,6 +146,7 @@ export const getLatestFinished = async (req, res) => {
       .lean();
 
     if (matchDoc) {
+      const tossStr = matchDoc.toss?.text || (typeof matchDoc.toss === 'string' ? matchDoc.toss : null);
       const formatted = {
         ...matchDoc,
         team1: { name: matchDoc.teamA },
@@ -150,6 +157,7 @@ export const getLatestFinished = async (req, res) => {
         team1Score: `${matchDoc.scoreA || 0}/${matchDoc.wicketsA || 0} (${matchDoc.oversA || 0} ov)`,
         status: 'FINISHED',
         result: matchDoc.result || '',
+        toss: tossStr,
       };
       latestFinishedCache = { data: formatted, fetchedAt: Date.now() };
       return res.json({ match: formatted, source: 'mongo' });
@@ -169,7 +177,11 @@ export const getLatestFinished = async (req, res) => {
 
     // Tier 3: MongoDB LiveMatch marked as FINISHED/RECENTLY FINISHED
     const mongoResult = await getLatestFinishedMatch();
-    if (mongoResult) return res.json({ match: mongoResult.toObject(), source: 'liveMatch' });
+    if (mongoResult) {
+      const obj = mongoResult.toObject();
+      if (obj.toss && typeof obj.toss === 'object') obj.toss = obj.toss.text || obj.toss.display || null;
+      return res.json({ match: obj, source: 'liveMatch' });
+    }
 
     // Tier 4: Return null
     return res.json({ match: null, source: 'none' });

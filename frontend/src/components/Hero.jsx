@@ -18,6 +18,7 @@ const LOGO = {
   LSG: '/logos/lsg_logo.png', SRH: '/logos/srh_logo.png',
 };
 const getLogo = (n) => n ? LOGO[n.toUpperCase()] || null : null;
+const getTossText = (t) => t ? (typeof t === 'object' ? (t.text || t.display || null) : String(t)) : null;
 
 // ─── Ball color ───────────────────────────────────────────────────────────────
 const ballCls = (b) => {
@@ -175,7 +176,7 @@ const ScorecardModal = ({ match, onClose, team1Name, team2Name, logo1, logo2 }) 
                   <MapPin className="w-2.5 h-2.5" />{match.venue}
                 </p>
               )}
-              {match.toss && <p className="text-[9px] text-gray-600 italic">🪙 {match.toss}</p>}
+              {getTossText(match.toss) && <p className="text-[9px] text-gray-600 italic">🪙 {getTossText(match.toss)}</p>}
             </div>
           )}
 
@@ -442,10 +443,10 @@ const MatchCard = ({ match, onOpenModal, compact = false }) => {
       )}
 
       {/* Toss chip — prominent, always visible when toss data exists */}
-      {match?.toss && (
+      {getTossText(match?.toss) && (
         <div className="flex justify-center mb-3">
           <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[10px] font-black text-yellow-300 tracking-wide">
-            🪙 {match.toss}
+            🪙 {getTossText(match.toss)}
           </span>
         </div>
       )}
@@ -768,7 +769,7 @@ const FinishedMatchCard = ({ match, onOpenModal }) => {
       {(match.venue || match.toss || match.date) && (
         <div className="flex flex-wrap gap-3 text-[9px] text-gray-600 justify-center mb-4">
           {match.venue && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{match.venue}</span>}
-          {match.toss && <span className="italic">🪙 {match.toss}</span>}
+          {getTossText(match.toss) && <span className="italic">🪙 {getTossText(match.toss)}</span>}
           {match.date && <span>📅 {match.date}</span>}
         </div>
       )}
@@ -877,7 +878,7 @@ const Hero = () => {
     status: 'FINISHED',
     matchNumber: latestFinished.matchNumber || null,
     venue: latestFinished.venue || null,
-    toss: latestFinished.toss || null,
+    toss: getTossText(latestFinished.toss),
     batsmen: latestFinished.batsmen || [],
     bowlers: latestFinished.bowlers || [],
     currentInnings: 2,
