@@ -42,13 +42,10 @@ const SOCIALS = [
   { icon: Mail,         label: 'Email',     handle: 'rahulkr23082006', href: 'mailto:rahulkr23082006@gmail.com',           color: '#0ea5e9' },
 ];
 
-const STATS_TICKER = [
-  '🏏 74 matches played in IPL 2026',
-  '🏆 RCB crowned champions for the 2nd time',
-  '🟠 Vaibhav Sooryavanshi — Orange Cap — 776 runs',
-  '🟣 Kagiso Rabada — Purple Cap — 29 wickets',
-  '⭐ Vaibhav Suryavanshi — Most Valuable Player',
-  '🌟 Vaibhav Suryavanshi — Emerging Player',
+const DEFAULT_STATS_TICKER = [
+  '🏏 74 matches scheduled in IPL 2026',
+  '🏆 10 elite franchises competing for the trophy',
+  '🟠 Real-time Orange & Purple Cap tracking active',
   '📍 19 seasons · 2008 – 2026 · India\'s premier T20 league',
 ];
 
@@ -59,10 +56,45 @@ const Footer = () => {
   const [serverOnline, setServerOnline]   = useState(true);
   const [lastSync, setLastSync]           = useState(new Date());
   const [syncPulse, setSyncPulse]         = useState(false);
+  const [tickerList, setTickerList]       = useState(DEFAULT_STATS_TICKER);
   const [tickerIdx, setTickerIdx]         = useState(0);
   const [easterCount, setEasterCount]     = useState(0);
   const [easterActive, setEasterActive]   = useState(false);
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  // Fetch dynamic season quick-stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/data/season/2026/quick-stats`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = [];
+        if (data.matchesPlayed > 0) {
+          items.push(`🏏 ${data.matchesPlayed} matches completed in IPL 2026`);
+        } else {
+          items.push(`🏏 IPL 2026 season live sync active`);
+        }
+        if (data.orangeCap?.player) {
+          items.push(`🟠 Orange Cap Leader: ${data.orangeCap.player} (${data.orangeCap.runs || 0} runs)`);
+        }
+        if (data.purpleCap?.player) {
+          items.push(`🟣 Purple Cap Leader: ${data.purpleCap.player} (${data.purpleCap.wickets || 0} wkts)`);
+        }
+        if (data.totalSixes > 0) {
+          items.push(`💥 ${data.totalSixes} Maximums smashed this season`);
+        }
+        if (data.highestTotal?.score > 0) {
+          items.push(`⚡ Highest Total: ${data.highestTotal.score} by ${data.highestTotal.team}`);
+        }
+        items.push(`📍 19 seasons · 2008 – 2026 · India's premier T20 league`);
+        if (items.length > 0) setTickerList(items);
+      } catch {
+        // fallback
+      }
+    };
+    fetchStats();
+  }, [API_URL]);
 
   // Ping server health every 30s
   useEffect(() => {
@@ -80,13 +112,14 @@ const Footer = () => {
     ping();
     const id = setInterval(ping, 30000);
     return () => clearInterval(id);
-  }, []);
+  }, [API_URL]);
 
   // Stats ticker rotation
   useEffect(() => {
-    const id = setInterval(() => setTickerIdx(i => (i + 1) % STATS_TICKER.length), 3500);
+    if (tickerList.length === 0) return;
+    const id = setInterval(() => setTickerIdx(i => (i + 1) % tickerList.length), 4000);
     return () => clearInterval(id);
-  }, []);
+  }, [tickerList]);
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -133,7 +166,7 @@ const Footer = () => {
                 transition={{ duration: 0.3 }}
                 className="text-[10px] font-bold text-gray-400 absolute whitespace-nowrap"
               >
-                {STATS_TICKER[tickerIdx]}
+                {tickerList[tickerIdx]}
               </motion.p>
             </AnimatePresence>
           </div>

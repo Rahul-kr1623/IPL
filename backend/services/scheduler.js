@@ -25,7 +25,7 @@ import {
   generateCommentary,
   generateOverCommentary,
 } from '../utils/matchDataEngine.js';
-import { saveCompletedMatch } from '../utils/seasonStore.js';
+import { onMatchCompletedPipeline } from './completedMatchService.js';
 
 let ioInstance = null;
 
@@ -146,6 +146,7 @@ const processSlot = async (slotKey, data) => {
 
   // ── Nothing found for this slot ────────────────────────────────────────
   if (!data) {
+    s.status = 'UPCOMING';
     if (s.lastKey) {
       s.consecutiveFails++;
       if (s.consecutiveFails >= MAX_FAILS) {
@@ -154,10 +155,13 @@ const processSlot = async (slotKey, data) => {
         s.matchFinishedAt = Date.now();
         s.finishedConfirmations = NEED_CONFIRM;
         s.lastKey = null;
+        s.status = 'FINISHED';
       }
     }
     return;
   }
+
+  s.status = data.status || 'LIVE';
 
   // ── Check freeze ──────────────────────────────────────────────────────
   if (s.matchFinishedAt) {
@@ -236,24 +240,14 @@ const processSlot = async (slotKey, data) => {
       if (!s.savedToDb) {
         s.savedToDb = true;
 
-        // Tier 1: MongoDB CompletedMatch (persistent across redeploys)
         try {
-          const { saveCompletedMatch: saveToDB } = await import('../services/completedMatchService.js');
-          await saveToDB(data);
-          console.log(`  [${slotKey}] ✅ Saved to MongoDB CompletedMatch`);
+          await onMatchCompletedPipeline(data);
+          console.log(`  [${slotKey}] ✅ Post-match pipeline (NRR, PointsTable, H2H, Caps) completed`);
         } catch (e) {
-          console.error(`  [${slotKey}] ⚠️ CompletedMatch MongoDB save failed: ${e.message}`);
-        }
-
-        // Tier 2: JSON file (fast local reads, non-persistent across redeploys)
-        try {
-          saveCompletedMatch(data);
-          console.log(`  [${slotKey}] ✅ Saved to seasonStore JSON`);
-        } catch (e) {
-          console.error(`  [${slotKey}] ⚠️ seasonStore JSON save failed: ${e.message}`);
+          console.error(`  [${slotKey}] ⚠️ onMatchCompletedPipeline failed: ${e.message}`);
         }
       } else {
-        console.log(`  [${slotKey}] ℹ️ DB already saved this session — skipping duplicate write`);
+        console.log(`  [${slotKey}] ℹ️ Post-match pipeline already ran for this match — skipping duplicate execution`);
       }
     }
 
@@ -373,48 +367,63 @@ let isActiveWindow = true; // Assume active initially to get immediate first-run
 export const startScheduler = (io) => {
   ioInstance = io;
   const isSimulating = process.env.SIMULATE_LIVE === 'true';
-  const baseInterval = isSimulating ? 5_000 : 40_000;
-  
-  setInterval(async () => {
+
+  let timer = null;
+
+  const tick = async () => {
     ticks++;
-    
-    // Check every ~5 minutes (every 7th tick of 40s = 280s, or every 2nd tick in simulation)
-    const checkInterval = isSimulating ? 2 : 7;
-    const shouldLightCheck = (ticks % checkInterval === 1); 
-    
-    if (shouldLightCheck) {
-      try {
-        if (!isActiveWindow) console.log(`[Scheduler] Lightweight check for upcoming matches...`);
-        
-        // In simulation mode, we force the window to be active so we can see the full scrape
-        const matches = isSimulating 
-          ? [{ startTime: new Date().toISOString() }] 
-          : await espnFindAllMatches();
-          
-        const now = Date.now();
-        isActiveWindow = matches.some(m => {
-          if (!m.startTime) return true; // Play it safe if no time provided
-          // Active if match starts within next 30 mins, or is already in the past (live)
-          return new Date(m.startTime).getTime() - now < 30 * 60 * 1000;
-        });
-        
-        if (!isActiveWindow) {
-          console.log(`[Scheduler] No match near. Remaining in lightweight mode.`);
-        } else if (ticks > 1) {
-          console.log(`[Scheduler] Match window active. Full scrape cycle engaged.`);
-        }
-      } catch (err) {
-        console.error('[Scheduler] Lightweight check failed:', err.message);
-      }
-    }
-    
-    // We run the full scrape if we are in an active window, OR if a global freeze is active 
-    // (meaning a match just finished and we're locking state)
-    if (isActiveWindow || scraperState.matchFinishedAt) {
+    let nextDelay = 35_000;
+
+    if (isSimulating) {
       await runLiveSyncAllSlots();
+      timer = setTimeout(tick, 5_000);
+      return;
     }
-  }, baseInterval);
+
+    try {
+      const checkInterval = 10;
+      const shouldLightCheck = (ticks % checkInterval === 1);
+
+      if (shouldLightCheck) {
+        try {
+          const matches = await espnFindAllMatches();
+          const now = Date.now();
+          isActiveWindow = matches.some(m => {
+            if (!m.startTime) return true;
+            return new Date(m.startTime).getTime() - now < 45 * 60 * 1000;
+          });
+        } catch (err) {
+          console.error('[Scheduler] Lightweight check failed:', err.message);
+        }
+      }
+
+      if (isActiveWindow || scraperState.matchFinishedAt) {
+        await runLiveSyncAllSlots();
+        const isLive = slotState.slot1.status === 'LIVE' ||
+                       slotState.slot1.status === 'SUPER OVER' ||
+                       slotState.slot2.status === 'LIVE' ||
+                       slotState.slot2.status === 'SUPER OVER';
+
+        if (isLive) {
+          nextDelay = 12_000; // 12 seconds live ball updates!
+        } else {
+          nextDelay = 35_000; // 35 seconds breaks or upcoming
+        }
+      } else {
+        console.log(`[Scheduler] No active/imminent match. Idle wait (120s)...`);
+        nextDelay = 120_000; // 2 minutes idle
+      }
+    } catch (err) {
+      console.error('[Scheduler] Adaptive tick error:', err.message);
+      nextDelay = 30_000;
+    }
+
+    timer = setTimeout(tick, nextDelay);
+  };
+
+  // Start adaptive loop
+  timer = setTimeout(tick, 1000);
 
   setInterval(updateStandingsAndStats, 12 * 60 * 60_000);
-  console.log(`⏰ Scheduler started (base interval: ${baseInterval/1000}s${isSimulating ? ' [SIMULATION MODE]' : ''}, standings: 12h)`);
+  console.log(`⏰ Adaptive Scheduler started (live: 12s, breaks: 35s, idle: 120s, simulation: ${isSimulating})`);
 };

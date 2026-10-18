@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoveLeft, Shield, Zap, Target, Users, Trophy, Star } from 'lucide-react';
 import SeasonDropdown from '../components/SeasonDropdown.jsx';
 import { CURRENT_SEASON, TEAM_COLORS } from '../utils/constants.js';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ─── Squad data per team per season ──────────────────────────────────────────
 const SQUADS = {
@@ -218,15 +220,43 @@ const Squad = () => {
   const meta   = teamsMeta[id] || { name: 'Unknown Team', color: '#fff' };
   const color  = meta.color;
 
+  const [dbSquad, setDbSquad] = useState([]);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchTeamPlayers = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/data/players?team=${id.toUpperCase()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setDbSquad(data);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch squad from API:', e);
+      }
+    };
+    fetchTeamPlayers();
+  }, [id]);
+
   // Find available seasons for this team
   const teamSeasons = Object.keys(SQUADS[id] || {}).map(Number).sort((a, b) => b - a);
   const defaultSeason = teamSeasons.includes(CURRENT_SEASON) ? CURRENT_SEASON : (teamSeasons[0] || CURRENT_SEASON);
   const [season, setSeason] = useState(defaultSeason);
 
   const squad = useMemo(() => {
+    if (season === CURRENT_SEASON && dbSquad.length > 0) {
+      const normalized = dbSquad.map(p => ({
+        ...p,
+        role: (p.role === 'WK-Batter' || p.role === 'Wicket-Keeper') ? 'Wicket-Keeper' : (p.role || 'Batter')
+      }));
+      return ROLE_ORDER.flatMap(role => normalized.filter(p => p.role === role))
+        .concat(normalized.filter(p => !ROLE_ORDER.includes(p.role)));
+    }
     const raw = SQUADS[id]?.[season] || SQUADS[id]?.[defaultSeason] || [];
     return ROLE_ORDER.flatMap(role => raw.filter(p => p.role === role));
-  }, [id, season]);
+  }, [id, season, dbSquad, defaultSeason]);
 
   const grouped = useMemo(() => {
     return ROLE_ORDER.reduce((acc, role) => {
@@ -319,42 +349,46 @@ const Squad = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {grouped[role].map((player, idx) => (
                 <motion.div
-                  key={player.name}
+                  key={player.playerId || player.name}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.04 }}
                   whileHover={{ y: -4 }}
-                  className={`glass p-5 rounded-2xl border bg-white/5 group flex gap-4 items-center relative overflow-hidden
-                    ${player.type === 'captain' ? 'border-yellow-400/30' : 'border-white/10'}
-                    ${player.type === 'icon'    ? 'border-ipl-neon/20'  : ''}`}
                 >
-                  <div className="absolute -bottom-4 -right-4 w-20 h-20 blur-2xl opacity-10 group-hover:opacity-25 transition-all"
-                    style={{ backgroundColor: color }} />
+                  <Link
+                    to={`/player/${player.playerId || player.name}`}
+                    className={`glass p-5 rounded-2xl border bg-white/5 group flex gap-4 items-center relative overflow-hidden transition-all hover:border-white/25 block
+                      ${player.type === 'captain' ? 'border-yellow-400/30' : 'border-white/10'}
+                      ${player.type === 'icon'    ? 'border-ipl-neon/20'  : ''}`}
+                  >
+                    <div className="absolute -bottom-4 -right-4 w-20 h-20 blur-2xl opacity-10 group-hover:opacity-25 transition-all"
+                      style={{ backgroundColor: color }} />
 
-                  {/* Avatar */}
-                  <div className="w-12 h-12 rounded-full border-2 border-dashed flex-shrink-0 flex items-center justify-center text-lg"
-                    style={{ borderColor: `${color}60`, backgroundColor: `${color}15`, color }}>
-                    {ROLE_ICON[player.role]}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="text-sm font-black tracking-tight text-white leading-tight">
-                        {player.name}
-                      </h4>
-                      {player.type === 'captain' && (
-                        <span className="text-[8px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-full font-black tracking-widest">C</span>
-                      )}
-                      {player.type === 'overseas' && (
-                        <span className="text-[8px] bg-blue-400/10 text-blue-400 border border-blue-400/20 px-1.5 py-0.5 rounded-full font-black tracking-widest">OS</span>
-                      )}
+                    {/* Avatar */}
+                    <div className="w-12 h-12 rounded-full border-2 border-dashed flex-shrink-0 flex items-center justify-center text-lg"
+                      style={{ borderColor: `${color}60`, backgroundColor: `${color}15`, color }}>
+                      {ROLE_ICON[player.role] || <Star className="w-4 h-4" />}
                     </div>
-                    <p className="text-[9px] font-bold tracking-widest uppercase mt-0.5" style={{ color }}>
-                      {player.role}
-                    </p>
-                    <p className="text-[8px] text-gray-600 font-mono mt-0.5">IPL {season}</p>
-                  </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="text-sm font-black tracking-tight text-white leading-tight group-hover:text-ipl-neon transition-colors">
+                          {player.name}
+                        </h4>
+                        {player.type === 'captain' && (
+                          <span className="text-[8px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-full font-black tracking-widest">C</span>
+                        )}
+                        {player.type === 'overseas' && (
+                          <span className="text-[8px] bg-blue-400/10 text-blue-400 border border-blue-400/20 px-1.5 py-0.5 rounded-full font-black tracking-widest">OS</span>
+                        )}
+                      </div>
+                      <p className="text-[9px] font-bold tracking-widest uppercase mt-0.5" style={{ color }}>
+                        {player.role}
+                      </p>
+                      <p className="text-[8px] text-gray-600 font-mono mt-0.5">IPL {season}</p>
+                    </div>
+                  </Link>
                 </motion.div>
               ))}
             </div>

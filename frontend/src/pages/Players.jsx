@@ -38,12 +38,14 @@ const Players = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedRole]);
 
+  const getPlayerKey = (p) => p?.playerId || p?.id || p?._id;
+
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
         const response = await fetch(`${API_URL}/api/v1/data/players`);
         const data = await response.json();
-        setPlayers(data.players || []);
+        setPlayers(Array.isArray(data) ? data : (data.players || []));
       } catch (error) {
         console.error('Failed to load players:', error);
       } finally {
@@ -55,15 +57,17 @@ const Players = () => {
 
   const filteredPlayers = useMemo(() => {
     return players.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const name = p.name || p.shortName || '';
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRole = selectedRole === 'All' || p.role === selectedRole;
       return matchesSearch && matchesRole;
     });
   }, [searchTerm, selectedRole, players]);
 
   const toggleCompare = (player) => {
-    if (compareList.find(p => p.id === player.id)) {
-      setCompareList(compareList.filter(p => p.id !== player.id));
+    const key = getPlayerKey(player);
+    if (compareList.find(p => getPlayerKey(p) === key)) {
+      setCompareList(compareList.filter(p => getPlayerKey(p) !== key));
     } else {
       if (compareList.length < 2) {
         setCompareList([...compareList, player]);
@@ -162,9 +166,9 @@ const Players = () => {
           >
             <div className="flex items-center gap-4">
               {compareList.map(p => (
-                <div key={p.id} className="flex items-center gap-2">
+                <div key={getPlayerKey(p)} className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/20">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={p.image || p.imageUrl || '/logo.svg'} alt={p.name} className="w-full h-full object-cover" onError={e => { e.target.src = '/logo.svg'; }} />
                   </div>
                   <span className="text-sm font-bold text-white hidden sm:block">{p.name}</span>
                 </div>
@@ -206,12 +210,18 @@ const Players = () => {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredPlayers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((player, idx) => {
-            const color = TEAM_COLORS[player.activeTeam] || '#888';
-            const isSelected = compareList.find(p => p.id === player.id);
+            const key = getPlayerKey(player);
+            const team = player.currentTeam || player.activeTeam || 'IPL';
+            const color = TEAM_COLORS[team] || '#888';
+            const isSelected = compareList.find(p => getPlayerKey(p) === key);
+            const matchesCount = player.careerBatting?.matches || player.careerBowling?.matches || player.stats?.matches || 0;
+            const runsOrWkts = player.role?.toLowerCase().includes('bowler')
+              ? (player.careerBowling?.wickets ?? player.stats?.wickets ?? 0)
+              : (player.careerBatting?.runs ?? player.stats?.runs ?? 0);
 
           return (
             <motion.div
-              key={player.id}
+              key={key || idx}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
@@ -226,7 +236,7 @@ const Players = () => {
               {/* Top Banner */}
               <div className="h-16 relative flex items-start justify-between p-4 z-10" style={{ background: `linear-gradient(to right, ${color}20, transparent)` }}>
                 <span className="text-[10px] font-black uppercase tracking-widest text-white/70 px-2 py-1 rounded bg-black/30 border border-white/10 backdrop-blur-md">
-                  {player.activeTeam || 'Free Agent'}
+                  {team || 'Free Agent'}
                 </span>
                 <button 
                   onClick={() => toggleCompare(player)}
@@ -243,31 +253,36 @@ const Players = () => {
               <div className="px-6 pb-6 pt-2 flex flex-col items-center text-center z-10 flex-1">
                 <div className="w-24 h-24 rounded-full border-4 bg-slate-800 flex items-center justify-center overflow-hidden mb-4 relative z-10 shadow-xl"
                   style={{ borderColor: color }}>
-                  <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+                  <img
+                    src={player.image || player.imageUrl || '/logo.svg'}
+                    alt={player.name}
+                    className="w-full h-full object-cover"
+                    onError={e => { e.target.src = '/logo.svg'; }}
+                  />
                 </div>
                 
                 <h3 className="text-xl font-black text-white tracking-tight mb-1">{player.name}</h3>
                 
                 <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 tracking-widest uppercase mb-4">
-                  <span style={{ color }}>{ROLE_ICON[player.role]}</span>
-                  {player.role}
+                  <span style={{ color }}>{ROLE_ICON[player.role] || <Star className="w-4 h-4" />}</span>
+                  {player.role || 'Player'}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 w-full mb-6 text-left">
                   <div className="bg-white/5 rounded-xl p-3 border border-white/5">
                     <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Matches</p>
-                    <p className="text-lg font-mono text-white">{player.careerBatting?.matches || player.careerBowling?.matches || 0}</p>
+                    <p className="text-lg font-mono text-white">{matchesCount}</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3 border border-white/5">
                     <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Runs/Wkts</p>
                     <p className="text-lg font-mono text-ipl-neon">
-                      {player.role.includes('Bowler') ? player.careerBowling?.wickets : player.careerBatting?.runs}
+                      {runsOrWkts}
                     </p>
                   </div>
                 </div>
 
                 <Link 
-                  to={`/player/${player.id}`}
+                  to={`/player/${key}`}
                   className="mt-auto w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold text-xs tracking-widest uppercase flex justify-center items-center gap-2 transition-colors"
                 >
                   View Stats <ChevronRight className="w-4 h-4" />

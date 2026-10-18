@@ -92,8 +92,14 @@ const Stadiums = () => {
         {stadiums.map((s, i) => {
           const homeColor = s.homeTeam ? (TEAM_COLORS[s.homeTeam] || '#fff') : '#4b5563';
           const pitchColor = PITCH_COLORS[s.pitchType] || '#fff';
+          const avg1st = s.avgFirst || s.stats?.avgFirstInningsScore || s.stats?.avgFirstInnings || '—';
+          const avg2nd = s.avgSecond || s.stats?.avgSecondInningsScore || s.stats?.avgSecondInnings || '—';
+          const highSc = s.highScore || s.stats?.highestTotal || s.stats?.highestScore || '—';
+          const lowSc = s.lowScore || s.stats?.lowestTotal || s.stats?.lowestScore || '—';
+          const matchCount = s.iplMatches || s.stats?.totalMatches || '—';
+
           return (
-            <motion.div key={s.id}
+            <motion.div key={s.stadiumId || s.id || s._id || i}
               initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
               viewport={{ once:true }} transition={{ delay: i * 0.04 }}
               className="glass bg-white/5 border border-white/10 rounded-3xl overflow-hidden group hover:border-white/20 transition-all"
@@ -110,12 +116,12 @@ const Stadiums = () => {
                     </h3>
                     <div className="flex items-center gap-1.5 mt-1">
                       <MapPin className="w-3 h-3 text-gray-500" />
-                      <span className="text-xs text-gray-400 font-bold">{s.city}, {s.state}</span>
+                      <span className="text-xs text-gray-400 font-bold">{s.city}, {s.state || s.country}</span>
                     </div>
                   </div>
                   <span className="text-[9px] font-black px-3 py-1.5 rounded-full tracking-widest border shrink-0"
                     style={{ backgroundColor: `${pitchColor}15`, color: pitchColor, borderColor: `${pitchColor}30` }}>
-                    {s.pitchType}
+                    {s.pitchType || 'Balanced'}
                   </span>
                 </div>
 
@@ -123,17 +129,17 @@ const Stadiums = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-white/5 rounded-xl p-3 text-center">
                     <Users className="w-4 h-4 text-gray-500 mx-auto mb-1" />
-                    <p className="text-sm font-black text-white">{s.capacity.toLocaleString()}</p>
+                    <p className="text-sm font-black text-white">{s.capacity ? s.capacity.toLocaleString() : '—'}</p>
                     <p className="text-[8px] text-gray-600 uppercase font-bold tracking-wider">Capacity</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3 text-center">
                     <TrendingUp className="w-4 h-4 text-green-400 mx-auto mb-1" />
-                    <p className="text-sm font-black text-green-400">{s.avgFirst}</p>
+                    <p className="text-sm font-black text-green-400">{avg1st}</p>
                     <p className="text-[8px] text-gray-600 uppercase font-bold tracking-wider">Avg 1st Inn</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3 text-center">
                     <TrendingDown className="w-4 h-4 text-blue-400 mx-auto mb-1" />
-                    <p className="text-sm font-black text-blue-400">{s.avgSecond}</p>
+                    <p className="text-sm font-black text-blue-400">{avg2nd}</p>
                     <p className="text-[8px] text-gray-600 uppercase font-bold tracking-wider">Avg 2nd Inn</p>
                   </div>
                 </div>
@@ -142,16 +148,18 @@ const Stadiums = () => {
                 <div className="space-y-1.5 text-xs">
                   <div className="flex gap-2">
                     <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest w-20 shrink-0">High Score</span>
-                    <span className="font-bold text-green-400 text-[10px]">{s.highScore || s.stats?.highestScore}</span>
+                    <span className="font-bold text-green-400 text-[10px]">{highSc}</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest w-20 shrink-0">Low Score</span>
-                    <span className="font-bold text-red-400 text-[10px]">{s.lowScore || s.stats?.lowestScore}</span>
+                    <span className="font-bold text-red-400 text-[10px]">{lowSc}</span>
                   </div>
                 </div>
 
                 {/* Pitch notes */}
-                <p className="text-[10px] text-gray-500 leading-relaxed border-t border-white/5 pt-4">{s.notes}</p>
+                {s.notes && (
+                  <p className="text-[10px] text-gray-500 leading-relaxed border-t border-white/5 pt-4">{s.notes}</p>
+                )}
 
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-1">
@@ -165,7 +173,7 @@ const Stadiums = () => {
                       </>
                     )}
                   </div>
-                  <span className="text-[9px] font-mono text-gray-600">{s.iplMatches} IPL matches</span>
+                  <span className="text-[9px] font-mono text-gray-600">{matchCount} IPL matches</span>
                 </div>
               </div>
             </motion.div>

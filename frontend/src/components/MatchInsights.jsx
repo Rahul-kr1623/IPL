@@ -136,6 +136,8 @@ const MatchInsights = () => {
   const [historyData, setHistoryData]       = useState([]);
   const [compHistory, setCompHistory]       = useState([]); // comparison (last match)
   const [compLabel, setCompLabel]           = useState('');
+  const [h2h, setH2h]                       = useState(null);
+  const [stadiumInfo, setStadiumInfo]       = useState(null);
   const snapshotRef = useRef(null); // last snapshotted over
 
   // ── Derived state ───────────────────────────────────────────────────────
@@ -145,6 +147,46 @@ const MatchInsights = () => {
     : null;
   const currentOver = Math.floor(parseOversFloat(match?.overs));
   const currentScore = parseInt(match?.score || 0);
+
+  // ── Fetch dynamic Head-to-Head & Stadium metadata ────────────────────────
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const [h2hRes, stadRes] = await Promise.allSettled([
+          fetch(`${API}/api/v1/data/global/head_to_head`).then(r => r.json()),
+          fetch(`${API}/api/v1/data/stadiums`).then(r => r.json())
+        ]);
+
+        if (h2hRes.status === 'fulfilled' && Array.isArray(h2hRes.value)) {
+          const t1 = match.team1?.name;
+          const t2 = match.team2?.name;
+          const found = h2hRes.value.find(h => 
+            (h.team1 === t1 && h.team2 === t2) || (h.team1 === t2 && h.team2 === t1)
+          );
+          if (found) {
+            setH2h({
+              t1Wins: found.team1 === t1 ? found.team1Wins : found.team2Wins,
+              t2Wins: found.team1 === t1 ? found.team2Wins : found.team1Wins,
+              total: found.totalMatches,
+              noResult: found.noResult || 0
+            });
+          }
+        }
+
+        if (stadRes.status === 'fulfilled' && Array.isArray(stadRes.value)) {
+          const v = (match.venue || '').toLowerCase();
+          const foundVenue = stadRes.value.find(s => 
+            (s.name && v.includes(s.name.toLowerCase())) || 
+            (s.city && v.includes(s.city.toLowerCase()))
+          );
+          if (foundVenue) setStadiumInfo(foundVenue);
+        }
+      } catch (e) {
+        console.warn('[MatchInsights] Metadata fetch error:', e.message);
+      }
+    };
+    fetchMetadata();
+  }, [match.team1?.name, match.team2?.name, match.venue]);
 
   // ── Save a snapshot every time the over changes ─────────────────────────
   useEffect(() => {
@@ -290,38 +332,50 @@ const MatchInsights = () => {
               className="glass rounded-[3rem] p-8 border border-white/10 bg-white/5">
               <div className="flex items-center gap-2 mb-8">
                 <CloudRain className="w-5 h-5 text-ipl-neon" />
-                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Match Conditions</h3>
+                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Venue & Pitch Insights</h3>
               </div>
               <div className="space-y-6">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-3"><Thermometer className="w-4 h-4 text-gray-500" /><span className="text-xs font-bold text-gray-300">Temperature</span></div>
-                  <span className="text-lg font-black text-white">28°C</span>
+                  <div className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-500" /><span className="text-xs font-bold text-gray-300">City / Venue</span></div>
+                  <span className="text-sm font-black text-white">{stadiumInfo?.city || match.venue || 'India'}</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-3"><Wind className="w-4 h-4 text-gray-500" /><span className="text-xs font-bold text-gray-300">Wind Speed</span></div>
-                  <span className="text-lg font-black text-white">14 km/h <span className="text-[10px] text-gray-500">(SW)</span></span>
+                  <div className="flex items-center gap-3"><Wind className="w-4 h-4 text-gray-500" /><span className="text-xs font-bold text-gray-300">Avg 1st Innings</span></div>
+                  <span className="text-lg font-black text-white">{stadiumInfo?.avgFirstInnings || '178'} <span className="text-[10px] text-gray-500">runs</span></span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-500" /><span className="text-xs font-bold text-gray-300">Pitch Type</span></div>
-                  <span className="text-sm font-black text-ipl-neon uppercase">Hard & Dry</span>
+                  <div className="flex items-center gap-3"><Activity className="w-4 h-4 text-gray-500" /><span className="text-xs font-bold text-gray-300">Pitch Type</span></div>
+                  <span className="text-sm font-black text-ipl-neon uppercase">{stadiumInfo?.pitchType || 'True Bounce & Carry'}</span>
                 </div>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               className="glass rounded-[3rem] p-8 border border-white/10 bg-white/5 flex flex-col justify-center">
-              <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-8 text-center">Head to Head</h3>
+              <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6 text-center">Head to Head Rivalry</h3>
               <div className="flex items-center justify-between px-4">
                 <div className="flex flex-col items-center">
-                  <img src={match.team1?.logo} className="w-16 h-16 object-contain mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" alt="" />
-                  <span className="text-3xl font-black">14</span>
-                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Wins</span>
+                  <img
+                    src={match.team1?.logo || `https://cricketvectors.akamaized.net/teams/IPL/${match.team1?.name}.png`}
+                    className="w-14 h-14 object-contain mb-2 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                    alt={match.team1?.name}
+                    onError={(e) => { e.target.src = '/logo.svg'; }}
+                  />
+                  <span className="text-3xl font-black">{h2h?.t1Wins ?? 0}</span>
+                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">{match.team1?.name || 'T1'} Wins</span>
                 </div>
-                <div className="text-2xl font-black italic text-white/20">VS</div>
+                <div className="text-xl font-black italic text-white/20">
+                  {h2h ? `${h2h.total} MT` : 'VS'}
+                </div>
                 <div className="flex flex-col items-center">
-                  <img src={match.team2?.logo} className="w-16 h-16 object-contain mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" alt="" />
-                  <span className="text-3xl font-black">11</span>
-                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Wins</span>
+                  <img
+                    src={match.team2?.logo || `https://cricketvectors.akamaized.net/teams/IPL/${match.team2?.name}.png`}
+                    className="w-14 h-14 object-contain mb-2 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                    alt={match.team2?.name}
+                    onError={(e) => { e.target.src = '/logo.svg'; }}
+                  />
+                  <span className="text-3xl font-black">{h2h?.t2Wins ?? 0}</span>
+                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">{match.team2?.name || 'T2'} Wins</span>
                 </div>
               </div>
             </motion.div>

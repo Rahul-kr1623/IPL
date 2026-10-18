@@ -10,13 +10,13 @@
  */
 
 import { getAllMatches, getLatestMatch, getLatestFinishedMatch } from '../services/dbService.js';
+import Match from '../models/Match.js';
 import standingsCache from '../utils/standingsCache.js';
 import {
   COMPLETED_MATCHES,
   PLAYER_STATS,
   getCapLeaders,
 } from '../utils/matchDataEngine.js';
-import { getLatestFinishedFromJson, getAllCompletedFromJson } from '../utils/seasonStore.js';
 import { getMatchIntel } from '../services/geminiService.js';
 import { scrapeLatestCompletedMatch, scrapeAllSlots } from '../services/scraperService.js';
 
@@ -131,10 +131,31 @@ export const getLatestFinished = async (req, res) => {
     const age = Date.now() - latestFinishedCache.fetchedAt;
     
     if (age < LATEST_FINISHED_CACHE_MS && latestFinishedCache.data) {
-      return res.json({ match: latestFinishedCache.data, source: 'espn-scraped' });
+      return res.json({ match: latestFinishedCache.data, source: 'cached' });
     }
 
-    // Tier 1: Live ESPN scrape — most dynamic and accurate
+    // Tier 1: MongoDB Match collection (most complete scorecard)
+    const matchDoc = await Match.findOne({ status: { $in: ['FINISHED', 'RECENTLY FINISHED'] } })
+      .sort({ date: -1, updatedAt: -1 })
+      .lean();
+
+    if (matchDoc) {
+      const formatted = {
+        ...matchDoc,
+        team1: { name: matchDoc.teamA },
+        team2: { name: matchDoc.teamB },
+        score: String(matchDoc.scoreB || '0'),
+        wickets: String(matchDoc.wicketsB || '0'),
+        overs: String(matchDoc.oversB || '0.0'),
+        team1Score: `${matchDoc.scoreA || 0}/${matchDoc.wicketsA || 0} (${matchDoc.oversA || 0} ov)`,
+        status: 'FINISHED',
+        result: matchDoc.result || '',
+      };
+      latestFinishedCache = { data: formatted, fetchedAt: Date.now() };
+      return res.json({ match: formatted, source: 'mongo' });
+    }
+
+    // Tier 2: Live ESPN scrape — dynamic fallback
     try {
       const scraped = await scrapeLatestCompletedMatch();
       if (scraped) {
@@ -145,10 +166,6 @@ export const getLatestFinished = async (req, res) => {
     } catch (e) {
       console.log('[getLatestFinished] ESPN scrape failed:', e.message);
     }
-
-    // Tier 2: JSON file written by scheduler on every FINISHED match
-    const jsonResult = getLatestFinishedFromJson();
-    if (jsonResult) return res.json({ match: jsonResult, source: 'json' });
 
     // Tier 3: MongoDB LiveMatch marked as FINISHED/RECENTLY FINISHED
     const mongoResult = await getLatestFinishedMatch();
@@ -252,22 +269,43 @@ export const getPlayerStats = (req, res) => {
 };
 
 // ─── GET /api/v1/completed-matches ────────────────────────────────────────────
-export const getCompletedMatches = (req, res) => {
-  const fromJson = getAllCompletedFromJson();
-  if (fromJson && fromJson.length > 0) {
-    return res.json({ completedIds: fromJson.map(m => m.matchId), results: fromJson, source: 'json' });
+export const getCompletedMatches = async (req, res) => {
+  try {
+    const dbMatches = await Match.find({ status: { $in: ['FINISHED', 'RECENTLY FINISHED'] } })
+      .sort({ date: -1 })
+      .lean();
+
+    if (dbMatches && dbMatches.length > 0) {
+      return res.json({
+        completedIds: dbMatches.map(m => m.matchId || m._id),
+        results: dbMatches.map(m => ({
+          id: m.matchId || m._id,
+          teamA: m.teamA,
+          teamB: m.teamB,
+          winner: m.winner,
+          result: m.result,
+          scoreA: `${m.scoreA}/${m.wicketsA} (${m.oversA})`,
+          scoreB: `${m.scoreB}/${m.wicketsB} (${m.oversB})`,
+          date: m.date,
+        })),
+        source: 'mongo',
+      });
+    }
+
+    res.json({
+      completedIds: COMPLETED_MATCHES.map(m => m.id),
+      results: COMPLETED_MATCHES.map(m => ({
+        id: m.id, teamA: m.teamA, teamB: m.teamB, winner: m.winner,
+        result: m.result,
+        scoreA: `${m.scoreA}/${m.wA} (${m.ovA})`,
+        scoreB: `${m.scoreB}/${m.wB} (${m.ovB})`,
+        date: m.date,
+      })),
+      source: 'memory',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  res.json({
-    completedIds: COMPLETED_MATCHES.map(m => m.id),
-    results: COMPLETED_MATCHES.map(m => ({
-      id: m.id, teamA: m.teamA, teamB: m.teamB, winner: m.winner,
-      result: m.result,
-      scoreA: `${m.scoreA}/${m.wA} (${m.ovA})`,
-      scoreB: `${m.scoreB}/${m.wB} (${m.ovB})`,
-      date: m.date,
-    })),
-    source: 'memory',
-  });
 };
 
 // ─── GET /api/v1/health ───────────────────────────────────────────────────────
